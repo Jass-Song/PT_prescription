@@ -91,7 +91,10 @@ Exercise 각 운동마다 반드시 포함:
 
     const data = await response.json();
     const text = data.content[0].text;
-    const cleanText = text.replace(/^```json\s*\n?/, '').replace(/\n?```\s*$/, '').trim();
+    // Extract JSON object robustly
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('No JSON found in response');
+    const cleanText = match[0];
     const result = JSON.parse(cleanText);
 
     return res.status(200).json(result);
