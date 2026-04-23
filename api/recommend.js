@@ -84,7 +84,7 @@ Exercise 각 운동마다 반드시 포함:
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-5',
-        max_tokens: 2048,
+        max_tokens: 4096,
         messages: [{ role: 'user', content: prompt }]
       })
     });
