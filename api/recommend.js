@@ -90,16 +90,29 @@ Exercise 각 운동마다 반드시 포함:
     });
 
     const data = await response.json();
+
+    // Claude API 자체 에러 처리 (401, 400 등)
+    if (!response.ok || data.error) {
+      const apiErr = data.error ? JSON.stringify(data.error) : `HTTP ${response.status}`;
+      return res.status(502).json({ error: `Claude API 오류: ${apiErr}` });
+    }
+
+    if (!data.content || !data.content[0] || !data.content[0].text) {
+      return res.status(502).json({ error: `Claude 응답 구조 오류: ${JSON.stringify(data)}` });
+    }
+
     const text = data.content[0].text;
+
     // Extract JSON object robustly
     const match = text.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error('No JSON found in response');
-    const cleanText = match[0];
-    const result = JSON.parse(cleanText);
+    if (!match) {
+      return res.status(502).json({ error: `JSON 없음. Claude 원문: ${text.slice(0, 300)}` });
+    }
 
+    const result = JSON.parse(match[0]);
     return res.status(200).json(result);
+
   } catch (error) {
     return res.status(500).json({ error: '추천 생성 실패: ' + error.message });
   }
 }
-// rebuild trigger
