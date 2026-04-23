@@ -430,6 +430,55 @@
     .rec-content-area { display: block; }
     .rec-content-area.hidden { display: none; }
 
+    /* ── Rec cards (detailed) ── */
+    .rec-card {
+      background: white;
+      border: 1px solid #e0e8f0;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .rec-card h4 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1a6fc4;
+      margin-bottom: 10px;
+    }
+    .rec-detail {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: #333;
+    }
+    .rec-detail .label {
+      font-weight: 600;
+      color: #666;
+      white-space: nowrap;
+      min-width: 80px;
+    }
+    .rec-detail.warning {
+      background: #fff8e1;
+      border-radius: 6px;
+      padding: 6px 8px;
+    }
+    .rec-detail.highlight {
+      background: #e8f4fd;
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-style: italic;
+    }
+    .clinical-note-block {
+      background: #f0f9f0;
+      border-left: 3px solid #2ecc71;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-top: 16px;
+      font-size: 13px;
+      color: #2d6a4f;
+    }
+
     /* ── Mobile tweaks ── */
     @media (max-width: 380px) {
       .choice-grid { grid-template-columns: 1fr; }
@@ -603,6 +652,22 @@
   const REGION_LABEL   = { cervical: '경추', lumbar: '요추' };
   const STAGE_LABEL    = { acute: '급성', chronic: '만성' };
   const SYMPTOM_LABEL  = { movement: '움직임 시 통증', rest: '안정 시 통증', radicular: '방사통' };
+
+  /* ══════════════════════════════════════
+     SESSION HISTORY (localStorage)
+  ══════════════════════════════════════ */
+  function getSessionHistory() {
+    try {
+      return JSON.parse(localStorage.getItem('pt_session_history') || '[]');
+    } catch { return []; }
+  }
+
+  function saveSessionHistory(summary) {
+    const history = getSessionHistory();
+    history.unshift(summary); // 최신 순으로
+    if (history.length > 5) history.pop(); // 최대 5개 유지
+    localStorage.setItem('pt_session_history', JSON.stringify(history));
+  }
 
   /* ══════════════════════════════════════
      STATE
@@ -841,6 +906,7 @@
       symptom:     SYMPTOM_LABEL[selectedSymptom],
       preferredMT,
       preferredEX,
+      sessionHistory: getSessionHistory(),
     };
 
     try {
@@ -880,6 +946,11 @@
   }
 
   function renderAIResult(result) {
+    // Save session history if summary provided
+    if (result.sessionSummary) {
+      saveSessionHistory(result.sessionSummary);
+    }
+
     // Render MT
     const mtList = document.getElementById('mt-rec-list');
     mtList.innerHTML = '';
@@ -887,8 +958,17 @@
     if (mtItems.length === 0) {
       mtList.innerHTML = `<div class="no-rec">해당 조합에 맞는 Manual Therapy 추천이 없습니다.</div>`;
     } else {
-      mtItems.forEach((item, i) => {
-        mtList.appendChild(makeRecItem(i + 1, item.technique, item.reason));
+      mtItems.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'rec-card';
+        card.innerHTML = `
+          <h4>🔧 ${item.technique}</h4>
+          <div class="rec-detail"><span class="label">환자 자세</span> ${item.patientPosition}</div>
+          <div class="rec-detail"><span class="label">손 위치</span> ${item.therapistHands}</div>
+          <div class="rec-detail"><span class="label">동작</span> ${item.movement}</div>
+          <div class="rec-detail"><span class="label">목표 근육</span> ${(item.targetMuscles || []).join(', ')}</div>
+          <div class="rec-detail warning"><span class="label">환자 피드백</span> ${item.patientFeedback}</div>`;
+        mtList.appendChild(card);
       });
     }
 
@@ -899,8 +979,18 @@
     if (exItems.length === 0) {
       exList.innerHTML = `<div class="no-rec">해당 조합에 맞는 Exercise 추천이 없습니다.</div>`;
     } else {
-      exItems.forEach((item, i) => {
-        exList.appendChild(makeRecItem(i + 1, item.name, item.description));
+      exItems.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'rec-card';
+        card.innerHTML = `
+          <h4>🏃 ${item.name}</h4>
+          <div class="rec-detail"><span class="label">시작 자세</span> ${item.startPosition}</div>
+          <div class="rec-detail"><span class="label">치료사 가이드</span> ${item.therapistGuide}</div>
+          <div class="rec-detail"><span class="label">동작</span> ${item.movement}</div>
+          <div class="rec-detail"><span class="label">처방</span> ${item.sets}</div>
+          <div class="rec-detail"><span class="label">목표 근육</span> ${(item.targetMuscles || []).join(', ')}</div>
+          <div class="rec-detail highlight"><span class="label">큐잉</span> "${item.cue}"</div>`;
+        exList.appendChild(card);
       });
     }
 
@@ -914,18 +1004,6 @@
           ${result.clinicalNote}
         </div>`;
     }
-  }
-
-  function makeRecItem(num, name, desc) {
-    const div = document.createElement('div');
-    div.className = 'rec-item';
-    div.innerHTML = `
-      <div class="rec-num">${num}</div>
-      <div class="rec-content">
-        <div class="rec-name">${name}</div>
-        <div class="rec-desc">${desc}</div>
-      </div>`;
-    return div;
   }
 
   function getLabel(id) {
