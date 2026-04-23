@@ -367,6 +367,69 @@
       margin: 8px 0 16px;
     }
 
+    /* ── Loading spinner ── */
+    .loading-state {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 20px;
+      gap: 16px;
+    }
+    .loading-state.visible { display: flex; }
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid var(--primary-light);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text {
+      font-size: 14px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    /* ── Error state ── */
+    .error-state {
+      display: none;
+      background: #fff5f5;
+      border: 1px solid #fc8181;
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      font-size: 13.5px;
+      color: var(--danger);
+      margin-bottom: 14px;
+      text-align: center;
+    }
+    .error-state.visible { display: block; }
+
+    /* ── Clinical note ── */
+    .clinical-note-block {
+      background: #f0fdf4;
+      border: 1px solid #9ae6b4;
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      font-size: 13px;
+      color: #22543d;
+      line-height: 1.6;
+      margin-bottom: 14px;
+    }
+    .clinical-note-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #276749;
+      margin-bottom: 6px;
+    }
+
+    /* ── Rec content hidden when loading ── */
+    .rec-content-area { display: block; }
+    .rec-content-area.hidden { display: none; }
+
     /* ── Mobile tweaks ── */
     @media (max-width: 380px) {
       .choice-grid { grid-template-columns: 1fr; }
@@ -465,18 +528,35 @@
       <div class="combo" id="combo-label"></div>
     </div>
 
-    <div class="rec-block" id="mt-rec-block">
-      <div class="rec-block-title"><span class="icon">🔧</span> Manual Therapy 추천</div>
-      <div id="mt-rec-list"></div>
+    <!-- Loading state -->
+    <div class="loading-state" id="rec-loading">
+      <div class="spinner"></div>
+      <div class="loading-text">AI가 추천을 생성하고 있습니다...</div>
     </div>
 
-    <div class="rec-block" id="ex-rec-block">
-      <div class="rec-block-title"><span class="icon">🏃</span> Exercise 추천</div>
-      <div id="ex-rec-list"></div>
+    <!-- Error state -->
+    <div class="error-state" id="rec-error">
+      추천 생성에 실패했습니다. 다시 시도해주세요.
+    </div>
+
+    <!-- Recommendation content (hidden while loading) -->
+    <div class="rec-content-area" id="rec-content-area">
+      <div class="rec-block" id="mt-rec-block">
+        <div class="rec-block-title"><span class="icon">🔧</span> Manual Therapy 추천</div>
+        <div id="mt-rec-list"></div>
+      </div>
+
+      <div class="rec-block" id="ex-rec-block">
+        <div class="rec-block-title"><span class="icon">🏃</span> Exercise 추천</div>
+        <div id="ex-rec-list"></div>
+      </div>
+
+      <div id="clinical-note-wrap"></div>
     </div>
 
     <div style="padding: 0 0 8px;">
-      <button class="btn-primary" onclick="goScreen2()">다시 입력</button>
+      <button class="btn-primary" id="btn-retry" style="display:none" onclick="showRecommendation()">다시 시도</button>
+      <button class="btn-secondary" onclick="goScreen2()">다시 입력</button>
     </div>
   </div>
 
@@ -519,79 +599,6 @@
     { id: 'rest',     label: '안정 시\n통증',   sub: '' },
     { id: 'radicular',label: '방사통',          sub: '' },
   ];
-
-  /* ── Rule table ──
-     Key: "region-stage-symptom"
-     Value: { mt: [id, ...], ex: [id, ...] }   (priority order)
-  */
-  const RULES = {
-    'cervical-acute-movement': {
-      mt: ['mt_maitland', 'mt_mulligan', 'mt_soft'],
-      ex: ['ex_stab', 'ex_rom', 'ex_stretch'],
-    },
-    'cervical-acute-rest': {
-      mt: ['mt_soft', 'mt_neuro', 'mt_maitland'],
-      ex: ['ex_stab', 'ex_self', 'ex_stretch'],
-    },
-    'cervical-acute-radicular': {
-      mt: ['mt_neuro', 'mt_mckenzie', 'mt_maitland'],
-      ex: ['ex_stab', 'ex_self', 'ex_rom'],
-    },
-    'cervical-chronic-movement': {
-      mt: ['mt_mulligan', 'mt_maitland', 'mt_hvla'],
-      ex: ['ex_strength', 'ex_stab', 'ex_wbear'],
-    },
-    'cervical-chronic-rest': {
-      mt: ['mt_soft', 'mt_maitland', 'mt_neuro'],
-      ex: ['ex_prog', 'ex_strength', 'ex_rehab'],
-    },
-    'cervical-chronic-radicular': {
-      mt: ['mt_neuro', 'mt_mckenzie', 'mt_maitland'],
-      ex: ['ex_prog', 'ex_self', 'ex_rehab'],
-    },
-    'lumbar-acute-movement': {
-      mt: ['mt_maitland', 'mt_mckenzie', 'mt_soft'],
-      ex: ['ex_stab', 'ex_rom', 'ex_self'],
-    },
-    'lumbar-acute-rest': {
-      mt: ['mt_soft', 'mt_maitland', 'mt_neuro'],
-      ex: ['ex_stab', 'ex_stretch', 'ex_self'],
-    },
-    'lumbar-acute-radicular': {
-      mt: ['mt_neuro', 'mt_mckenzie', 'mt_maitland'],
-      ex: ['ex_stab', 'ex_self', 'ex_rom'],
-    },
-    'lumbar-chronic-movement': {
-      mt: ['mt_hvla', 'mt_maitland', 'mt_mulligan'],
-      ex: ['ex_strength', 'ex_wbear', 'ex_prog'],
-    },
-    'lumbar-chronic-rest': {
-      mt: ['mt_soft', 'mt_maitland', 'mt_mckenzie'],
-      ex: ['ex_prog', 'ex_strength', 'ex_rehab'],
-    },
-    'lumbar-chronic-radicular': {
-      mt: ['mt_neuro', 'mt_mckenzie', 'mt_maitland'],
-      ex: ['ex_prog', 'ex_self', 'ex_rehab'],
-    },
-  };
-
-  /* ── Descriptions ── */
-  const DESCS = {
-    mt_maitland:  '관절 유동성 회복을 위한 진동성 수동 기법 (Grade I–IV)',
-    mt_hvla:      '단순 고속 저진폭의 교정 기법으로 관절 가동성 즉각 개선',
-    mt_soft:      '근막·근육 이완을 통해 통증 민감도를 낮추는 연조직 기법',
-    mt_neuro:     '말초신경의 활주·긴장 회복을 위한 신경계 가동 기법',
-    mt_mckenzie:  '방향성 선호 반복 운동 기반의 평가·치료 패턴',
-    mt_mulligan:  'NAGs·SNAGs 등 동적 기법으로 통증 없는 움직임 유도',
-    ex_stab:      '심층 안정화 근육군 활성화로 척추 분절 조절 훈련',
-    ex_prog:      '점진적 기계적 부하로 조직 적응 및 내성 강화',
-    ex_strength:  '주요 근군의 저항 운동을 통해 기능적 근력 향상',
-    ex_rom:       '관절의 정상 가동범위 확보를 위한 능동·보조 운동',
-    ex_stretch:   '단축된 근육·결합조직의 유연성 회복 운동',
-    ex_self:      '환자 스스로 수행하는 자가 가동술 및 관리 운동',
-    ex_wbear:     '기능적 체중 부하 자세에서의 통합 운동 훈련',
-    ex_rehab:     '일상생활 복귀를 위한 기능 재훈련 및 운동 복합 프로그램',
-  };
 
   const REGION_LABEL   = { cervical: '경추', lumbar: '요추' };
   const STAGE_LABEL    = { acute: '급성', chronic: '만성' };
@@ -810,51 +817,103 @@
   }
 
   /* ══════════════════════════════════════
-     RECOMMENDATION LOGIC
+     RECOMMENDATION LOGIC (AI)
   ══════════════════════════════════════ */
-  function showRecommendation() {
-    const key = `${selectedRegion}-${selectedStage}-${selectedSymptom}`;
-    const rule = RULES[key];
-    const settings = loadSettings();
-    const userMT = new Set(settings ? settings.mt : [...selectedMT]);
-    const userEX = new Set(settings ? settings.ex : [...selectedEX]);
-
-    // Filter by user settings, preserve priority, limit MT=2 EX=3
-    const mtRecs = rule.mt.filter(id => userMT.has(id)).slice(0, 2);
-    const exRecs = rule.ex.filter(id => userEX.has(id)).slice(0, 3);
-
+  async function showRecommendation() {
     // Combo label
     document.getElementById('combo-label').textContent =
       `${REGION_LABEL[selectedRegion]} · ${STAGE_LABEL[selectedStage]} · ${SYMPTOM_LABEL[selectedSymptom]}`;
 
+    // Show screen 3 in loading state
+    goScreen3();
+    setRecLoading(true);
+
+    // Build human-readable label lists for the API
+    const settings = loadSettings();
+    const userMTIds = settings ? settings.mt : [...selectedMT];
+    const userEXIds = settings ? settings.ex : [...selectedEX];
+    const preferredMT = userMTIds.map(id => getLabel(id));
+    const preferredEX = userEXIds.map(id => getLabel(id));
+
+    const payload = {
+      region:      REGION_LABEL[selectedRegion],
+      acuity:      STAGE_LABEL[selectedStage],
+      symptom:     SYMPTOM_LABEL[selectedSymptom],
+      preferredMT,
+      preferredEX,
+    };
+
+    try {
+      const response = await fetch('/api/recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (result.error) throw new Error(result.error);
+
+      setRecLoading(false);
+      renderAIResult(result);
+    } catch (err) {
+      setRecLoading(false);
+      showRecError();
+      console.error('AI 추천 오류:', err);
+    }
+  }
+
+  function setRecLoading(on) {
+    document.getElementById('rec-loading').classList.toggle('visible', on);
+    document.getElementById('rec-content-area').classList.toggle('hidden', on);
+    document.getElementById('rec-error').classList.remove('visible');
+    document.getElementById('btn-retry').style.display = 'none';
+  }
+
+  function showRecError() {
+    document.getElementById('rec-content-area').classList.add('hidden');
+    document.getElementById('rec-error').classList.add('visible');
+    document.getElementById('btn-retry').style.display = 'block';
+  }
+
+  function renderAIResult(result) {
     // Render MT
     const mtList = document.getElementById('mt-rec-list');
     mtList.innerHTML = '';
-    if (mtRecs.length === 0) {
-      mtList.innerHTML = `<div class="no-rec">설정된 기법 중 해당 조합에 맞는 Manual Therapy가 없습니다.</div>`;
+    const mtItems = result.manualTherapy || [];
+    if (mtItems.length === 0) {
+      mtList.innerHTML = `<div class="no-rec">해당 조합에 맞는 Manual Therapy 추천이 없습니다.</div>`;
     } else {
-      mtRecs.forEach((id, i) => {
-        mtList.appendChild(makeRecItem(i + 1, getLabel(id), DESCS[id]));
+      mtItems.forEach((item, i) => {
+        mtList.appendChild(makeRecItem(i + 1, item.technique, item.reason));
       });
     }
 
     // Render EX
     const exList = document.getElementById('ex-rec-list');
     exList.innerHTML = '';
-    if (exRecs.length === 0) {
-      exList.innerHTML = `<div class="no-rec">설정된 기법 중 해당 조합에 맞는 Exercise가 없습니다.</div>`;
+    const exItems = result.exercise || [];
+    if (exItems.length === 0) {
+      exList.innerHTML = `<div class="no-rec">해당 조합에 맞는 Exercise 추천이 없습니다.</div>`;
     } else {
-      exRecs.forEach((id, i) => {
-        exList.appendChild(makeRecItem(i + 1, getLabel(id), DESCS[id]));
+      exItems.forEach((item, i) => {
+        exList.appendChild(makeRecItem(i + 1, item.name, item.description));
       });
     }
 
-    // Warning if partial
-    if (mtRecs.length === 0 || exRecs.length === 0) {
-      // already shown via no-rec
+    // Render clinical note
+    const noteWrap = document.getElementById('clinical-note-wrap');
+    noteWrap.innerHTML = '';
+    if (result.clinicalNote) {
+      noteWrap.innerHTML = `
+        <div class="clinical-note-block">
+          <div class="clinical-note-label">임상 메모</div>
+          ${result.clinicalNote}
+        </div>`;
     }
-
-    goScreen3();
   }
 
   function makeRecItem(num, name, desc) {
