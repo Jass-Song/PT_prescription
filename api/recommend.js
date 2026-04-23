@@ -102,3 +102,4 @@ Exercise 각 운동마다 반드시 포함:
     return res.status(500).json({ error: '추천 생성 실패: ' + error.message });
   }
 }
+// rebuild trigger
