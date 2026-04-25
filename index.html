@@ -493,12 +493,16 @@
     }
     .position-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
     .position-label {
-      font-size: 0.72rem;
+      font-size: 0.75rem;
       font-weight: 700;
-      color: #64748b;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-      margin-bottom: 3px;
+      color: #475569;
+      margin-bottom: 2px;
+    }
+    .position-sublabel {
+      font-size: 0.68rem;
+      color: #94a3b8;
+      font-style: italic;
+      margin-bottom: 4px;
     }
     .position-value { font-size: 0.87rem; color: #334155; line-height: 1.5; }
     .position-divider { height: 1px; background: #e2e8f0; margin: 0 16px; }
@@ -529,15 +533,49 @@
     }
     .card-section { padding: 12px 20px 4px; }
     .card-section-title {
-      font-size: 0.78rem;
+      font-size: 0.82rem;
       font-weight: 700;
-      color: #64748b;
-      margin-bottom: 6px;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
+      color: #475569;
+      margin-bottom: 8px;
     }
     .card-section-value { font-size: 0.87rem; color: #334155; line-height: 1.6; }
     .card-section-warn { font-size: 0.87rem; color: #b45309; line-height: 1.6; }
+    .card-bullet-list {
+      margin: 0;
+      padding: 0 0 0 20px;
+      font-size: 0.87rem;
+      color: #334155;
+      line-height: 1.8;
+    }
+    .card-bullet-list li { margin-bottom: 2px; }
+    .feedback-ok {
+      font-size: 0.85rem;
+      color: #065f46;
+      background: #d1fae5;
+      border-left: 3px solid #10b981;
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      line-height: 1.55;
+    }
+    .feedback-warn {
+      font-size: 0.85rem;
+      color: #92400e;
+      background: #fef3c7;
+      border-left: 3px solid #f59e0b;
+      border-radius: 6px;
+      padding: 8px 12px;
+      line-height: 1.55;
+    }
+    .cue-text {
+      font-style: italic;
+      color: #1e40af;
+      background: #eff6ff;
+      border-radius: 6px;
+      padding: 8px 12px;
+      line-height: 1.55;
+      font-size: 0.87rem;
+    }
 
     /* ── Mobile tweaks ── */
     @media (max-width: 380px) {
@@ -1003,6 +1041,30 @@
     document.getElementById('btn-retry').style.display = 'block';
   }
 
+  function parseFeedback(text) {
+    if (!text) return { ok: '', warn: '' };
+    const warnMatch = text.match(/주의\s*신호\s*[:：]/);
+    if (!warnMatch) return { ok: text.replace(/올바른\s*반응\s*[:：]\s*/i, '').trim(), warn: '' };
+    const warnIdx = text.indexOf(warnMatch[0]);
+    const ok = text.substring(0, warnIdx).replace(/올바른\s*반응\s*[:：]\s*/i, '').replace(/\.\s*$/, '').trim();
+    const warn = text.substring(warnIdx + warnMatch[0].length).replace(/\.\s*$/, '').trim();
+    return { ok, warn };
+  }
+
+  function renderMuscles(muscles) {
+    if (!muscles || muscles.length === 0) return '<p class="card-section-value">—</p>';
+    return `<ul class="card-bullet-list">${muscles.map(m => `<li>${m}</li>`).join('')}</ul>`;
+  }
+
+  function renderFeedback(text) {
+    const { ok, warn } = parseFeedback(text);
+    let html = '';
+    if (ok) html += `<div class="feedback-ok">✅ <strong>올바른 반응:</strong> ${ok}</div>`;
+    if (warn) html += `<div class="feedback-warn">⚠️ <strong>주의신호:</strong> ${warn}</div>`;
+    if (!html && text) html = `<div class="feedback-ok">✅ ${text}</div>`;
+    return html || '<p class="card-section-value">—</p>';
+  }
+
   function renderAIResult(result) {
     if (result.sessionSummary) {
       saveSessionHistory(result.sessionSummary);
@@ -1034,7 +1096,8 @@
           <div class="position-row">
             <span class="position-icon">🧑‍⚕️</span>
             <div>
-              <div class="position-label">환자 자세</div>
+              <div class="position-label">① 환자 자세 세팅</div>
+              <div class="position-sublabel">환자를 어디에, 어떻게 눕히나요?</div>
               <div class="position-value">${item.patientPosition}</div>
             </div>
           </div>
@@ -1042,7 +1105,8 @@
           <div class="position-row">
             <span class="position-icon">👐</span>
             <div>
-              <div class="position-label">손 위치</div>
+              <div class="position-label">② 치료사 손 배치</div>
+              <div class="position-sublabel">손을 어디에, 어떻게 놓나요?</div>
               <div class="position-value">${item.therapistHands}</div>
             </div>
           </div>
@@ -1054,16 +1118,16 @@
 
         <div class="card-detail-section">
           <div class="card-section">
-            <div class="card-section-title">📋 동작</div>
+            <div class="card-section-title">📋 시술 방법 — 어떻게 진행하나요?</div>
             <div class="card-section-value">${item.movement}</div>
           </div>
           <div class="card-section">
-            <div class="card-section-title">🎯 목표 구조물</div>
-            <div class="card-section-value">${(item.targetMuscles || []).join(', ')}</div>
+            <div class="card-section-title">🎯 목표 구조물 — 어디에 작용하나요?</div>
+            ${renderMuscles(item.targetMuscles)}
           </div>
           <div class="card-section" style="padding-bottom:14px">
-            <div class="card-section-title">✅ 환자 피드백</div>
-            <div class="card-section-warn">${item.patientFeedback}</div>
+            <div class="card-section-title">🔍 환자 반응 확인 — 잘 되고 있는 건가요?</div>
+            ${renderFeedback(item.patientFeedback)}
           </div>
         </div>`;
         mtList.appendChild(card);
@@ -1098,7 +1162,8 @@
           <div class="position-row">
             <span class="position-icon">🧑‍⚕️</span>
             <div>
-              <div class="position-label">시작 자세</div>
+              <div class="position-label">① 시작 자세 세팅</div>
+              <div class="position-sublabel">환자를 어떻게 준비시키나요?</div>
               <div class="position-value">${item.startPosition}</div>
             </div>
           </div>
@@ -1106,7 +1171,8 @@
           <div class="position-row">
             <span class="position-icon">👐</span>
             <div>
-              <div class="position-label">치료사 가이드</div>
+              <div class="position-label">② 치료사 역할</div>
+              <div class="position-sublabel">어떻게 보조하고 가이드하나요?</div>
               <div class="position-value">${item.therapistGuide}</div>
             </div>
           </div>
@@ -1118,20 +1184,20 @@
 
         <div class="card-detail-section">
           <div class="card-section">
-            <div class="card-section-title">📋 동작</div>
+            <div class="card-section-title">📋 동작 방법 — 어떻게 수행하나요?</div>
             <div class="card-section-value">${item.movement}</div>
           </div>
           <div class="card-section">
-            <div class="card-section-title">⏱ 처방</div>
+            <div class="card-section-title">⏱ 운동 처방 — 몇 세트, 몇 회 하나요?</div>
             <div class="card-section-value">${item.sets}</div>
           </div>
           <div class="card-section">
-            <div class="card-section-title">🎯 목표 근육</div>
-            <div class="card-section-value">${(item.targetMuscles || []).join(', ')}</div>
+            <div class="card-section-title">🎯 목표 근육 — 어디에 작용하나요?</div>
+            ${renderMuscles(item.targetMuscles)}
           </div>
           <div class="card-section" style="padding-bottom:14px">
-            <div class="card-section-title">💬 큐잉</div>
-            <div class="card-section-warn">"${item.cue}"</div>
+            <div class="card-section-title">💬 환자 큐잉 — 환자에게 어떻게 말하나요?</div>
+            <div class="cue-text">"${item.cue}"</div>
           </div>
         </div>`;
         exList.appendChild(card);
