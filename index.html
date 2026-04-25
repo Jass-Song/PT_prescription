@@ -919,8 +919,8 @@
       const validIds = new Set(MT_OPTIONS.map(o => o.id));
       const cleanMT = (saved.mt || []).filter(id => validIds.has(id));
       if (cleanMT.length !== (saved.mt || []).length) {
-        // 구형 ID 제거 후 즉시 저장
-        localStorage.setItem('pt_settings', JSON.stringify({ mt: cleanMT }));
+        // 구형 ID 제거 후 즉시 저장 — ex 필드 보존
+        localStorage.setItem('pt_settings', JSON.stringify({ mt: cleanMT, ex: saved.ex || [] }));
       }
       cleanMT.forEach(id => selectedMT.add(id));
 
