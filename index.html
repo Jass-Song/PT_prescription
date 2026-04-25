@@ -1134,13 +1134,15 @@
 
     // ID 그대로 전송 — API에서 Supabase 조회 시 ID 키 사용
     const settings = loadSettings();
-    const preferredMT = settings ? settings.mt : [...selectedMT];
+    const preferredMT = settings ? (settings.mt || []) : [...selectedMT];
+    const preferredEX = settings ? (settings.ex || []) : [...selectedEX];
 
     const payload = {
       region:      REGION_LABEL[selectedRegion],
       acuity:      STAGE_LABEL[selectedStage],
       symptom:     SYMPTOM_LABEL[selectedSymptom],
       preferredMT,
+      preferredEX,
       sessionHistory: getSessionHistory(),
     };
 
@@ -1290,6 +1292,79 @@
           </div>
         </div>`;
         mtList.appendChild(card);
+      });
+    }
+
+    // ── Exercise 렌더 ──
+    const exBlock = document.getElementById('ex-rec-block');
+    const exList  = document.getElementById('ex-rec-list');
+    exList.innerHTML = '';
+    const exItems = result.exercise || [];
+    if (exItems.length === 0) {
+      exBlock.style.display = 'none';
+    } else {
+      exBlock.style.display = 'block';
+      exItems.forEach((item, idx) => {
+        const rankClass = idx === 0 ? 'rank-1' : idx === 1 ? 'rank-2' : idx === 2 ? 'rank-3' : '';
+        const card = document.createElement('div');
+        card.className = 'result-card';
+        const catInfoAttr = item.categoryInfo
+          ? `data-catinfo='${JSON.stringify(item.categoryInfo).replace(/'/g, "&apos;")}'`
+          : '';
+        const catBtn = item.categoryInfo
+          ? `<button class="btn-category-info" onclick="showCategoryModal(this)" ${catInfoAttr}>📖 원칙 보기</button>`
+          : '';
+        card.innerHTML = `
+        <div class="card-header">
+          <div class="card-rank ${rankClass}">${idx + 1}</div>
+          <div class="card-title-group">
+            <div class="card-name-ko">🏃 ${item.technique}</div>
+            <div class="card-meta">
+              <span class="badge badge-ex">운동 처방</span>
+            </div>
+          </div>
+          ${catBtn}
+        </div>
+
+        <div class="position-box">
+          <div class="position-row">
+            <span class="position-icon">🧑</span>
+            <div>
+              <div class="position-label">① 시작 자세</div>
+              <div class="position-sublabel">어떤 자세로 시작하나요?</div>
+              <div class="position-value">${item.patientPosition || '—'}</div>
+            </div>
+          </div>
+          <div class="position-divider"></div>
+          <div class="position-row">
+            <span class="position-icon">🔁</span>
+            <div>
+              <div class="position-label">② 운동 설정</div>
+              <div class="position-sublabel">세트/횟수 또는 핵심 포인트</div>
+              <div class="position-value">${item.therapistHands || '—'}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-expand-btn-wrap">
+          <button class="btn-expand-card" onclick="toggleCardDetail(this)">자세히 보기 ▼</button>
+        </div>
+
+        <div class="card-detail-section">
+          <div class="card-section">
+            <div class="card-section-title">📋 운동 방법 — 어떻게 진행하나요?</div>
+            ${renderMovement(item.movement)}
+          </div>
+          <div class="card-section">
+            <div class="card-section-title">🎯 목표 근육 — 어디에 작용하나요?</div>
+            ${renderMuscles(item.targetMuscles)}
+          </div>
+          <div class="card-section" style="padding-bottom:14px">
+            <div class="card-section-title">🔍 환자 반응 확인 — 잘 되고 있는 건가요?</div>
+            ${renderFeedback(item.patientFeedback)}
+          </div>
+        </div>`;
+        exList.appendChild(card);
       });
     }
 

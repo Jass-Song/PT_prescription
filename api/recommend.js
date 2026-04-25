@@ -21,58 +21,18 @@ const MT_GROUP_LABEL = {
   mt_neuro: '신경가동술',
 };
 
-// 운동 처방 선호 ID → Supabase category 매핑
-const EX_CAT_MAP = {
-  ex_neuro:    ['category_f_therapeutic_exercise'],  // subcategory: Neuromuscular Training
-  ex_strength: ['category_f_therapeutic_exercise'],  // subcategory: Resistance Training + Body Weight Exercise
-  ex_aerobic:  ['category_f_therapeutic_exercise'],  // subcategory: Aerobic Exercise
+// 운동 처방 선호 ID → Supabase category 매핑 (모두 category_exercise01로 통합)
+const EX_CATEGORY_MAP = {
+  ex_neuro:    ['category_exercise01'],
+  ex_strength: ['category_exercise01'],
+  ex_aerobic:  ['category_exercise01'],
 };
 
-// Supabase에서 운동 처방 데이터 조회 (subcategory + body_region 필터)
-async function fetchExercises(preferredEX, bodyRegion) {
-  const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gnusyjnviugpofvaicbv.supabase.co';
-  const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
-  if (!SUPABASE_KEY || preferredEX.length === 0) return [];
-
-  // 선호 ID → subcategory 필터 조건 매핑
-  const subcategoryFilters = [];
-  const subcategoryInList = [];
-
-  if (preferredEX.includes('ex_neuro')) {
-    subcategoryFilters.push('Neuromuscular Training');
-  }
-  if (preferredEX.includes('ex_strength')) {
-    subcategoryFilters.push('Resistance Training', 'Body Weight Exercise');
-  }
-  if (preferredEX.includes('ex_aerobic')) {
-    subcategoryFilters.push('Aerobic Exercise');
-  }
-
-  if (subcategoryFilters.length === 0) return [];
-
-  // body_region 필터 (cervical / lumbar)
-  const regionParam = bodyRegion ? `&body_region=eq.${encodeURIComponent(bodyRegion)}` : '';
-  const subcategoryParam = subcategoryFilters.length === 1
-    ? `subcategory=eq.${encodeURIComponent(subcategoryFilters[0])}`
-    : `subcategory=in.(${subcategoryFilters.map(s => encodeURIComponent(s)).join(',')})`;
-
-  const url = `${SUPABASE_URL}/rest/v1/techniques?is_active=eq.true&${subcategoryParam}${regionParam}` +
-    `&select=id,name_ko,name_en,abbreviation,subcategory,body_region,description,technique_steps,clinical_notes,absolute_contraindications,evidence_level,key_references`;
-
-  try {
-    const res = await fetch(url, {
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`
-      }
-    });
-    if (!res.ok) return [];
-    const data = await res.json();
-    return (data || []).filter(t => t.name_ko);
-  } catch {
-    return [];
-  }
-}
+const EX_PREFERENCE_LABEL = {
+  ex_neuro:    '신경근·운동조절 훈련 (Motor Control)',
+  ex_strength: '근력·저항성 운동 (Strength/Resistance)',
+  ex_aerobic:  '유산소·활동성 운동 (Aerobic)',
+};
 
 // Supabase에서 is_active=true 테크닉 상세 데이터 조회
 async function fetchActiveTechniques(categories) {
@@ -180,26 +140,37 @@ export default async function handler(req, res) {
 
   // preferredMT ID → Supabase category 변환
   const mtCategories = [...new Set(preferredMT.flatMap(id => MT_CATEGORY_MAP[id] || []))];
+  const exCategories = [...new Set(preferredEX.flatMap(id => EX_CATEGORY_MAP[id] || []))];
 
-  // Supabase에서 is_active=true 테크닉 + 카테고리 원칙 + 운동 처방 조회
-  let activeMT = [], categoryPrinciplesMap = {}, activeEX = [];
+  // Supabase에서 is_active=true 테크닉 + 카테고리 원칙 병렬 조회
+  let activeMT = [], activeEX = [], categoryPrinciplesMap = {};
   try {
-    [activeMT, categoryPrinciplesMap, activeEX] = await Promise.all([
-      fetchActiveTechniques(mtCategories),
-      fetchCategoryPrinciples(),
-      fetchExercises(preferredEX, region),
-    ]);
+    const fetches = [fetchActiveTechniques(mtCategories), fetchCategoryPrinciples()];
+    if (exCategories.length > 0) fetches.push(fetchActiveTechniques(exCategories));
+    const results = await Promise.all(fetches);
+    activeMT = results[0];
+    categoryPrinciplesMap = results[1];
+    activeEX = results[2] || [];
   } catch {
     // Supabase 조회 실패 시 LLM이 자체 판단으로 추천
   }
 
-  // 기법에 고유 인덱스 ID 부여 — LLM이 ID로 선택하므로 이름 매칭 오류 없음
+  // MT 기법에 고유 인덱스 ID 부여
   const indexedTechniques = new Map(); // 'MT-001' → technique object
   let counter = 1;
   activeMT.forEach(t => {
     const id = `MT-${String(counter++).padStart(3, '0')}`;
     t._promptId = id;
     indexedTechniques.set(id, t);
+  });
+
+  // EX 기법에 고유 인덱스 ID 부여
+  const indexedExercises = new Map(); // 'EX-001' → technique object
+  let exCounter = 1;
+  activeEX.forEach(t => {
+    const id = `EX-${String(exCounter++).padStart(3, '0')}`;
+    t._promptId = id;
+    indexedExercises.set(id, t);
   });
 
   // 허용 목록 텍스트 — MT 그룹별로 분리하여 LLM에 전달 (category 필드 숨김)
@@ -223,6 +194,14 @@ export default async function handler(req, res) {
     allowedMTText = `선호 기법: ${preferredMT.join(', ') || '지정 없음'}`;
   }
 
+  // 운동 처방 허용 목록 텍스트
+  const preferenceLabels = preferredEX.map(id => EX_PREFERENCE_LABEL[id]).filter(Boolean);
+  const allowedEXText = activeEX.length > 0
+    ? `\n\n=== 운동 처방 목록 (환자 상태 + 치료사 선호에 맞춰 3개 선택) ===\n` +
+      `치료사 선호 유형: ${preferenceLabels.join(', ') || '전체'}\n\n` +
+      activeEX.map(t => formatTechniqueForPrompt(t, '운동처방')).join('\n\n')
+    : '';
+
   // 세션 히스토리 요약 (중복 추천 방지)
   const historyText = sessionHistory.length > 0
     ? `\n\n이전 세션 기록 (중복 추천 피할 것):\n${sessionHistory.map((h, i) => `${i+1}. ${JSON.stringify(h)}`).join('\n')}`
@@ -245,26 +224,33 @@ export default async function handler(req, res) {
    - technique 필드(기법명)에도 신체 부위는 반드시 영어 병기. 예: "경추(cervical spine) 중앙 PA 가동술"
 3. movement 필드는 반드시 "1. [동작] 2. [동작] 3. [동작] 4. [동작]" 번호 단계 형식으로 작성.
    예: "1. 양손을 극돌기 위에 올려놓기 2. 천천히 아래 방향으로 압력 가하기 3. 환자 반응 보며 5초 유지 4. 서서히 압력 제거"
-4. 아래 기법 목록의 DB 정보(환자자세·치료사위치·접촉부위·방향·시술단계)를 기반으로 각 필드를 재작성하세요.
-   - patientPosition: DB 환자자세를 쉬운 한국어로 변환 (25자 이내)
-   - therapistHands: DB "치료사위치 + 접촉부위"를 결합하여 쉬운 한국어로 (25자 이내)
-   - movement: DB 시술단계를 번호 형식으로 요약 (각 단계 15자 이내)
-   - targetMuscles: DB에 없음 — 기법명과 신체부위 기반으로 임상 지식에서 추론
-5. DB 정보가 없는 기법은 선택하지 마세요.
-6. 각 기법의 [MT-XXX] ID를 techniqueId 필드에 정확히 복사하세요. 절대 변형 금지.
-   예: [MT-007] 기법 선택 시 → "techniqueId": "MT-007"`;
+4. MT 기법: DB 정보(환자자세·치료사위치·접촉부위·방향·시술단계)를 기반으로 재작성.
+   - patientPosition: DB 환자자세 → 쉬운 한국어 (25자 이내)
+   - therapistHands: DB "치료사위치 + 접촉부위" 결합 (25자 이내)
+5. 운동 처방 기법: DB 정보(환자자세·방향·시술단계)를 기반으로 재작성.
+   - patientPosition: 운동 시작 자세 → 쉬운 한국어 (25자 이내)
+   - therapistHands: 세트/횟수 또는 핵심 동작 포인트 (25자 이내)
+6. DB 정보가 없는 기법은 선택하지 마세요.
+7. 각 기법의 ID를 techniqueId 필드에 정확히 복사하세요. 절대 변형 금지.
+   MT 기법: [MT-007] → "techniqueId": "MT-007" / EX 기법: [EX-003] → "techniqueId": "EX-003"`;
+
+  // exercise 스키마는 운동 처방 데이터가 있을 때만 포함
+  const exerciseSchema = allowedEXText
+    ? `,\n  "exercise": [\n    {\n      "techniqueId": "EX-001",\n      "technique": "운동명 (10자 이내)",\n      "patientPosition": "시작 자세 (25자 이내)",\n      "therapistHands": "세트/횟수 또는 동작 포인트 (25자 이내)",\n      "movement": "1. [단계] 2. [단계] 3. [단계] 4. [단계]",\n      "targetMuscles": ["한국어(영어)"],\n      "patientFeedback": "올바른 반응: [증상]. 주의신호: [경고]"\n    }\n  ]`
+    : '';
 
   const userPrompt = `환자 정보:
 - 부위: ${region}
 - 시기: ${acuity}
 - 증상 패턴: ${symptom}
 
-${allowedMTText}
+${allowedMTText}${allowedEXText}
 ${historyText}
 
 위 허용 목록에서 환자(부위: ${region}, 시기: ${acuity}, 증상: ${symptom})에게
-각 === 섹션별로 가장 적합한 기법 3개씩 선택하고, DB 정보를 쉬운 한국어로 재작성하여 아래 형식으로만 반환하세요.
-목록에 없는 기법 생성 금지. 각 섹션에서 반드시 정확히 3개씩 (섹션 2개 → 총 6개, 1개 → 총 3개).
+▸ MT: 각 === 섹션별로 정확히 3개씩 선택 (섹션 2개 → 총 6개, 1개 → 총 3개)
+▸ 운동: 치료사 선호 유형과 환자 상태를 고려하여 3개 선택
+DB 정보를 쉬운 한국어로 재작성하여 아래 형식으로만 반환하세요. 목록에 없는 기법 생성 금지.
 
 반환 형식 (JSON 외 출력 금지):
 {
@@ -278,11 +264,11 @@ ${historyText}
       "targetMuscles": ["한국어(영어)", "한국어(영어)"],
       "patientFeedback": "올바른 반응: [증상]. 주의신호: [경고]"
     }
-  ],
+  ]${exerciseSchema},
   "clinicalNote": "임상 핵심 메시지 1~2문장 (100자 이내)"
 }
-manualTherapy는 섹션당 3개 (선택 섹션 수 × 3개), targetMuscles는 최대 3개.
-techniqueId는 [MT-XXX] ID를 그대로 복사 — 기법명과 함께 표기된 대괄호 안의 값.`;
+MT: 섹션당 3개 / 운동처방: 3개 / targetMuscles: 최대 3개
+techniqueId는 [MT-XXX] 또는 [EX-XXX] ID를 그대로 복사.`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -332,7 +318,19 @@ techniqueId는 [MT-XXX] ID를 그대로 복사 — 기법명과 함께 표기된
       }
     });
 
-    result.therapeuticExercise = activeEX;
+    // exercise categoryInfo 부착 (EX 인덱스 ID로 lookup)
+    (result.exercise || []).forEach(item => {
+      const t = indexedExercises.get(item.techniqueId);
+      const catKey = t ? t.category : 'category_exercise01';
+      const catData = categoryPrinciplesMap[catKey];
+      if (catData) {
+        item.categoryInfo = {
+          name_ko: catData.name_ko,
+          name_en: catData.name_en,
+          basic_principles: catData.basic_principles || [],
+        };
+      }
+    });
 
     result.sessionSummary = {
       region,
