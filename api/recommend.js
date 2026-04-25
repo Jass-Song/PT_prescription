@@ -103,9 +103,17 @@ export default async function handler(req, res) {
 반-카타스트로파이징(anti-catastrophizing) 접근을 강조합니다.
 핵심 원칙: "통증 ≠ 손상", "몸은 적응적이다", "Calm things down, then build things back up"
 자세 불균형·정렬 이상 프레임 사용 금지. 공포 유발 표현 금지.
-⚠️ 중요: 아래에 제공된 허용 목록에 없는 기법은 절대 추천하지 마세요.
-간결함이 최우선: 각 필드는 핵심 임상 정보만, 설명·부연 금지.
-응답은 반드시 순수 JSON만 출력하세요. 마크다운 금지.`;
+⚠️ 중요: 아래 허용 목록에 있는 기법만 선택하여 우선순위 순으로 나열하세요. 목록에 없는 기법 생성 절대 금지.
+응답은 반드시 순수 JSON만 출력하세요. 마크다운 금지.
+
+언어 원칙 (반드시 준수):
+1. 자세·동작 설명은 초보 치료사도 바로 이해하는 쉬운 한국어 사용. 한자어·의학 약어 금지.
+   ✗ 반좌위, 복위, 복와위, 전굴, 후굴, 측굴, 촉진, 신연, 거상
+   ✓ 등받이 세워 앉기, 엎드려 눕기, 앞으로 굽히기, 뒤로 젖히기, 옆으로 기울이기, 손으로 부드럽게 누르기, 팔 들어올리기
+2. 해부학 구조물은 반드시 "한국어(영어)" 형식으로 작성.
+   예: 척추기립근(erector spinae), 다열근(multifidus), 후두하근(suboccipital muscles), 요방형근(quadratus lumborum)
+3. movement 필드는 반드시 "1. [동작] 2. [동작] 3. [동작] 4. [동작]" 번호 단계 형식으로 작성.
+   예: "1. 양손을 극돌기 위에 올려놓기 2. 천천히 아래 방향으로 압력 가하기 3. 환자 반응 보며 5초 유지 4. 서서히 압력 제거"`;
 
   // Exercise 섹션은 Supabase에 활성 데이터가 있을 때만 포함
   const hasExData = activeEX.length > 0;
@@ -118,12 +126,12 @@ ${allowedEXText}` : '';
   "exercise": [
     {
       "name": "운동명 (10자 이내)",
-      "startPosition": "시작자세 (15자 이내)",
-      "therapistGuide": "가이드 (20자 이내)",
-      "movement": "동작 (30자 이내)",
-      "sets": "처방 (예: 3×10회)",
-      "targetMuscles": ["근육1", "근육2"],
-      "cue": "환자 큐잉 1문장 (20자 이내)"
+      "startPosition": "쉬운 일상 언어로 시작 자세 (25자 이내)",
+      "therapistGuide": "치료사 역할 설명 (25자 이내)",
+      "movement": "1. [단계] 2. [단계] 3. [단계] 4. [단계] 번호 형식 필수",
+      "sets": "처방 (예: 3×10회, 2세트)",
+      "targetMuscles": ["한국어(영어)", "한국어(영어)"],
+      "cue": "환자에게 말하는 쉬운 큐잉 1문장"
     }
   ]` : '';
 
@@ -137,24 +145,24 @@ ${allowedEXText}` : '';
 ${allowedMTText}${exPromptSection}
 ${historyText}
 
-위 환자에게 적합한 임상 추천을 아래 JSON 형식으로 작성하세요.
-반드시 위의 허용 목록에 있는 기법만 추천하세요. 목록에 없는 기법 추천 금지.
+위 허용 목록에서 환자에게 가장 적합한 기법을 우선순위 순으로 선택하세요.
+목록에 없는 기법 생성 금지. 아래 JSON 형식으로만 반환하세요.
 
-반환 형식 (JSON 외 출력 금지, 설명 금지):
+반환 형식 (JSON 외 출력 금지):
 {
   "manualTherapy": [
     {
       "technique": "기법명 (10자 이내)",
-      "patientPosition": "자세 (15자 이내)",
-      "therapistHands": "손 위치 (20자 이내)",
-      "movement": "방향·강도 (30자 이내)",
-      "targetMuscles": ["구조물1", "구조물2"],
-      "patientFeedback": "정상반응 vs 주의신호 (20자 이내)"
+      "patientPosition": "쉬운 일상 언어로 자세 설명 (25자 이내, 의학 약어 금지)",
+      "therapistHands": "손 배치 위치와 방법 (25자 이내)",
+      "movement": "1. [단계] 2. [단계] 3. [단계] 4. [단계] 번호 형식 필수",
+      "targetMuscles": ["한국어(영어)", "한국어(영어)"],
+      "patientFeedback": "올바른 반응: [증상]. 주의신호: [경고]"
     }
   ]${exSchemaSection},
   "clinicalNote": "임상 핵심 메시지 1~2문장 (100자 이내)"
 }
-manualTherapy는 정확히 3개${exCountNote}, targetMuscles는 최대 2개.`;
+manualTherapy는 정확히 3개${exCountNote}, targetMuscles는 최대 3개.`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {

@@ -548,6 +548,37 @@
       line-height: 1.8;
     }
     .card-bullet-list li { margin-bottom: 2px; }
+    .card-step-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .card-step-list li {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      font-size: 0.87rem;
+      color: #334155;
+      line-height: 1.5;
+    }
+    .card-step-list li::before {
+      content: attr(data-step);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      background: #dbeafe;
+      color: #1e40af;
+      border-radius: 50%;
+      font-size: 0.70rem;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
     .feedback-ok {
       font-size: 0.85rem;
       color: #065f46;
@@ -1056,6 +1087,19 @@
     return `<ul class="card-bullet-list">${muscles.map(m => `<li>${m}</li>`).join('')}</ul>`;
   }
 
+  function renderMovement(text) {
+    if (!text) return '<p class="card-section-value">—</p>';
+    const parts = text.split(/(?=\d+\.\s)/).filter(s => s.trim());
+    if (parts.length <= 1 || !/^\d+\./.test(parts[0].trim())) {
+      return `<p class="card-section-value">${text}</p>`;
+    }
+    const items = parts.map((p, i) => {
+      const content = p.replace(/^\d+\.\s*/, '').trim();
+      return `<li data-step="${i + 1}">${content}</li>`;
+    }).filter(Boolean);
+    return `<ol class="card-step-list">${items.join('')}</ol>`;
+  }
+
   function renderFeedback(text) {
     const { ok, warn } = parseFeedback(text);
     let html = '';
@@ -1119,7 +1163,7 @@
         <div class="card-detail-section">
           <div class="card-section">
             <div class="card-section-title">📋 시술 방법 — 어떻게 진행하나요?</div>
-            <div class="card-section-value">${item.movement}</div>
+            ${renderMovement(item.movement)}
           </div>
           <div class="card-section">
             <div class="card-section-title">🎯 목표 구조물 — 어디에 작용하나요?</div>
@@ -1185,7 +1229,7 @@
         <div class="card-detail-section">
           <div class="card-section">
             <div class="card-section-title">📋 동작 방법 — 어떻게 수행하나요?</div>
-            <div class="card-section-value">${item.movement}</div>
+            ${renderMovement(item.movement)}
           </div>
           <div class="card-section">
             <div class="card-section-title">⏱ 운동 처방 — 몇 세트, 몇 회 하나요?</div>
