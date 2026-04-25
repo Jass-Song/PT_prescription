@@ -75,10 +75,15 @@ export default async function handler(req, res) {
   const exCategories = [...new Set(preferredEX.flatMap(id => EX_CATEGORY_MAP[id] || []))];
 
   // Supabase에서 is_active=true 테크닉만 조회 (IASTM 등 비활성화 자동 제외)
-  const [activeMT, activeEX] = await Promise.all([
-    fetchActiveTechniques(mtCategories),
-    fetchActiveTechniques(exCategories),
-  ]);
+  let activeMT = [], activeEX = [];
+  try {
+    [activeMT, activeEX] = await Promise.all([
+      fetchActiveTechniques(mtCategories),
+      fetchActiveTechniques(exCategories),
+    ]);
+  } catch {
+    // Supabase 조회 실패 시 LLM이 자체 판단으로 추천
+  }
 
   // 허용 목록 텍스트 (LLM에 전달)
   const allowedMTText = activeMT.length > 0
@@ -150,7 +155,7 @@ ${historyText}
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5',
-        max_tokens: 2000,
+        max_tokens: 4096,
         system: systemPrompt,
         messages: [{ role: 'user', content: userPrompt }]
       })
