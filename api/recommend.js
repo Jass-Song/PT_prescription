@@ -23,9 +23,9 @@ const MT_GROUP_LABEL = {
 
 // 운동 처방 선호 ID → Supabase category 매핑
 const EX_CATEGORY_MAP = {
-  ex_neuro:    ['category_exercise01', 'category_f_therapeutic_exercise'],
-  ex_strength: ['category_exercise01', 'category_f_therapeutic_exercise'],
-  ex_aerobic:  ['category_exercise01', 'category_f_therapeutic_exercise'],
+  ex_neuro:    ['category_ex_neuromuscular'],
+  ex_strength: ['category_ex_resistance', 'category_ex_bodyweight'],
+  ex_aerobic:  ['category_ex_aerobic'],
 };
 
 const EX_PREFERENCE_LABEL = {
