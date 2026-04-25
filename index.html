@@ -893,12 +893,10 @@
     goScreen3();
     setRecLoading(true);
 
-    // Build human-readable label lists for the API
+    // ID 그대로 전송 — API에서 Supabase 조회 시 ID 키 사용
     const settings = loadSettings();
-    const userMTIds = settings ? settings.mt : [...selectedMT];
-    const userEXIds = settings ? settings.ex : [...selectedEX];
-    const preferredMT = userMTIds.map(id => getLabel(id));
-    const preferredEX = userEXIds.map(id => getLabel(id));
+    const preferredMT = settings ? settings.mt : [...selectedMT];
+    const preferredEX = settings ? settings.ex : [...selectedEX];
 
     const payload = {
       region:      REGION_LABEL[selectedRegion],
