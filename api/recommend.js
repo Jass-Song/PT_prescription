@@ -72,8 +72,7 @@ ${historyText}
       "cue": "환자 큐잉 멘트"
     }
   ],
-  "clinicalNote": "이 환자에게 특히 중요한 임상 포인트 (KMO 철학 기반)",
-  "sessionSummary": { "region": "${region}", "acuity": "${acuity}", "symptom": "${symptom}", "mt": ${JSON.stringify(preferredMT)}, "ex": ${JSON.stringify(preferredEX)} }
+  "clinicalNote": "이 환자에게 특히 중요한 임상 포인트 (KMO 철학 기반)"
 }`;
 
   try {
@@ -109,6 +108,16 @@ ${historyText}
     }
 
     const result = JSON.parse(jsonMatch[0]);
+
+    // sessionSummary는 서버에서 직접 조립 (LLM에게 맡기지 않음)
+    result.sessionSummary = {
+      region,
+      acuity,
+      symptom,
+      mt: preferredMT,
+      ex: preferredEX
+    };
+
     return res.status(200).json(result);
 
   } catch (err) {
