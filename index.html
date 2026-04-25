@@ -970,13 +970,15 @@
       });
     }
 
-    // Render EX
+    // Render EX — Supabase 운동 데이터 미설정 시 섹션 전체 숨김
+    const exBlock = document.getElementById('ex-rec-block');
     const exList = document.getElementById('ex-rec-list');
     exList.innerHTML = '';
     const exItems = result.exercise || [];
     if (exItems.length === 0) {
-      exList.innerHTML = `<div class="no-rec">해당 조합에 맞는 Exercise 추천이 없습니다.</div>`;
+      exBlock.style.display = 'none';
     } else {
+      exBlock.style.display = '';
       exItems.forEach(item => {
         const card = document.createElement('div');
         card.className = 'rec-card';
