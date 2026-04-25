@@ -31,7 +31,7 @@ async function fetchActiveTechniques(categories) {
 
   const catFilter = categories.map(c => `category.eq.${c}`).join(',');
   const url = `${SUPABASE_URL}/rest/v1/techniques?is_active=eq.true&or=(${catFilter})` +
-    `&select=name_ko,patient_position,therapist_position,contact_point,direction,technique_steps`;
+    `&select=name_ko,category,patient_position,therapist_position,contact_point,direction,technique_steps`;
 
   try {
     const res = await fetch(url, {
@@ -48,6 +48,40 @@ async function fetchActiveTechniques(categories) {
   }
 }
 
+// 카테고리 일반 원칙(basic_principles) 조회
+async function fetchCategoryPrinciples() {
+  const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gnusyjnviugpofvaicbv.supabase.co';
+  const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
+  if (!SUPABASE_KEY) return {};
+
+  const url = `${SUPABASE_URL}/rest/v1/technique_categories?is_active=eq.true` +
+    `&select=category_key,name_ko,name_en,basic_principles`;
+
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`
+      }
+    });
+    if (!res.ok) return {};
+    const data = await res.json();
+    // category_key → { name_ko, name_en, basic_principles } 맵으로 변환
+    return Object.fromEntries((data || []).map(c => [c.category_key, c]));
+  } catch {
+    return {};
+  }
+}
+
+// techniques.category enum → technique_categories.category_key 매핑
+const ENUM_TO_CATEGORY_KEY = {
+  'category_joint_mobilization': 'category_a_joint_mobilization',
+  'category_mulligan':           'category_b_mulligan',
+  'category_mfr':                'category_c_mfr',
+  'category_d_neural':           'category_d_neural',
+  'category_exercise01':         'category_exercise01',
+};
+
 // 기법 객체를 LLM 프롬프트용 텍스트 블록으로 변환
 function formatTechniqueForPrompt(t) {
   const steps = Array.isArray(t.technique_steps)
@@ -55,7 +89,7 @@ function formatTechniqueForPrompt(t) {
     : '';
 
   return [
-    `【${t.name_ko}】`,
+    `【${t.name_ko} | categoryEnum:${t.category}】`,
     `  환자자세: ${t.patient_position || ''}`,
     `  치료사위치: ${t.therapist_position || ''}`,
     `  접촉부위: ${t.contact_point || ''}`,
@@ -92,11 +126,12 @@ export default async function handler(req, res) {
   const exCategories = [...new Set(preferredEX.flatMap(id => EX_CATEGORY_MAP[id] || []))];
 
   // Supabase에서 is_active=true 테크닉만 조회 (IASTM 등 비활성화 자동 제외)
-  let activeMT = [], activeEX = [];
+  let activeMT = [], activeEX = [], categoryPrinciplesMap = {};
   try {
-    [activeMT, activeEX] = await Promise.all([
+    [activeMT, activeEX, categoryPrinciplesMap] = await Promise.all([
       fetchActiveTechniques(mtCategories),
       fetchActiveTechniques(exCategories),
+      fetchCategoryPrinciples(),
     ]);
   } catch {
     // Supabase 조회 실패 시 LLM이 자체 판단으로 추천
@@ -179,6 +214,7 @@ ${historyText}
   "manualTherapy": [
     {
       "technique": "기법명 (10자 이내)",
+      "categoryEnum": "입력 데이터의 categoryEnum 값을 그대로 복사",
       "patientPosition": "쉬운 일상 언어로 자세 설명 (25자 이내, 의학 약어 금지)",
       "therapistHands": "손 배치 위치와 방법 (25자 이내)",
       "movement": "1. [단계] 2. [단계] 3. [단계] 4. [단계] 번호 형식 필수",
@@ -226,6 +262,20 @@ manualTherapy는 정확히 3개${exCountNote}, targetMuscles는 최대 3개.`;
 
     // exercise 데이터가 없으면 빈 배열 보장 (Supabase 미설정 시 LLM이 임의 생성하지 않도록)
     if (!hasExData) result.exercise = [];
+
+    // 각 기법에 카테고리 원칙 attach
+    (result.manualTherapy || []).forEach(item => {
+      const categoryKey = ENUM_TO_CATEGORY_KEY[item.categoryEnum] || item.categoryEnum;
+      const catData = categoryPrinciplesMap[categoryKey];
+      if (catData) {
+        item.categoryInfo = {
+          name_ko: catData.name_ko,
+          name_en: catData.name_en,
+          basic_principles: catData.basic_principles || [],
+        };
+      }
+      delete item.categoryEnum;
+    });
 
     // sessionSummary는 서버에서 직접 조립 (LLM에게 맡기지 않음)
     result.sessionSummary = {
