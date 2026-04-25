@@ -1146,6 +1146,8 @@
       sessionHistory: getSessionHistory(),
     };
 
+    console.log('[DEBUG] payload →', JSON.stringify(payload, null, 2));
+
     try {
       const response = await fetch('/api/recommend', {
         method: 'POST',
@@ -1159,6 +1161,13 @@
 
       const result = await response.json();
       if (result.error) throw new Error(result.error);
+
+      console.log('[DEBUG] API response →', JSON.stringify({
+        manualTherapy_count: (result.manualTherapy || []).length,
+        exercise_count: (result.exercise || []).length,
+        exercise_raw: result.exercise,
+        clinicalNote: result.clinicalNote,
+      }, null, 2));
 
       setRecLoading(false);
       renderAIResult(result);

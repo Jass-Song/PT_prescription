@@ -151,9 +151,12 @@ export default async function handler(req, res) {
     activeMT = results[0];
     categoryPrinciplesMap = results[1];
     activeEX = results[2] || [];
-  } catch {
-    // Supabase 조회 실패 시 LLM이 자체 판단으로 추천
+  } catch (e) {
+    console.error('[DEBUG] Supabase fetch error:', e);
   }
+
+  console.log('[DEBUG] preferredMT:', preferredMT, '| mtCategories:', mtCategories, '| activeMT count:', activeMT.length);
+  console.log('[DEBUG] preferredEX:', preferredEX, '| exCategories:', exCategories, '| activeEX count:', activeEX.length);
 
   // MT 기법에 고유 인덱스 ID 부여
   const indexedTechniques = new Map(); // 'MT-001' → technique object
@@ -303,6 +306,7 @@ techniqueId는 [MT-XXX] 또는 [EX-XXX] ID를 그대로 복사.`;
     }
 
     const result = JSON.parse(jsonMatch[0]);
+    console.log('[DEBUG] LLM result keys:', Object.keys(result), '| exercise count:', (result.exercise || []).length, '| manualTherapy count:', (result.manualTherapy || []).length);
 
     // techniqueId(인덱스 ID)로 기법 lookup → category 확보 → categoryInfo 부착
     (result.manualTherapy || []).forEach(item => {
