@@ -40,32 +40,38 @@ const REGION_BODY_REGION_MAP = {
   '요추': ['lumbar', 'sacroiliac'],
 };
 
-// Supabase에서 is_active=true 테크닉 상세 데이터 조회 (body_region 필터 적용)
+// Supabase에서 is_active=true 테크닉 상세 데이터 조회
+// bodyRegions 필터로 관련 부위만 조회하되, 결과가 0이면 필터 없이 재조회 (body_region이 NULL인 기법 포함)
 async function fetchActiveTechniques(categories, bodyRegions = []) {
   const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gnusyjnviugpofvaicbv.supabase.co';
   const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
   if (!SUPABASE_KEY || categories.length === 0) return [];
 
   const catFilter = categories.map(c => `category.eq.${c}`).join(',');
-  const regionFilter = bodyRegions.length > 0
-    ? `&body_region=in.(${bodyRegions.join(',')})`
-    : '';
-  const url = `${SUPABASE_URL}/rest/v1/techniques?is_active=eq.true&or=(${catFilter})${regionFilter}` +
-    `&select=name_ko,category,patient_position,therapist_position,contact_point,direction,technique_steps`;
+  const selectFields = `name_ko,category,patient_position,therapist_position,contact_point,direction,technique_steps`;
+  const headers = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` };
 
-  try {
-    const res = await fetch(url, {
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`
-      }
-    });
-    if (!res.ok) return [];
-    const data = await res.json();
-    return (data || []).filter(t => t.name_ko);
-  } catch {
-    return [];
+  const query = async (extraFilter = '') => {
+    const url = `${SUPABASE_URL}/rest/v1/techniques?is_active=eq.true&or=(${catFilter})${extraFilter}&select=${selectFields}`;
+    try {
+      const res = await fetch(url, { headers });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return (data || []).filter(t => t.name_ko);
+    } catch {
+      return [];
+    }
+  };
+
+  // 1차: body_region 필터 적용
+  if (bodyRegions.length > 0) {
+    const filtered = await query(`&body_region=in.(${bodyRegions.join(',')})`);
+    if (filtered.length > 0) return filtered;
+    // body_region이 NULL인 기존 기법이 걸러졌을 가능성 → 필터 없이 재조회
   }
+
+  // 2차: 필터 없이 전체 조회 (LLM이 region context로 선택)
+  return query();
 }
 
 // 카테고리 일반 원칙(basic_principles) 조회
@@ -293,8 +299,8 @@ techniqueId는 [MT-XXX] 또는 [EX-XXX] ID를 그대로 복사.`;
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5',
-        max_tokens: 2048,
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 4096,
         system: systemPrompt,
         messages: [{ role: 'user', content: userPrompt }]
       })
@@ -316,7 +322,13 @@ techniqueId는 [MT-XXX] 또는 [EX-XXX] ID를 그대로 복사.`;
       return res.status(502).json({ error: 'AI 응답 파싱 오류' });
     }
 
-    const result = JSON.parse(jsonMatch[0]);
+    let result;
+    try {
+      result = JSON.parse(jsonMatch[0]);
+    } catch (parseErr) {
+      console.error('JSON.parse 실패:', parseErr.message, '| 원문:', rawText.slice(0, 400));
+      return res.status(502).json({ error: 'AI 응답 파싱 오류' });
+    }
     // techniqueId(인덱스 ID)로 기법 lookup → category 확보 → categoryInfo 부착
     (result.manualTherapy || []).forEach(item => {
       const t = indexedTechniques.get(item.techniqueId);
