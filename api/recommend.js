@@ -51,27 +51,19 @@ async function fetchActiveTechniques(categories, bodyRegions = []) {
   const selectFields = `name_ko,category,patient_position,therapist_position,contact_point,direction,technique_steps`;
   const headers = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` };
 
-  const query = async (extraFilter = '') => {
-    const url = `${SUPABASE_URL}/rest/v1/techniques?is_active=eq.true&or=(${catFilter})${extraFilter}&select=${selectFields}`;
-    try {
-      const res = await fetch(url, { headers });
-      if (!res.ok) return [];
-      const data = await res.json();
-      return (data || []).filter(t => t.name_ko);
-    } catch {
-      return [];
-    }
-  };
+  const regionFilter = bodyRegions.length > 0
+    ? `&body_region=in.(${bodyRegions.join(',')})`
+    : '';
+  const url = `${SUPABASE_URL}/rest/v1/techniques?is_active=eq.true&or=(${catFilter})${regionFilter}&select=${selectFields}`;
 
-  // 1차: body_region 필터 적용
-  if (bodyRegions.length > 0) {
-    const filtered = await query(`&body_region=in.(${bodyRegions.join(',')})`);
-    if (filtered.length > 0) return filtered;
-    // body_region이 NULL인 기존 기법이 걸러졌을 가능성 → 필터 없이 재조회
+  try {
+    const res = await fetch(url, { headers });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data || []).filter(t => t.name_ko);
+  } catch {
+    return [];
   }
-
-  // 2차: 필터 없이 전체 조회 (LLM이 region context로 선택)
-  return query();
 }
 
 // LLM 호출 + JSON 파싱 헬퍼 (실패 시 null 반환)
