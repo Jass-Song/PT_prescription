@@ -324,6 +324,7 @@ techniqueId는 [MT-XXX] 또는 [EX-XXX] ID를 그대로 복사.`;
       const catData = catKey ? categoryPrinciplesMap[catKey] : null;
       if (catData) {
         item.categoryInfo = {
+          category_key: catKey,
           name_ko: catData.name_ko,
           name_en: catData.name_en,
           basic_principles: catData.basic_principles || [],
@@ -338,6 +339,7 @@ techniqueId는 [MT-XXX] 또는 [EX-XXX] ID를 그대로 복사.`;
       const catData = categoryPrinciplesMap[catKey];
       if (catData) {
         item.categoryInfo = {
+          category_key: catKey,
           name_ko: catData.name_ko,
           name_en: catData.name_en,
           basic_principles: catData.basic_principles || [],

@@ -707,6 +707,167 @@
       .choice-grid { grid-template-columns: 1fr; }
       .choice-grid-3 { grid-template-columns: 1fr; }
     }
+
+    /* ── Feedback Button ── */
+    .feedback-btn-wrap {
+      padding: 12px 16px 4px;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .btn-feedback {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 14px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #92400e;
+      background: #fef3c7;
+      border: 1px solid #fcd34d;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-feedback:hover { background: #fde68a; border-color: #f59e0b; }
+    .btn-feedback.done {
+      color: #166534;
+      background: #dcfce7;
+      border-color: #86efac;
+      cursor: default;
+    }
+
+    /* ── Feedback Modal ── */
+    .fb-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.55);
+      z-index: 1000;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .fb-modal-overlay.open { display: flex; }
+    .fb-modal {
+      background: #fff;
+      border-radius: 20px 20px 0 0;
+      width: 100%;
+      max-width: 480px;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 0 0 32px;
+      animation: slideUp 0.25s ease;
+    }
+    .fb-modal-header {
+      position: sticky;
+      top: 0;
+      background: #fff;
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid #f1f5f9;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .fb-modal-title { font-size: 1rem; font-weight: 700; color: #1a1a2e; }
+    .fb-modal-technique {
+      font-size: 0.82rem;
+      color: #64748b;
+      margin-top: 3px;
+    }
+    .fb-modal-close {
+      background: #f1f5f9;
+      border: none;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      font-size: 1rem;
+      cursor: pointer;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #64748b;
+    }
+    .fb-modal-close:hover { background: #e2e8f0; }
+    .fb-modal-body { padding: 16px 20px 0; display: flex; flex-direction: column; gap: 16px; }
+    .fb-section-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 6px;
+    }
+    .fb-context-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .fb-chip {
+      padding: 4px 12px;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      color: #334155;
+      font-weight: 500;
+    }
+    .fb-star-row { display: flex; gap: 6px; }
+    .fb-star {
+      font-size: 1.8rem;
+      color: #d1d5db;
+      cursor: pointer;
+      transition: color 0.1s, transform 0.1s;
+      line-height: 1;
+    }
+    .fb-star.on { color: #f59e0b; }
+    .fb-star:hover { transform: scale(1.15); }
+    .fb-notes {
+      width: 100%;
+      min-height: 70px;
+      padding: 10px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-family: inherit;
+      resize: none;
+      box-sizing: border-box;
+      color: #334155;
+    }
+    .fb-notes:focus { outline: none; border-color: #818cf8; }
+    .fb-save-btn {
+      width: 100%;
+      padding: 13px;
+      background: #4f46e5;
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .fb-save-btn:hover { background: #4338ca; }
+    .fb-save-btn:disabled { background: #a5b4fc; cursor: default; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #1e293b;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 24px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 2000;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
   </style>
 </head>
 <body>
@@ -723,6 +884,43 @@
     <div class="cat-principle-list" id="catPrincipleList"></div>
   </div>
 </div>
+
+<!-- ── Feedback Modal ── -->
+<div class="fb-modal-overlay" id="fbModalOverlay" onclick="closeFeedbackModal(event)">
+  <div class="fb-modal" id="fbModal">
+    <div class="fb-modal-header">
+      <div>
+        <div class="fb-modal-title">★ 사용 평가</div>
+        <div class="fb-modal-technique" id="fbTechniqueName"></div>
+      </div>
+      <button class="fb-modal-close" onclick="closeFeedbackModal()">✕</button>
+    </div>
+    <div class="fb-modal-body">
+      <div>
+        <div class="fb-section-label">📍 적용 환경</div>
+        <div class="fb-context-chips" id="fbContextChips"></div>
+      </div>
+      <div>
+        <div class="fb-section-label">⭐ 효과 평점</div>
+        <div class="fb-star-row" id="fbStarRow">
+          <span class="fb-star" onclick="setRating(1)">★</span>
+          <span class="fb-star" onclick="setRating(2)">★</span>
+          <span class="fb-star" onclick="setRating(3)">★</span>
+          <span class="fb-star" onclick="setRating(4)">★</span>
+          <span class="fb-star" onclick="setRating(5)">★</span>
+        </div>
+      </div>
+      <div>
+        <div class="fb-section-label">📝 메모 (선택)</div>
+        <textarea class="fb-notes" id="fbNotes" placeholder="특이사항이 있으면 입력하세요" maxlength="300"></textarea>
+      </div>
+      <button class="fb-save-btn" id="fbSaveBtn" onclick="submitFeedback()" disabled>저장하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast ── -->
+<div class="toast" id="appToast"></div>
 
 <div class="app-wrap">
 
@@ -869,8 +1067,9 @@
     { id: 'lumbar',   label: '요추', sub: '허리' },
   ];
   const STAGES    = [
-    { id: 'acute',   label: '급성', sub: '< 6주' },
-    { id: 'chronic', label: '만성', sub: '> 6주' },
+    { id: 'acute',    label: '급성',  sub: '< 6주' },
+    { id: 'subacute', label: '아급성', sub: '6주~3개월' },
+    { id: 'chronic',  label: '만성',  sub: '> 3개월' },
   ];
   const SYMPTOMS  = [
     { id: 'movement', label: '움직임 시\n통증', sub: '' },
@@ -879,7 +1078,7 @@
   ];
 
   const REGION_LABEL   = { cervical: '경추', lumbar: '요추' };
-  const STAGE_LABEL    = { acute: '급성', chronic: '만성' };
+  const STAGE_LABEL    = { acute: '급성', subacute: '아급성', chronic: '만성' };
   const SYMPTOM_LABEL  = { movement: '움직임 시 통증', rest: '안정 시 통증', radicular: '방사통' };
 
   /* ══════════════════════════════════════
@@ -1224,6 +1423,13 @@
       saveSessionHistory(result.sessionSummary);
     }
 
+    // 피드백 모달에서 사용할 세션 컨텍스트 저장
+    currentSession = {
+      region:  REGION_LABEL[selectedRegion]  || '',
+      acuity:  STAGE_LABEL[selectedStage]    || '',
+      symptom: SYMPTOM_LABEL[selectedSymptom]|| '',
+    };
+
     // ── Manual Therapy 렌더 ──
     const mtList = document.getElementById('mt-rec-list');
     mtList.innerHTML = '';
@@ -1289,6 +1495,12 @@
           <div class="card-section" style="padding-bottom:14px">
             <div class="card-section-title">🔍 환자 반응 확인 — 잘 되고 있는 건가요?</div>
             ${renderFeedback(item.patientFeedback)}
+          </div>
+          <div class="feedback-btn-wrap">
+            <button class="btn-feedback" id="fb-mt-${idx}"
+              onclick="openFeedback('${item.technique.replace(/'/g, "\\'")}', '${(item.categoryInfo && item.categoryInfo.category_key) || ''}', 'fb-mt-${idx}')">
+              ★ 사용 평가
+            </button>
           </div>
         </div>`;
         mtList.appendChild(card);
@@ -1363,6 +1575,12 @@
             <div class="card-section-title">🔍 환자 반응 확인 — 잘 되고 있는 건가요?</div>
             ${renderFeedback(item.patientFeedback)}
           </div>
+          <div class="feedback-btn-wrap">
+            <button class="btn-feedback" id="fb-ex-${idx}"
+              onclick="openFeedback('${item.technique.replace(/'/g, "\\'")}', '${(item.categoryInfo && item.categoryInfo.category_key) || ''}', 'fb-ex-${idx}')">
+              ★ 사용 평가
+            </button>
+          </div>
         </div>`;
         exList.appendChild(card);
       });
@@ -1413,6 +1631,106 @@
     const found = MT_OPTIONS.find(o => o.id === id);
     if (!found) return id;
     return found.sub ? `${found.label} (${found.sub})` : found.label;
+  }
+
+  /* ══════════════════════════════════════
+     FEEDBACK MODAL
+  ══════════════════════════════════════ */
+  let currentSession    = {};
+  let fbCurrentRating   = 0;
+  let fbActiveBtnId     = null;
+  let fbCurrentTech     = '';
+  let fbCurrentCategory = '';
+
+  function openFeedback(techniqueName, categoryKey, btnId) {
+    fbCurrentTech     = techniqueName;
+    fbCurrentCategory = categoryKey;
+    fbActiveBtnId     = btnId;
+    fbCurrentRating   = 0;
+
+    document.getElementById('fbTechniqueName').textContent = techniqueName;
+
+    // 컨텍스트 chips
+    const chips = document.getElementById('fbContextChips');
+    chips.innerHTML = ['region', 'acuity', 'symptom']
+      .filter(k => currentSession[k])
+      .map(k => `<span class="fb-chip">${currentSession[k]}</span>`)
+      .join('');
+
+    // 별점 초기화
+    updateStars(0);
+    document.getElementById('fbNotes').value = '';
+    document.getElementById('fbSaveBtn').disabled = true;
+
+    document.getElementById('fbModalOverlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeFeedbackModal(e) {
+    if (e && e.target !== document.getElementById('fbModalOverlay')) return;
+    document.getElementById('fbModalOverlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  function setRating(r) {
+    fbCurrentRating = r;
+    updateStars(r);
+    document.getElementById('fbSaveBtn').disabled = false;
+  }
+
+  function updateStars(r) {
+    document.querySelectorAll('.fb-star').forEach((s, i) => {
+      s.classList.toggle('on', i < r);
+    });
+  }
+
+  async function submitFeedback() {
+    const saveBtn = document.getElementById('fbSaveBtn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = '저장 중...';
+
+    try {
+      const res = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          technique: fbCurrentTech,
+          category:  fbCurrentCategory,
+          region:    currentSession.region  || null,
+          acuity:    currentSession.acuity  || null,
+          symptom:   currentSession.symptom || null,
+          rating:    fbCurrentRating,
+          notes:     document.getElementById('fbNotes').value.trim() || null,
+        }),
+      });
+
+      if (!res.ok) throw new Error('저장 실패');
+
+      // 버튼 상태 ✅로 변경
+      if (fbActiveBtnId) {
+        const btn = document.getElementById(fbActiveBtnId);
+        if (btn) {
+          btn.textContent = '✅ 평가 완료';
+          btn.classList.add('done');
+          btn.onclick = null;
+        }
+      }
+
+      document.getElementById('fbModalOverlay').classList.remove('open');
+      document.body.style.overflow = '';
+      showToast('평가가 저장되었습니다 감사합니다');
+    } catch (err) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = '저장하기';
+      showToast('저장 중 오류가 발생했습니다 다시 시도해 주세요');
+    }
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('appToast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
   }
 
   /* ══════════════════════════════════════
