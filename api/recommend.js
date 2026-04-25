@@ -127,8 +127,10 @@ export default async function handler(req, res) {
 1. 자세·동작 설명은 초보 치료사도 바로 이해하는 쉬운 한국어 사용. 한자어·의학 약어 금지.
    ✗ 반좌위, 복위, 복와위, 전굴, 후굴, 측굴, 촉진, 신연, 거상
    ✓ 등받이 세워 앉기, 엎드려 눕기, 앞으로 굽히기, 뒤로 젖히기, 옆으로 기울이기, 손으로 부드럽게 누르기, 팔 들어올리기
-2. 해부학 구조물은 반드시 "한국어(영어)" 형식으로 작성.
-   예: 척추기립근(erector spinae), 다열근(multifidus), 후두하근(suboccipital muscles), 요방형근(quadratus lumborum)
+2. 신체 부위명과 해부학 구조물은 반드시 "한국어(영어)" 형식으로 작성.
+   - 신체 부위: 경추(cervical spine), 흉추(thoracic spine), 요추(lumbar spine), 천장관절(sacroiliac joint), 고관절(hip), 슬관절(knee), 견관절(shoulder)
+   - 해부학 구조물: 척추기립근(erector spinae), 다열근(multifidus), 후두하근(suboccipital muscles), 요방형근(quadratus lumborum)
+   - technique 필드(기법명)에도 신체 부위는 반드시 영어 병기. 예: "경추(cervical spine) 중앙 PA 가동술"
 3. movement 필드는 반드시 "1. [동작] 2. [동작] 3. [동작] 4. [동작]" 번호 단계 형식으로 작성.
    예: "1. 양손을 극돌기 위에 올려놓기 2. 천천히 아래 방향으로 압력 가하기 3. 환자 반응 보며 5초 유지 4. 서서히 압력 제거"
 4. 아래 기법 목록의 DB 정보(환자자세·치료사위치·접촉부위·방향·시술단계)를 기반으로 각 필드를 재작성하세요.
