@@ -93,7 +93,7 @@ function formatTechniqueForPrompt(t) {
     : '';
 
   return [
-    `【${t.name_ko} | categoryEnum:${t.category}】`,
+    `【${t.name_ko}】`,
     `  환자자세: ${t.patient_position || ''}`,
     `  치료사위치: ${t.therapist_position || ''}`,
     `  접촉부위: ${t.contact_point || ''}`,
@@ -266,10 +266,20 @@ manualTherapy는 정확히 3개${exCountNote}, targetMuscles는 최대 3개.`;
     // exercise 데이터가 없으면 빈 배열 보장 (Supabase 미설정 시 LLM이 임의 생성하지 않도록)
     if (!hasExData) result.exercise = [];
 
-    // 각 기법에 카테고리 원칙 attach (categoryEnum → map 직접 조회)
+    // 각 기법에 카테고리 원칙 attach
+    // activeMT의 name_ko → category 맵을 이용해 서버 사이드에서 직접 매칭
+    const nameToCategoryMap = {};
+    activeMT.forEach(t => { nameToCategoryMap[t.name_ko] = t.category; });
+
     (result.manualTherapy || []).forEach(item => {
-      // categoryPrinciplesMap에 구/신 양방향 키가 모두 인덱싱되어 있으므로 바로 조회
-      const catData = categoryPrinciplesMap[item.categoryEnum];
+      // LLM이 추가한 (영어) 병기 제거 후 매칭
+      const cleanName = item.technique.replace(/\([^)]*\)/g, '').replace(/\s+/g, ' ').trim();
+      const categoryEnum =
+        nameToCategoryMap[cleanName] ||
+        Object.entries(nameToCategoryMap).find(([k]) => cleanName.includes(k) || k.includes(cleanName))?.[1] ||
+        mtCategories[0];
+
+      const catData = categoryPrinciplesMap[categoryEnum];
       if (catData) {
         item.categoryInfo = {
           name_ko: catData.name_ko,
@@ -277,7 +287,6 @@ manualTherapy는 정확히 3개${exCountNote}, targetMuscles는 최대 3개.`;
           basic_principles: catData.basic_principles || [],
         };
       }
-      delete item.categoryEnum;
     });
 
     // sessionSummary는 서버에서 직접 조립 (LLM에게 맡기지 않음)
