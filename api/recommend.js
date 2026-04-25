@@ -9,6 +9,18 @@ const MT_CATEGORY_MAP = {
   mt_neuro: ['category_d_neural'],
 };
 
+// 역방향 맵: category → MT 그룹 ID
+const CATEGORY_TO_MT_GROUP = {};
+for (const [mtId, cats] of Object.entries(MT_CATEGORY_MAP)) {
+  for (const cat of cats) CATEGORY_TO_MT_GROUP[cat] = mtId;
+}
+
+const MT_GROUP_LABEL = {
+  mt_joint: '관절가동술 (Maitland · Mulligan · HVLA)',
+  mt_soft:  '연부조직 가동술 (MFR)',
+  mt_neuro: '신경가동술',
+};
+
 // 운동 처방 선호 ID → Supabase category 매핑
 const EX_CAT_MAP = {
   ex_neuro:    ['category_f_therapeutic_exercise'],  // subcategory: Neuromuscular Training
@@ -180,10 +192,26 @@ export default async function handler(req, res) {
     // Supabase 조회 실패 시 LLM이 자체 판단으로 추천
   }
 
-  // 허용 목록 텍스트 (LLM에 전달) — DB 상세 데이터 포함
-  const allowedMTText = activeMT.length > 0
-    ? `사용 가능한 Manual Therapy 기법 목록 (이 목록에서만 추천할 것):\n\n${activeMT.map(t => formatTechniqueForPrompt(t)).join('\n\n')}`
-    : `선호 기법: ${preferredMT.join(', ') || '지정 없음'}`;
+  // 허용 목록 텍스트 — MT 그룹별로 분리하여 LLM에 전달
+  let allowedMTText;
+  if (activeMT.length > 0) {
+    // 기법을 MT 그룹별로 분류
+    const techniquesByGroup = {};
+    preferredMT.forEach(mtId => { techniquesByGroup[mtId] = []; });
+    activeMT.forEach(t => {
+      const mtId = CATEGORY_TO_MT_GROUP[t.category];
+      if (mtId && techniquesByGroup[mtId]) techniquesByGroup[mtId].push(t);
+    });
+
+    allowedMTText = `사용 가능한 Manual Therapy 기법 목록 (그룹별, 각 그룹에서 3개씩 추천할 것):\n\n` +
+      preferredMT.map(mtId => {
+        const label = MT_GROUP_LABEL[mtId] || mtId;
+        const techs = techniquesByGroup[mtId] || [];
+        return `=== [${label}] ===\n${techs.map(t => formatTechniqueForPrompt(t)).join('\n\n')}`;
+      }).join('\n\n');
+  } else {
+    allowedMTText = `선호 기법: ${preferredMT.join(', ') || '지정 없음'}`;
+  }
 
   // 세션 히스토리 요약 (중복 추천 방지)
   const historyText = sessionHistory.length > 0
@@ -223,9 +251,9 @@ export default async function handler(req, res) {
 ${allowedMTText}
 ${historyText}
 
-위 허용 목록에서 환자(부위: ${region}, 시기: ${acuity}, 증상: ${symptom})에게 가장 적합한 기법 3개를 선택하고,
+위 허용 목록에서 환자(부위: ${region}, 시기: ${acuity}, 증상: ${symptom})에게 각 그룹별로 가장 적합한 기법 3개씩 선택하고,
 각 기법의 DB 정보를 쉬운 한국어로 재작성하여 아래 형식으로만 반환하세요.
-목록에 없는 기법 생성 금지.
+목록에 없는 기법 생성 금지. 각 그룹에서 반드시 3개씩 선택 (그룹이 2개면 총 6개, 1개면 총 3개).
 
 반환 형식 (JSON 외 출력 금지):
 {
@@ -242,7 +270,7 @@ ${historyText}
   ],
   "clinicalNote": "임상 핵심 메시지 1~2문장 (100자 이내)"
 }
-manualTherapy는 정확히 3개, targetMuscles는 최대 3개.`;
+manualTherapy는 그룹당 3개 (선택 그룹 수 × 3개), targetMuscles는 최대 3개.`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
