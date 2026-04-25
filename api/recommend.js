@@ -23,14 +23,15 @@ const EX_CATEGORY_MAP = {
   ex_rehab:   ['category_exercise01'],
 };
 
-// Supabase에서 is_active=true 테크닉 이름 목록 조회
+// Supabase에서 is_active=true 테크닉 상세 데이터 조회
 async function fetchActiveTechniques(categories) {
   const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gnusyjnviugpofvaicbv.supabase.co';
   const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
   if (!SUPABASE_KEY || categories.length === 0) return [];
 
   const catFilter = categories.map(c => `category.eq.${c}`).join(',');
-  const url = `${SUPABASE_URL}/rest/v1/techniques?is_active=eq.true&or=(${catFilter})&select=name_ko,category`;
+  const url = `${SUPABASE_URL}/rest/v1/techniques?is_active=eq.true&or=(${catFilter})` +
+    `&select=name_ko,patient_position,therapist_position,contact_point,direction,technique_steps`;
 
   try {
     const res = await fetch(url, {
@@ -41,10 +42,26 @@ async function fetchActiveTechniques(categories) {
     });
     if (!res.ok) return [];
     const data = await res.json();
-    return (data || []).map(t => t.name_ko).filter(Boolean);
+    return (data || []).filter(t => t.name_ko);
   } catch {
     return [];
   }
+}
+
+// 기법 객체를 LLM 프롬프트용 텍스트 블록으로 변환
+function formatTechniqueForPrompt(t) {
+  const steps = Array.isArray(t.technique_steps)
+    ? t.technique_steps.map(s => `    ${s.step}. ${s.instruction}`).join('\n')
+    : '';
+
+  return [
+    `【${t.name_ko}】`,
+    `  환자자세: ${t.patient_position || ''}`,
+    `  치료사위치: ${t.therapist_position || ''}`,
+    `  접촉부위: ${t.contact_point || ''}`,
+    `  방향: ${t.direction || ''}`,
+    steps ? `  시술단계:\n${steps}` : '',
+  ].filter(Boolean).join('\n');
 }
 
 export default async function handler(req, res) {
@@ -85,13 +102,13 @@ export default async function handler(req, res) {
     // Supabase 조회 실패 시 LLM이 자체 판단으로 추천
   }
 
-  // 허용 목록 텍스트 (LLM에 전달)
+  // 허용 목록 텍스트 (LLM에 전달) — DB 상세 데이터 포함
   const allowedMTText = activeMT.length > 0
-    ? `사용 가능한 Manual Therapy 기법 목록 (이 목록에서만 추천할 것):\n${activeMT.map(n => `- ${n}`).join('\n')}`
+    ? `사용 가능한 Manual Therapy 기법 목록 (이 목록에서만 추천할 것):\n\n${activeMT.map(t => formatTechniqueForPrompt(t)).join('\n\n')}`
     : `선호 기법: ${preferredMT.join(', ') || '지정 없음'}`;
 
   const allowedEXText = activeEX.length > 0
-    ? `사용 가능한 Exercise 목록 (이 목록에서만 추천할 것):\n${activeEX.map(n => `- ${n}`).join('\n')}`
+    ? `사용 가능한 Exercise 목록 (이 목록에서만 추천할 것):\n\n${activeEX.map(t => formatTechniqueForPrompt(t)).join('\n\n')}`
     : `선호 운동: ${preferredEX.join(', ') || '지정 없음'}`;
 
   // 세션 히스토리 요약 (중복 추천 방지)
@@ -113,7 +130,13 @@ export default async function handler(req, res) {
 2. 해부학 구조물은 반드시 "한국어(영어)" 형식으로 작성.
    예: 척추기립근(erector spinae), 다열근(multifidus), 후두하근(suboccipital muscles), 요방형근(quadratus lumborum)
 3. movement 필드는 반드시 "1. [동작] 2. [동작] 3. [동작] 4. [동작]" 번호 단계 형식으로 작성.
-   예: "1. 양손을 극돌기 위에 올려놓기 2. 천천히 아래 방향으로 압력 가하기 3. 환자 반응 보며 5초 유지 4. 서서히 압력 제거"`;
+   예: "1. 양손을 극돌기 위에 올려놓기 2. 천천히 아래 방향으로 압력 가하기 3. 환자 반응 보며 5초 유지 4. 서서히 압력 제거"
+4. 아래 기법 목록의 DB 정보(환자자세·치료사위치·접촉부위·방향·시술단계)를 기반으로 각 필드를 재작성하세요.
+   - patientPosition: DB 환자자세를 쉬운 한국어로 변환 (25자 이내)
+   - therapistHands: DB "치료사위치 + 접촉부위"를 결합하여 쉬운 한국어로 (25자 이내)
+   - movement: DB 시술단계를 번호 형식으로 요약 (각 단계 15자 이내)
+   - targetMuscles: DB에 없음 — 기법명과 신체부위 기반으로 임상 지식에서 추론
+5. DB 정보가 없는 기법은 선택하지 마세요.`;
 
   // Exercise 섹션은 Supabase에 활성 데이터가 있을 때만 포함
   const hasExData = activeEX.length > 0;
@@ -145,8 +168,9 @@ ${allowedEXText}` : '';
 ${allowedMTText}${exPromptSection}
 ${historyText}
 
-위 허용 목록에서 환자에게 가장 적합한 기법을 우선순위 순으로 선택하세요.
-목록에 없는 기법 생성 금지. 아래 JSON 형식으로만 반환하세요.
+위 허용 목록에서 환자(부위: ${region}, 시기: ${acuity}, 증상: ${symptom})에게 가장 적합한 기법 3개를 선택하고,
+각 기법의 DB 정보를 쉬운 한국어로 재작성하여 아래 형식으로만 반환하세요.
+목록에 없는 기법 생성 금지.
 
 반환 형식 (JSON 외 출력 금지):
 {
