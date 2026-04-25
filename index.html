@@ -830,6 +830,71 @@
       .card-score-group { order: -1; width: 100%; text-align: left; }
       #technique-select-grid { grid-template-columns: 1fr; }
     }
+
+    /* ─ LLM 배너 ─ */
+    .llm-banner {
+      background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+      border: 1.5px solid #bfdbfe;
+      border-radius: 14px;
+      padding: 18px 20px;
+      margin-bottom: 20px;
+    }
+    .llm-banner-header { margin-bottom: 14px; }
+    .llm-badge {
+      background: #2563eb;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+    .llm-section { margin-bottom: 14px; }
+    .llm-section:last-child { margin-bottom: 0; }
+    .llm-section-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #1e40af;
+      margin-bottom: 6px;
+    }
+    .llm-session-flow {
+      font-size: 13px;
+      color: #1e293b;
+      line-height: 1.7;
+      background: #fff;
+      border-radius: 8px;
+      padding: 10px 14px;
+    }
+    .llm-clinical-note {
+      font-size: 13px;
+      color: #374151;
+      line-height: 1.7;
+      background: #fff;
+      border-radius: 8px;
+      padding: 10px 14px;
+    }
+
+    /* ─ LLM 임상 이유 블록 (카드 내) ─ */
+    .llm-reason-block {
+      background: #eff6ff;
+      border-left: 3px solid #2563eb;
+      border-radius: 0 8px 8px 0;
+      padding: 10px 12px;
+      margin: 10px 0;
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+    .llm-reason-icon { font-size: 14px; flex-shrink: 0; }
+    .llm-reason-text { font-size: 12px; color: #1e40af; line-height: 1.6; flex: 1; }
+    .llm-timing-badge {
+      font-size: 11px;
+      color: #fff;
+      background: #2563eb;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-top: 6px;
+      display: inline-block;
+    }
   </style>
 </head>
 <body>
@@ -1723,20 +1788,55 @@ async function runRecommend() {
   const target_tags  = [timingCard.dataset.value];
   const symptom_tags = [symptomCard.dataset.value];
   const purpose_tags = ['pain_relief', 'rom_improvement'];
+  const session_id   = 'session-' + Date.now();
 
   const btn = document.getElementById('btn-recommend');
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> 분석 중...';
+  btn.innerHTML = '<span class="spinner"></span> AI 분석 중...';
 
   try {
+    // 1. Supabase에서 후보 테크닉 가져오기 + 카테고리 원칙 로드
     const [results, categories] = await Promise.all([
       fetchTechniques({ body_part, purpose_tags, target_tags, symptom_tags }),
       loadCategoryPrinciples()
     ]);
-    renderResults(results, { body_part, purpose_tags, target_tags, symptom_tags }, categories);
+
+    // 2. LLM API 호출 — 임상 플로우 순서 추천
+    let llmData = null;
+    try {
+      const llmRes = await fetch('/api/recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ techniques: results, query: { body_part, purpose_tags, target_tags, symptom_tags }, session_id })
+      });
+      if (llmRes.ok) {
+        llmData = await llmRes.json();
+      }
+    } catch (llmErr) {
+      console.warn('LLM API 호출 실패 (fallback 사용):', llmErr);
+    }
+
+    // 3. LLM 순서로 결과 재정렬
+    let orderedResults = results;
+    if (llmData && llmData.ordered_techniques && !llmData.fallback) {
+      const rankMap = {};
+      llmData.ordered_techniques.forEach(ot => { rankMap[ot.id] = ot; });
+      orderedResults = results
+        .map(t => ({
+          ...t,
+          llm_rank: rankMap[t.id]?.rank ?? 999,
+          llm_clinical_reason: rankMap[t.id]?.clinical_reason || null,
+          llm_session_timing: rankMap[t.id]?.session_timing || null,
+        }))
+        .sort((a, b) => a.llm_rank - b.llm_rank);
+    }
+
+    // 4. 렌더링
+    renderResults(orderedResults, { body_part, purpose_tags, target_tags, symptom_tags }, categories, llmData);
     showPage('results');
     window.scrollTo(0, 0);
   } catch (err) {
+    console.error(err);
     alert('추천 중 오류가 발생했습니다. 다시 시도해주세요.');
   } finally {
     btn.disabled = false;
@@ -1762,6 +1862,14 @@ function buildTechniqueCard(t, idx) {
   const stepsHTML = steps.length > 0
     ? `<ol class="technique-steps">${steps.map(s => `<li>${simplifyTerms(s.instruction || String(s))}</li>`).join('')}</ol>`
     : '';
+
+  // LLM 임상 이유 블록 (있을 때만)
+  const llmReasonHTML = t.llm_clinical_reason ? `
+    <div class="llm-reason-block">
+      <span class="llm-reason-icon">🤖</span>
+      <div class="llm-reason-text">${t.llm_clinical_reason}</div>
+      ${t.llm_session_timing ? `<div class="llm-timing-badge">${t.llm_session_timing}</div>` : ''}
+    </div>` : '';
 
   const goodResponse  = simplifyTerms(t.good_response   || t.clinical_notes || '');
   const commonMistake = simplifyTerms(t.common_mistake  || '');
@@ -1834,6 +1942,7 @@ function buildTechniqueCard(t, idx) {
     </div>
 
     <div class="card-detail-section">
+      ${llmReasonHTML}
       ${stepsHTML ? `
       <div class="card-section">
         <div class="card-section-title">📋 시술 방법</div>
@@ -1873,7 +1982,7 @@ function togglePrinciples(btn) {
 }
 
 // ── 렌더링 ──
-function renderResults(results, query, categories) {
+function renderResults(results, query, categories, llmData) {
   const container = document.getElementById('results-container');
   const prefs = JSON.parse(localStorage.getItem(PREF_KEY) || '{}');
   const selectedCats = prefs.categories || ['joint_mobilization'];
@@ -1965,7 +2074,30 @@ function renderResults(results, query, categories) {
     return buildCategoryWrapper(uiCat, catResults, categories);
   }).join('');
 
-  container.innerHTML = wrappersHTML + exerciseHTML;
+  // LLM 세션 플로우 + 임상 노트 배너
+  let llmBannerHTML = '';
+  if (llmData && !llmData.fallback) {
+    const sessionFlow  = llmData.session_flow  || '';
+    const clinicalNote = llmData.clinical_notes || '';
+    llmBannerHTML = `
+      <div class="llm-banner">
+        <div class="llm-banner-header">
+          <span class="llm-badge">🤖 AI 임상 추론</span>
+        </div>
+        ${sessionFlow ? `
+        <div class="llm-section">
+          <div class="llm-section-title">📋 세션 진행 순서</div>
+          <div class="llm-session-flow">${sessionFlow}</div>
+        </div>` : ''}
+        ${clinicalNote ? `
+        <div class="llm-section">
+          <div class="llm-section-title">💡 임상 포인트</div>
+          <div class="llm-clinical-note">${clinicalNote}</div>
+        </div>` : ''}
+      </div>`;
+  }
+
+  container.innerHTML = llmBannerHTML + wrappersHTML + exerciseHTML;
 }
 
 function toggleCardDetail(btn) {
