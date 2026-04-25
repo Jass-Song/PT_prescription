@@ -752,16 +752,6 @@
       <div class="choice-grid" id="mt-grid"></div>
     </div>
 
-    <!-- Exercise -->
-    <div class="section-card">
-      <div class="section-title">
-        Exercise
-        <span class="badge" id="ex-count">0 / 3</span>
-      </div>
-      <div class="limit-hint" id="ex-hint">최대 3개 선택</div>
-      <div class="choice-grid" id="ex-grid"></div>
-    </div>
-
     <div style="padding: 0 0 8px;">
       <button class="btn-primary" id="btn-save" onclick="saveSettings()" disabled>저장 후 시작</button>
     </div>
@@ -832,11 +822,6 @@
         <div id="mt-rec-list"></div>
       </div>
 
-      <div class="rec-block" id="ex-rec-block">
-        <div class="rec-block-title"><span class="icon">🏃</span> Exercise 추천</div>
-        <div id="ex-rec-list"></div>
-      </div>
-
       <div id="clinical-note-wrap"></div>
     </div>
 
@@ -853,23 +838,9 @@
      DATA
   ══════════════════════════════════════ */
   const MT_OPTIONS = [
-    { id: 'mt_maitland',  label: '관절가동술', sub: 'Maitland / Kaltenborn' },
-    { id: 'mt_hvla',      label: '관절교정술', sub: 'HVLA' },
-    { id: 'mt_soft',      label: '연부조직 가동술', sub: '' },
-    { id: 'mt_neuro',     label: '신경가동술', sub: '' },
-    { id: 'mt_mckenzie',  label: 'McKenzie', sub: '' },
-    { id: 'mt_mulligan',  label: 'Mulligan', sub: '' },
-  ];
-
-  const EX_OPTIONS = [
-    { id: 'ex_stab',    label: '안정화 운동', sub: '' },
-    { id: 'ex_prog',    label: '점진적 부하 운동', sub: '' },
-    { id: 'ex_strength',label: '근력 강화', sub: '' },
-    { id: 'ex_rom',     label: '관절가동범위 운동', sub: '' },
-    { id: 'ex_stretch', label: '스트레칭', sub: '' },
-    { id: 'ex_self',    label: '자가도수 / 자기관리', sub: '' },
-    { id: 'ex_wbear',   label: '체중부하 운동', sub: '' },
-    { id: 'ex_rehab',   label: '재활 운동', sub: '' },
+    { id: 'mt_joint', label: '관절가동술', sub: 'Maitland · Mulligan · HVLA' },
+    { id: 'mt_soft',  label: '연부조직 가동술', sub: 'MFR' },
+    { id: 'mt_neuro', label: '신경가동술', sub: '' },
   ];
 
   const REGIONS   = [
@@ -910,7 +881,6 @@
      STATE
   ══════════════════════════════════════ */
   let selectedMT = new Set();
-  let selectedEX = new Set();
   let selectedRegion  = null;
   let selectedStage   = null;
   let selectedSymptom = null;
@@ -923,12 +893,9 @@
     renderPatientGrids();
 
     const saved = loadSettings();
-    if (saved && saved.mt.length > 0 && saved.ex.length > 0) {
-      // restore selections
+    if (saved && saved.mt.length > 0) {
       saved.mt.forEach(id => selectedMT.add(id));
-      saved.ex.forEach(id => selectedEX.add(id));
       refreshMTGrid();
-      refreshEXGrid();
       goScreen2();
     }
   });
@@ -938,7 +905,6 @@
   ══════════════════════════════════════ */
   function renderSettingsGrid() {
     const mtGrid = document.getElementById('mt-grid');
-    const exGrid = document.getElementById('ex-grid');
 
     MT_OPTIONS.forEach(opt => {
       const card = makeCard(opt, () => toggleMT(opt.id));
@@ -946,11 +912,6 @@
       mtGrid.appendChild(card);
     });
 
-    EX_OPTIONS.forEach(opt => {
-      const card = makeCard(opt, () => toggleEX(opt.id));
-      card.id = 'card-' + opt.id;
-      exGrid.appendChild(card);
-    });
   }
 
   function makeCard(opt, handler) {
@@ -972,17 +933,6 @@
     checkSaveBtn();
   }
 
-  function toggleEX(id) {
-    if (selectedEX.has(id)) {
-      selectedEX.delete(id);
-    } else {
-      if (selectedEX.size >= 3) return;
-      selectedEX.add(id);
-    }
-    refreshEXGrid();
-    checkSaveBtn();
-  }
-
   function refreshMTGrid() {
     const atMax = selectedMT.size >= 3;
     document.getElementById('mt-count').textContent = selectedMT.size + ' / 3';
@@ -997,26 +947,12 @@
     });
   }
 
-  function refreshEXGrid() {
-    const atMax = selectedEX.size >= 3;
-    document.getElementById('ex-count').textContent = selectedEX.size + ' / 3';
-    const hint = document.getElementById('ex-hint');
-    hint.textContent = atMax ? '최대 선택 완료' : '최대 3개 선택';
-    hint.className = 'limit-hint' + (atMax ? ' warn' : '');
-
-    EX_OPTIONS.forEach(opt => {
-      const card = document.getElementById('card-' + opt.id);
-      const isSel = selectedEX.has(opt.id);
-      card.className = 'choice-card' + (isSel ? ' selected' : '') + (!isSel && atMax ? ' disabled' : '');
-    });
-  }
-
   function checkSaveBtn() {
-    document.getElementById('btn-save').disabled = (selectedMT.size === 0 || selectedEX.size === 0);
+    document.getElementById('btn-save').disabled = (selectedMT.size === 0);
   }
 
   function saveSettings() {
-    const data = { mt: [...selectedMT], ex: [...selectedEX] };
+    const data = { mt: [...selectedMT] };
     localStorage.setItem('pt_settings', JSON.stringify(data));
     goScreen2();
   }
@@ -1133,14 +1069,12 @@
     // ID 그대로 전송 — API에서 Supabase 조회 시 ID 키 사용
     const settings = loadSettings();
     const preferredMT = settings ? settings.mt : [...selectedMT];
-    const preferredEX = settings ? settings.ex : [...selectedEX];
 
     const payload = {
       region:      REGION_LABEL[selectedRegion],
       acuity:      STAGE_LABEL[selectedStage],
       symptom:     SYMPTOM_LABEL[selectedSymptom],
       preferredMT,
-      preferredEX,
       sessionHistory: getSessionHistory(),
     };
 
@@ -1293,83 +1227,6 @@
       });
     }
 
-    // ── Exercise 렌더 ──
-    const exBlock = document.getElementById('ex-rec-block');
-    const exList = document.getElementById('ex-rec-list');
-    exList.innerHTML = '';
-    const exItems = result.exercise || [];
-    if (exItems.length === 0) {
-      exBlock.style.display = 'none';
-    } else {
-      exBlock.style.display = '';
-      exItems.forEach((item, idx) => {
-        const rankClass = idx === 0 ? 'rank-1' : idx === 1 ? 'rank-2' : idx === 2 ? 'rank-3' : '';
-        const card = document.createElement('div');
-        card.className = 'result-card';
-        const exCatInfoAttr = item.categoryInfo
-          ? `data-catinfo='${JSON.stringify(item.categoryInfo).replace(/'/g, "&apos;")}'`
-          : '';
-        const exCatBtn = item.categoryInfo
-          ? `<button class="btn-category-info" onclick="showCategoryModal(this)" ${exCatInfoAttr}>📖 원칙 보기</button>`
-          : '';
-        card.innerHTML = `
-        <div class="card-header">
-          <div class="card-rank ${rankClass}">${idx + 1}</div>
-          <div class="card-title-group">
-            <div class="card-name-ko">🏃 ${item.name}</div>
-            <div class="card-meta">
-              <span class="badge badge-ex">Exercise</span>
-            </div>
-          </div>
-          ${exCatBtn}
-        </div>
-
-        <div class="position-box">
-          <div class="position-row">
-            <span class="position-icon">🧑‍⚕️</span>
-            <div>
-              <div class="position-label">① 시작 자세 세팅</div>
-              <div class="position-sublabel">환자를 어떻게 준비시키나요?</div>
-              <div class="position-value">${item.startPosition}</div>
-            </div>
-          </div>
-          <div class="position-divider"></div>
-          <div class="position-row">
-            <span class="position-icon">👐</span>
-            <div>
-              <div class="position-label">② 치료사 역할</div>
-              <div class="position-sublabel">어떻게 보조하고 가이드하나요?</div>
-              <div class="position-value">${item.therapistGuide}</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card-expand-btn-wrap">
-          <button class="btn-expand-card" onclick="toggleCardDetail(this)">자세히 보기 ▼</button>
-        </div>
-
-        <div class="card-detail-section">
-          <div class="card-section">
-            <div class="card-section-title">📋 동작 방법 — 어떻게 수행하나요?</div>
-            ${renderMovement(item.movement)}
-          </div>
-          <div class="card-section">
-            <div class="card-section-title">⏱ 운동 처방 — 몇 세트, 몇 회 하나요?</div>
-            <div class="card-section-value">${item.sets}</div>
-          </div>
-          <div class="card-section">
-            <div class="card-section-title">🎯 목표 근육 — 어디에 작용하나요?</div>
-            ${renderMuscles(item.targetMuscles)}
-          </div>
-          <div class="card-section" style="padding-bottom:14px">
-            <div class="card-section-title">💬 환자 큐잉 — 환자에게 어떻게 말하나요?</div>
-            <div class="cue-text">"${item.cue}"</div>
-          </div>
-        </div>`;
-        exList.appendChild(card);
-      });
-    }
-
     // ── Clinical Note ──
     const noteWrap = document.getElementById('clinical-note-wrap');
     noteWrap.innerHTML = '';
@@ -1412,8 +1269,7 @@
   }
 
   function getLabel(id) {
-    const all = [...MT_OPTIONS, ...EX_OPTIONS];
-    const found = all.find(o => o.id === id);
+    const found = MT_OPTIONS.find(o => o.id === id);
     if (!found) return id;
     return found.sub ? `${found.label} (${found.sub})` : found.label;
   }
@@ -1451,9 +1307,7 @@
     const settings = loadSettings();
     if (settings) {
       selectedMT = new Set(settings.mt);
-      selectedEX = new Set(settings.ex);
       refreshMTGrid();
-      refreshEXGrid();
       checkSaveBtn();
     }
     goScreen(1);

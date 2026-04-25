@@ -1,26 +1,12 @@
 // PT 처방 도우미 — AI 추천 서버리스 함수
-// Input:  { region, acuity, symptom, preferredMT, preferredEX, sessionHistory }
+// Input:  { region, acuity, symptom, preferredMT, sessionHistory }
 // Output: { manualTherapy[], exercise[], clinicalNote, sessionSummary }
 
 // 치료사 선호 ID → Supabase category 매핑
 const MT_CATEGORY_MAP = {
-  mt_maitland:  ['category_joint_mobilization'],
-  mt_mulligan:  ['category_mulligan'],
-  mt_soft:      ['category_mfr'],          // 연부조직 가동술 = MFR만 (IASTM 제외)
-  mt_neuro:     ['category_d_neural'],
-  mt_mckenzie:  ['category_exercise01'],
-  mt_hvla:      ['category_joint_mobilization'],
-};
-
-const EX_CATEGORY_MAP = {
-  ex_stab:    ['category_exercise01'],
-  ex_prog:    ['category_exercise01'],
-  ex_strength:['category_exercise01'],
-  ex_rom:     ['category_exercise01'],
-  ex_stretch: ['category_exercise01'],
-  ex_self:    ['category_exercise01'],
-  ex_wbear:   ['category_exercise01'],
-  ex_rehab:   ['category_exercise01'],
+  mt_joint: ['category_joint_mobilization', 'category_mulligan'],
+  mt_soft:  ['category_mfr'],
+  mt_neuro: ['category_d_neural'],
 };
 
 // Supabase에서 is_active=true 테크닉 상세 데이터 조회
@@ -112,7 +98,6 @@ export default async function handler(req, res) {
     acuity,
     symptom,
     preferredMT = [],
-    preferredEX = [],
     sessionHistory = []
   } = req.body;
 
@@ -125,16 +110,14 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'API 키 설정 오류' });
   }
 
-  // preferredMT/EX ID → Supabase category 변환
+  // preferredMT ID → Supabase category 변환
   const mtCategories = [...new Set(preferredMT.flatMap(id => MT_CATEGORY_MAP[id] || []))];
-  const exCategories = [...new Set(preferredEX.flatMap(id => EX_CATEGORY_MAP[id] || []))];
 
-  // Supabase에서 is_active=true 테크닉만 조회 (IASTM 등 비활성화 자동 제외)
-  let activeMT = [], activeEX = [], categoryPrinciplesMap = {};
+  // Supabase에서 is_active=true 테크닉 + 카테고리 원칙 조회
+  let activeMT = [], categoryPrinciplesMap = {};
   try {
-    [activeMT, activeEX, categoryPrinciplesMap] = await Promise.all([
+    [activeMT, categoryPrinciplesMap] = await Promise.all([
       fetchActiveTechniques(mtCategories),
-      fetchActiveTechniques(exCategories),
       fetchCategoryPrinciples(),
     ]);
   } catch {
@@ -145,10 +128,6 @@ export default async function handler(req, res) {
   const allowedMTText = activeMT.length > 0
     ? `사용 가능한 Manual Therapy 기법 목록 (이 목록에서만 추천할 것):\n\n${activeMT.map(t => formatTechniqueForPrompt(t)).join('\n\n')}`
     : `선호 기법: ${preferredMT.join(', ') || '지정 없음'}`;
-
-  const allowedEXText = activeEX.length > 0
-    ? `사용 가능한 Exercise 목록 (이 목록에서만 추천할 것):\n\n${activeEX.map(t => formatTechniqueForPrompt(t)).join('\n\n')}`
-    : `선호 운동: ${preferredEX.join(', ') || '지정 없음'}`;
 
   // 세션 히스토리 요약 (중복 추천 방지)
   const historyText = sessionHistory.length > 0
@@ -179,34 +158,12 @@ export default async function handler(req, res) {
    - targetMuscles: DB에 없음 — 기법명과 신체부위 기반으로 임상 지식에서 추론
 5. DB 정보가 없는 기법은 선택하지 마세요.`;
 
-  // Exercise 섹션은 Supabase에 활성 데이터가 있을 때만 포함
-  const hasExData = activeEX.length > 0;
-
-  const exPromptSection = hasExData ? `
-
-${allowedEXText}` : '';
-
-  const exSchemaSection = hasExData ? `,
-  "exercise": [
-    {
-      "name": "운동명 (10자 이내)",
-      "startPosition": "쉬운 일상 언어로 시작 자세 (25자 이내)",
-      "therapistGuide": "치료사 역할 설명 (25자 이내)",
-      "movement": "1. [단계] 2. [단계] 3. [단계] 4. [단계] 번호 형식 필수",
-      "sets": "처방 (예: 3×10회, 2세트)",
-      "targetMuscles": ["한국어(영어)", "한국어(영어)"],
-      "cue": "환자에게 말하는 쉬운 큐잉 1문장"
-    }
-  ]` : '';
-
-  const exCountNote = hasExData ? ', exercise는 정확히 3개' : '';
-
   const userPrompt = `환자 정보:
 - 부위: ${region}
 - 시기: ${acuity}
 - 증상 패턴: ${symptom}
 
-${allowedMTText}${exPromptSection}
+${allowedMTText}
 ${historyText}
 
 위 허용 목록에서 환자(부위: ${region}, 시기: ${acuity}, 증상: ${symptom})에게 가장 적합한 기법 3개를 선택하고,
@@ -224,10 +181,10 @@ ${historyText}
       "targetMuscles": ["한국어(영어)", "한국어(영어)"],
       "patientFeedback": "올바른 반응: [증상]. 주의신호: [경고]"
     }
-  ]${exSchemaSection},
+  ],
   "clinicalNote": "임상 핵심 메시지 1~2문장 (100자 이내)"
 }
-manualTherapy는 정확히 3개${exCountNote}, targetMuscles는 최대 3개.`;
+manualTherapy는 정확히 3개, targetMuscles는 최대 3개.`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -263,39 +220,24 @@ manualTherapy는 정확히 3개${exCountNote}, targetMuscles는 최대 3개.`;
 
     const result = JSON.parse(jsonMatch[0]);
 
-    // exercise 데이터가 없으면 빈 배열 보장 (Supabase 미설정 시 LLM이 임의 생성하지 않도록)
-    if (!hasExData) result.exercise = [];
-
-    // 각 기법에 카테고리 원칙 attach
-    // activeMT의 name_ko → category 맵을 이용해 서버 사이드에서 직접 매칭
-    const nameToCategoryMap = {};
-    activeMT.forEach(t => { nameToCategoryMap[t.name_ko] = t.category; });
-
-    (result.manualTherapy || []).forEach(item => {
-      // LLM이 추가한 (영어) 병기 제거 후 매칭
-      const cleanName = item.technique.replace(/\([^)]*\)/g, '').replace(/\s+/g, ' ').trim();
-      const categoryEnum =
-        nameToCategoryMap[cleanName] ||
-        Object.entries(nameToCategoryMap).find(([k]) => cleanName.includes(k) || k.includes(cleanName))?.[1] ||
-        mtCategories[0];
-
-      const catData = categoryPrinciplesMap[categoryEnum];
-      if (catData) {
+    // 선택한 MT 카테고리의 일반 원칙을 모든 추천 기법에 attach
+    // (카테고리별 general commentary — 개별 기법 매칭 불필요)
+    const catData = categoryPrinciplesMap[mtCategories[0]];
+    if (catData) {
+      (result.manualTherapy || []).forEach(item => {
         item.categoryInfo = {
           name_ko: catData.name_ko,
           name_en: catData.name_en,
           basic_principles: catData.basic_principles || [],
         };
-      }
-    });
+      });
+    }
 
-    // sessionSummary는 서버에서 직접 조립 (LLM에게 맡기지 않음)
     result.sessionSummary = {
       region,
       acuity,
       symptom,
       mt: preferredMT,
-      ex: preferredEX
     };
 
     return res.status(200).json(result);
