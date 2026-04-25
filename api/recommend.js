@@ -48,14 +48,15 @@ async function fetchActiveTechniques(categories) {
   }
 }
 
-// 카테고리 일반 원칙(basic_principles) 조회 — 필터 없이 전체 조회
+// 카테고리 일반 원칙(basic_principles) 조회
+// category_key를 구/신 두 형태로 모두 인덱싱 (migration 004b가 category_a_ → category_ 로 rename했기 때문)
 async function fetchCategoryPrinciples() {
   const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gnusyjnviugpofvaicbv.supabase.co';
   const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
   if (!SUPABASE_KEY) return {};
 
-  const url = `${SUPABASE_URL}/rest/v1/technique_categories` +
-    `?select=category_key,name_ko,name_en,basic_principles`;
+  const url = `${SUPABASE_URL}/rest/v1/technique_categories?is_active=eq.true` +
+    `&select=category_key,name_ko,name_en,basic_principles`;
 
   try {
     const res = await fetch(url, {
@@ -66,35 +67,24 @@ async function fetchCategoryPrinciples() {
     });
     if (!res.ok) return {};
     const data = await res.json();
-    return Object.fromEntries(
-      (data || [])
-        .filter(c => c.category_key && Array.isArray(c.basic_principles) && c.basic_principles.length > 0)
-        .map(c => [c.category_key, c])
-    );
+    const map = {};
+    (data || []).forEach(c => {
+      if (!c.category_key || !Array.isArray(c.basic_principles) || c.basic_principles.length === 0) return;
+      // 원래 key로 인덱싱
+      map[c.category_key] = c;
+      // letter prefix 제거 버전도 인덱싱 (category_a_joint_mobilization → category_joint_mobilization)
+      const withoutPrefix = c.category_key.replace(/^(category|group)_[a-z]_/, '$1_');
+      if (withoutPrefix !== c.category_key) map[withoutPrefix] = c;
+      // letter prefix 추가 버전도 인덱싱 (category_joint_mobilization → category_a_joint_mobilization)
+      if (c.category_key.match(/^category_(?![a-z]_)/)) {
+        map[c.category_key.replace(/^category_/, 'category_a_')] = c;
+      }
+    });
+    return map;
   } catch {
     return {};
   }
 }
-
-// LLM 반환 기법명에서 영어 병기 제거 후 activeMT에서 category 찾기
-function resolveCategoryEnum(techniqueName, activeMT) {
-  const clean = techniqueName.replace(/\([^)]*\)/g, '').replace(/\s+/g, ' ').trim();
-  const match = activeMT.find(t =>
-    t.name_ko === clean ||
-    clean.includes(t.name_ko) ||
-    t.name_ko.includes(clean)
-  );
-  return match ? match.category : (activeMT[0] ? activeMT[0].category : null);
-}
-
-// techniques.category enum → technique_categories.category_key 매핑
-const ENUM_TO_CATEGORY_KEY = {
-  'category_joint_mobilization': 'category_a_joint_mobilization',
-  'category_mulligan':           'category_b_mulligan',
-  'category_mfr':                'category_c_mfr',
-  'category_d_neural':           'category_d_neural',
-  'category_exercise01':         'category_exercise01',
-};
 
 // 기법 객체를 LLM 프롬프트용 텍스트 블록으로 변환
 function formatTechniqueForPrompt(t) {
@@ -103,7 +93,7 @@ function formatTechniqueForPrompt(t) {
     : '';
 
   return [
-    `【${t.name_ko}】`,
+    `【${t.name_ko} | categoryEnum:${t.category}】`,
     `  환자자세: ${t.patient_position || ''}`,
     `  치료사위치: ${t.therapist_position || ''}`,
     `  접촉부위: ${t.contact_point || ''}`,
@@ -276,11 +266,10 @@ manualTherapy는 정확히 3개${exCountNote}, targetMuscles는 최대 3개.`;
     // exercise 데이터가 없으면 빈 배열 보장 (Supabase 미설정 시 LLM이 임의 생성하지 않도록)
     if (!hasExData) result.exercise = [];
 
-    // 각 기법에 카테고리 원칙 attach (서버 사이드 이름 매칭)
+    // 각 기법에 카테고리 원칙 attach (categoryEnum → map 직접 조회)
     (result.manualTherapy || []).forEach(item => {
-      const enumVal = resolveCategoryEnum(item.technique, activeMT);
-      const categoryKey = ENUM_TO_CATEGORY_KEY[enumVal] || enumVal;
-      const catData = categoryPrinciplesMap[categoryKey];
+      // categoryPrinciplesMap에 구/신 양방향 키가 모두 인덱싱되어 있으므로 바로 조회
+      const catData = categoryPrinciplesMap[item.categoryEnum];
       if (catData) {
         item.categoryInfo = {
           name_ko: catData.name_ko,
@@ -288,6 +277,7 @@ manualTherapy는 정확히 3개${exCountNote}, targetMuscles는 최대 3개.`;
           basic_principles: catData.basic_principles || [],
         };
       }
+      delete item.categoryEnum;
     });
 
     // sessionSummary는 서버에서 직접 조립 (LLM에게 맡기지 않음)
