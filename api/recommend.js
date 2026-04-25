@@ -21,11 +21,11 @@ const MT_GROUP_LABEL = {
   mt_neuro: '신경가동술',
 };
 
-// 운동 처방 선호 ID → Supabase category 매핑 (모두 category_exercise01로 통합)
+// 운동 처방 선호 ID → Supabase category 매핑
 const EX_CATEGORY_MAP = {
-  ex_neuro:    ['category_exercise01'],
-  ex_strength: ['category_exercise01'],
-  ex_aerobic:  ['category_exercise01'],
+  ex_neuro:    ['category_exercise01', 'category_f_therapeutic_exercise'],
+  ex_strength: ['category_exercise01', 'category_f_therapeutic_exercise'],
+  ex_aerobic:  ['category_exercise01', 'category_f_therapeutic_exercise'],
 };
 
 const EX_PREFERENCE_LABEL = {
@@ -155,8 +155,6 @@ export default async function handler(req, res) {
     console.error('[DEBUG] Supabase fetch error:', e);
   }
 
-  console.log('[DEBUG] preferredMT:', preferredMT, '| mtCategories:', mtCategories, '| activeMT count:', activeMT.length);
-  console.log('[DEBUG] preferredEX:', preferredEX, '| exCategories:', exCategories, '| activeEX count:', activeEX.length);
 
   // MT 기법에 고유 인덱스 ID 부여
   const indexedTechniques = new Map(); // 'MT-001' → technique object
@@ -306,8 +304,6 @@ techniqueId는 [MT-XXX] 또는 [EX-XXX] ID를 그대로 복사.`;
     }
 
     const result = JSON.parse(jsonMatch[0]);
-    console.log('[DEBUG] LLM result keys:', Object.keys(result), '| exercise count:', (result.exercise || []).length, '| manualTherapy count:', (result.manualTherapy || []).length);
-
     // techniqueId(인덱스 ID)로 기법 lookup → category 확보 → categoryInfo 부착
     (result.manualTherapy || []).forEach(item => {
       const t = indexedTechniques.get(item.techniqueId);
