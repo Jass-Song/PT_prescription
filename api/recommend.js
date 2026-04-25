@@ -104,6 +104,7 @@ export default async function handler(req, res) {
 핵심 원칙: "통증 ≠ 손상", "몸은 적응적이다", "Calm things down, then build things back up"
 KPM 프레임(자세 불균형, 정렬 이상) 사용 금지. 공포 유발 표현 금지.
 ⚠️ 중요: 아래에 제공된 허용 목록에 없는 기법은 절대 추천하지 마세요.
+간결함이 최우선: 각 필드는 핵심 임상 정보만, 설명·부연 금지.
 응답은 반드시 순수 JSON만 출력하세요. 마크다운 금지.`;
 
   const userPrompt = `환자 정보:
@@ -119,31 +120,32 @@ ${historyText}
 위 환자에게 적합한 임상 추천을 아래 JSON 형식으로 작성하세요.
 반드시 위의 허용 목록에 있는 기법만 추천하세요. 목록에 없는 기법 추천 금지.
 
-반환 형식:
+반환 형식 (JSON 외 출력 금지, 설명 금지):
 {
   "manualTherapy": [
     {
-      "technique": "기법명",
-      "patientPosition": "환자 자세",
-      "therapistHands": "치료사 손 위치",
-      "movement": "동작 방향 및 강도",
-      "targetMuscles": ["목표 구조물1", "목표 구조물2"],
-      "patientFeedback": "올바른 반응 vs 주의 신호"
+      "technique": "기법명 (10자 이내)",
+      "patientPosition": "자세 (15자 이내)",
+      "therapistHands": "손 위치 (20자 이내)",
+      "movement": "방향·강도 (30자 이내)",
+      "targetMuscles": ["구조물1", "구조물2"],
+      "patientFeedback": "정상반응 vs 주의신호 (20자 이내)"
     }
   ],
   "exercise": [
     {
-      "name": "운동명",
-      "startPosition": "시작 자세",
-      "therapistGuide": "치료사 가이드",
-      "movement": "동작 설명",
-      "sets": "세트 및 반복 처방",
-      "targetMuscles": ["목표 근육"],
-      "cue": "환자 큐잉 멘트"
+      "name": "운동명 (10자 이내)",
+      "startPosition": "시작자세 (15자 이내)",
+      "therapistGuide": "가이드 (20자 이내)",
+      "movement": "동작 (30자 이내)",
+      "sets": "처방 (예: 3×10회)",
+      "targetMuscles": ["근육1", "근육2"],
+      "cue": "환자 큐잉 1문장 (20자 이내)"
     }
   ],
-  "clinicalNote": "이 환자에게 특히 중요한 임상 포인트 (KMO 철학 기반)"
-}`;
+  "clinicalNote": "KMO 핵심 메시지 1~2문장 (100자 이내)"
+}
+manualTherapy는 정확히 3개, exercise는 정확히 3개, targetMuscles는 최대 2개.`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
