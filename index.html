@@ -430,54 +430,114 @@
     .rec-content-area { display: block; }
     .rec-content-area.hidden { display: none; }
 
-    /* ── Rec cards (detailed) ── */
-    .rec-card {
-      background: white;
-      border: 1px solid #e0e8f0;
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 12px;
+    /* ── Result Card (새 스타일) ── */
+    .result-card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+      margin-bottom: 16px;
+      overflow: hidden;
+      border: 1.5px solid #e2e8f0;
+      transition: box-shadow 0.2s;
     }
-    .rec-card h4 {
-      font-size: 15px;
-      font-weight: 700;
-      color: #1a6fc4;
-      margin-bottom: 10px;
-    }
-    .rec-detail {
+    .result-card:hover { box-shadow: 0 4px 20px rgba(37,99,235,0.12); border-color: #bfdbfe; }
+
+    .card-header {
       display: flex;
-      gap: 8px;
-      margin-bottom: 6px;
-      font-size: 13px;
-      line-height: 1.5;
-      color: #333;
+      align-items: flex-start;
+      padding: 18px 20px 14px;
+      gap: 12px;
     }
-    .rec-detail .label {
+    .card-rank {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 32px;
+      height: 32px;
+      background: #1e3a8a;
+      color: #fff;
+      border-radius: 50%;
+      font-size: 0.85rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .card-rank.rank-1 { background: #f59e0b; }
+    .card-rank.rank-2 { background: #94a3b8; }
+    .card-rank.rank-3 { background: #b45309; }
+
+    .card-title-group { flex: 1; }
+    .card-name-ko { font-size: 1rem; font-weight: 700; color: #1a1a2e; line-height: 1.3; }
+    .card-meta { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+    .badge {
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      border-radius: 20px;
       font-weight: 600;
-      color: #666;
-      white-space: nowrap;
-      min-width: 80px;
     }
-    .rec-detail.warning {
-      background: #fff8e1;
-      border-radius: 6px;
-      padding: 6px 8px;
+    .badge-mt  { background: #dbeafe; color: #1e40af; }
+    .badge-ex  { background: #d1fae5; color: #065f46; }
+
+    /* ── Position Box ── */
+    .position-box {
+      margin: 0 20px 0;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      overflow: hidden;
     }
-    .rec-detail.highlight {
-      background: #e8f4fd;
-      border-radius: 6px;
-      padding: 6px 8px;
-      font-style: italic;
-    }
-    .clinical-note-block {
-      background: #f0f9f0;
-      border-left: 3px solid #2ecc71;
-      border-radius: 8px;
+    .position-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
       padding: 12px 16px;
-      margin-top: 16px;
-      font-size: 13px;
-      color: #2d6a4f;
     }
+    .position-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+    .position-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 3px;
+    }
+    .position-value { font-size: 0.87rem; color: #334155; line-height: 1.5; }
+    .position-divider { height: 1px; background: #e2e8f0; margin: 0 16px; }
+
+    /* ── Expand / Collapse ── */
+    .card-expand-btn-wrap {
+      padding: 12px 20px;
+      border-top: 1px solid #f1f5f9;
+      margin-top: 12px;
+    }
+    .btn-expand-card {
+      width: 100%;
+      padding: 8px;
+      font-size: 0.83rem;
+      font-weight: 600;
+      color: #2563eb;
+      background: none;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-expand-card:hover { background: #eff6ff; border-color: #2563eb; }
+    .card-detail-section {
+      display: none;
+      border-top: 1px solid #f1f5f9;
+      padding: 0 0 8px;
+    }
+    .card-section { padding: 12px 20px 4px; }
+    .card-section-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #64748b;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .card-section-value { font-size: 0.87rem; color: #334155; line-height: 1.6; }
+    .card-section-warn { font-size: 0.87rem; color: #b45309; line-height: 1.6; }
 
     /* ── Mobile tweaks ── */
     @media (max-width: 380px) {
@@ -944,33 +1004,73 @@
   }
 
   function renderAIResult(result) {
-    // Save session history if summary provided
     if (result.sessionSummary) {
       saveSessionHistory(result.sessionSummary);
     }
 
-    // Render MT
+    // ── Manual Therapy 렌더 ──
     const mtList = document.getElementById('mt-rec-list');
     mtList.innerHTML = '';
     const mtItems = result.manualTherapy || [];
     if (mtItems.length === 0) {
       mtList.innerHTML = `<div class="no-rec">해당 조합에 맞는 Manual Therapy 추천이 없습니다.</div>`;
     } else {
-      mtItems.forEach(item => {
+      mtItems.forEach((item, idx) => {
+        const rankClass = idx === 0 ? 'rank-1' : idx === 1 ? 'rank-2' : idx === 2 ? 'rank-3' : '';
         const card = document.createElement('div');
-        card.className = 'rec-card';
+        card.className = 'result-card';
         card.innerHTML = `
-          <h4>🔧 ${item.technique}</h4>
-          <div class="rec-detail"><span class="label">환자 자세</span> ${item.patientPosition}</div>
-          <div class="rec-detail"><span class="label">손 위치</span> ${item.therapistHands}</div>
-          <div class="rec-detail"><span class="label">동작</span> ${item.movement}</div>
-          <div class="rec-detail"><span class="label">목표 근육</span> ${(item.targetMuscles || []).join(', ')}</div>
-          <div class="rec-detail warning"><span class="label">환자 피드백</span> ${item.patientFeedback}</div>`;
+        <div class="card-header">
+          <div class="card-rank ${rankClass}">${idx + 1}</div>
+          <div class="card-title-group">
+            <div class="card-name-ko">🔧 ${item.technique}</div>
+            <div class="card-meta">
+              <span class="badge badge-mt">Manual Therapy</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="position-box">
+          <div class="position-row">
+            <span class="position-icon">🧑‍⚕️</span>
+            <div>
+              <div class="position-label">환자 자세</div>
+              <div class="position-value">${item.patientPosition}</div>
+            </div>
+          </div>
+          <div class="position-divider"></div>
+          <div class="position-row">
+            <span class="position-icon">👐</span>
+            <div>
+              <div class="position-label">손 위치</div>
+              <div class="position-value">${item.therapistHands}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-expand-btn-wrap">
+          <button class="btn-expand-card" onclick="toggleCardDetail(this)">자세히 보기 ▼</button>
+        </div>
+
+        <div class="card-detail-section">
+          <div class="card-section">
+            <div class="card-section-title">📋 동작</div>
+            <div class="card-section-value">${item.movement}</div>
+          </div>
+          <div class="card-section">
+            <div class="card-section-title">🎯 목표 구조물</div>
+            <div class="card-section-value">${(item.targetMuscles || []).join(', ')}</div>
+          </div>
+          <div class="card-section" style="padding-bottom:14px">
+            <div class="card-section-title">✅ 환자 피드백</div>
+            <div class="card-section-warn">${item.patientFeedback}</div>
+          </div>
+        </div>`;
         mtList.appendChild(card);
       });
     }
 
-    // Render EX — Supabase 운동 데이터 미설정 시 섹션 전체 숨김
+    // ── Exercise 렌더 ──
     const exBlock = document.getElementById('ex-rec-block');
     const exList = document.getElementById('ex-rec-list');
     exList.innerHTML = '';
@@ -979,31 +1079,83 @@
       exBlock.style.display = 'none';
     } else {
       exBlock.style.display = '';
-      exItems.forEach(item => {
+      exItems.forEach((item, idx) => {
+        const rankClass = idx === 0 ? 'rank-1' : idx === 1 ? 'rank-2' : idx === 2 ? 'rank-3' : '';
         const card = document.createElement('div');
-        card.className = 'rec-card';
+        card.className = 'result-card';
         card.innerHTML = `
-          <h4>🏃 ${item.name}</h4>
-          <div class="rec-detail"><span class="label">시작 자세</span> ${item.startPosition}</div>
-          <div class="rec-detail"><span class="label">치료사 가이드</span> ${item.therapistGuide}</div>
-          <div class="rec-detail"><span class="label">동작</span> ${item.movement}</div>
-          <div class="rec-detail"><span class="label">처방</span> ${item.sets}</div>
-          <div class="rec-detail"><span class="label">목표 근육</span> ${(item.targetMuscles || []).join(', ')}</div>
-          <div class="rec-detail highlight"><span class="label">큐잉</span> "${item.cue}"</div>`;
+        <div class="card-header">
+          <div class="card-rank ${rankClass}">${idx + 1}</div>
+          <div class="card-title-group">
+            <div class="card-name-ko">🏃 ${item.name}</div>
+            <div class="card-meta">
+              <span class="badge badge-ex">Exercise</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="position-box">
+          <div class="position-row">
+            <span class="position-icon">🧑‍⚕️</span>
+            <div>
+              <div class="position-label">시작 자세</div>
+              <div class="position-value">${item.startPosition}</div>
+            </div>
+          </div>
+          <div class="position-divider"></div>
+          <div class="position-row">
+            <span class="position-icon">👐</span>
+            <div>
+              <div class="position-label">치료사 가이드</div>
+              <div class="position-value">${item.therapistGuide}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-expand-btn-wrap">
+          <button class="btn-expand-card" onclick="toggleCardDetail(this)">자세히 보기 ▼</button>
+        </div>
+
+        <div class="card-detail-section">
+          <div class="card-section">
+            <div class="card-section-title">📋 동작</div>
+            <div class="card-section-value">${item.movement}</div>
+          </div>
+          <div class="card-section">
+            <div class="card-section-title">⏱ 처방</div>
+            <div class="card-section-value">${item.sets}</div>
+          </div>
+          <div class="card-section">
+            <div class="card-section-title">🎯 목표 근육</div>
+            <div class="card-section-value">${(item.targetMuscles || []).join(', ')}</div>
+          </div>
+          <div class="card-section" style="padding-bottom:14px">
+            <div class="card-section-title">💬 큐잉</div>
+            <div class="card-section-warn">"${item.cue}"</div>
+          </div>
+        </div>`;
         exList.appendChild(card);
       });
     }
 
-    // Render clinical note
+    // ── Clinical Note ──
     const noteWrap = document.getElementById('clinical-note-wrap');
     noteWrap.innerHTML = '';
     if (result.clinicalNote) {
       noteWrap.innerHTML = `
-        <div class="clinical-note-block">
-          <div class="clinical-note-label">임상 메모</div>
-          ${result.clinicalNote}
-        </div>`;
+      <div class="clinical-note-block">
+        <div class="clinical-note-label">임상 메모</div>
+        ${result.clinicalNote}
+      </div>`;
     }
+  }
+
+  function toggleCardDetail(btn) {
+    const card = btn.closest('.result-card');
+    const detail = card.querySelector('.card-detail-section');
+    const isOpen = detail.style.display === 'block';
+    detail.style.display = isOpen ? 'none' : 'block';
+    btn.textContent = isOpen ? '자세히 보기 ▼' : '접기 ▲';
   }
 
   function getLabel(id) {
