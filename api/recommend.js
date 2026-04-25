@@ -34,14 +34,23 @@ const EX_PREFERENCE_LABEL = {
   ex_aerobic:  '유산소·활동성 운동 (Aerobic)',
 };
 
-// Supabase에서 is_active=true 테크닉 상세 데이터 조회
-async function fetchActiveTechniques(categories) {
+// 프론트엔드 region 레이블 → DB body_region enum 값 매핑
+const REGION_BODY_REGION_MAP = {
+  '경추': ['cervical', 'thoracic'],
+  '요추': ['lumbar', 'sacroiliac'],
+};
+
+// Supabase에서 is_active=true 테크닉 상세 데이터 조회 (body_region 필터 적용)
+async function fetchActiveTechniques(categories, bodyRegions = []) {
   const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gnusyjnviugpofvaicbv.supabase.co';
   const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
   if (!SUPABASE_KEY || categories.length === 0) return [];
 
   const catFilter = categories.map(c => `category.eq.${c}`).join(',');
-  const url = `${SUPABASE_URL}/rest/v1/techniques?is_active=eq.true&or=(${catFilter})` +
+  const regionFilter = bodyRegions.length > 0
+    ? `&body_region=in.(${bodyRegions.join(',')})`
+    : '';
+  const url = `${SUPABASE_URL}/rest/v1/techniques?is_active=eq.true&or=(${catFilter})${regionFilter}` +
     `&select=name_ko,category,patient_position,therapist_position,contact_point,direction,technique_steps`;
 
   try {
@@ -100,8 +109,9 @@ async function fetchCategoryPrinciples() {
 // 기법 객체를 LLM 프롬프트용 텍스트 블록으로 변환
 // groupLabel: 사용자 그룹명 (category 필드 대신 표시 — LLM이 category 경계로 그룹을 오해하는 것 방지)
 function formatTechniqueForPrompt(t, groupLabel) {
+  // 프롬프트 크기 최적화: 처음 3단계만 포함 (LLM이 선택·재작성에 충분한 정보)
   const steps = Array.isArray(t.technique_steps)
-    ? t.technique_steps.map(s => `    ${s.step}. ${s.instruction}`).join('\n')
+    ? t.technique_steps.slice(0, 3).map(s => `    ${s.step}. ${s.instruction}`).join('\n')
     : '';
 
   return [
@@ -142,11 +152,14 @@ export default async function handler(req, res) {
   const mtCategories = [...new Set(preferredMT.flatMap(id => MT_CATEGORY_MAP[id] || []))];
   const exCategories = [...new Set(preferredEX.flatMap(id => EX_CATEGORY_MAP[id] || []))];
 
+  // region 레이블 → body_region enum 값 변환 (관련 없는 부위 기법 필터링)
+  const bodyRegions = REGION_BODY_REGION_MAP[region] || [];
+
   // Supabase에서 is_active=true 테크닉 + 카테고리 원칙 병렬 조회
   let activeMT = [], activeEX = [], categoryPrinciplesMap = {};
   try {
-    const fetches = [fetchActiveTechniques(mtCategories), fetchCategoryPrinciples()];
-    if (exCategories.length > 0) fetches.push(fetchActiveTechniques(exCategories));
+    const fetches = [fetchActiveTechniques(mtCategories, bodyRegions), fetchCategoryPrinciples()];
+    if (exCategories.length > 0) fetches.push(fetchActiveTechniques(exCategories, bodyRegions));
     const results = await Promise.all(fetches);
     activeMT = results[0];
     categoryPrinciplesMap = results[1];
@@ -281,7 +294,7 @@ techniqueId는 [MT-XXX] 또는 [EX-XXX] ID를 그대로 복사.`;
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5',
-        max_tokens: 4096,
+        max_tokens: 2048,
         system: systemPrompt,
         messages: [{ role: 'user', content: userPrompt }]
       })
