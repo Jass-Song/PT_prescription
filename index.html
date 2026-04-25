@@ -752,16 +752,6 @@
       <div class="choice-grid" id="mt-grid"></div>
     </div>
 
-    <!-- Therapeutic Exercise -->
-    <div class="section-card">
-      <div class="section-title">
-        운동 처방
-        <span class="badge" id="ex-count">0 / 2</span>
-      </div>
-      <div class="limit-hint" id="ex-hint">최대 2개 선택</div>
-      <div class="choice-grid" id="ex-grid"></div>
-    </div>
-
     <div style="padding: 0 0 8px;">
       <button class="btn-primary" id="btn-save" onclick="saveSettings()" disabled>저장 후 시작</button>
     </div>
@@ -832,11 +822,6 @@
         <div id="mt-rec-list"></div>
       </div>
 
-      <div class="rec-block" id="ex-rec-block" style="display:none">
-        <div class="rec-block-title"><span class="icon">🏃</span> 운동 처방 추천</div>
-        <div id="ex-rec-list"></div>
-      </div>
-
       <div id="clinical-note-wrap"></div>
     </div>
 
@@ -856,12 +841,6 @@
     { id: 'mt_joint', label: '관절가동술', sub: 'Maitland · Mulligan · HVLA' },
     { id: 'mt_soft',  label: '연부조직 가동술', sub: 'MFR' },
     { id: 'mt_neuro', label: '신경가동술', sub: '' },
-  ];
-
-  const EX_OPTIONS = [
-    { id: 'ex_neuro',    label: '신경근 훈련',  sub: 'Motor Control · Proprioception' },
-    { id: 'ex_strength', label: '저항성 운동',  sub: 'Resistance · Body Weight' },
-    { id: 'ex_aerobic',  label: '유산소 운동',  sub: 'Walking · Aerobic' },
   ];
 
   const REGIONS   = [
@@ -902,7 +881,6 @@
      STATE
   ══════════════════════════════════════ */
   let selectedMT = new Set();
-  let selectedEX = new Set();
   let selectedRegion  = null;
   let selectedStage   = null;
   let selectedSymptom = null;
@@ -915,12 +893,18 @@
     renderPatientGrids();
 
     const saved = loadSettings();
-    if (saved && (saved.mt.length > 0 || (saved.ex && saved.ex.length > 0))) {
-      (saved.mt || []).forEach(id => selectedMT.add(id));
-      (saved.ex || []).forEach(id => selectedEX.add(id));
-      refreshMTGrid();
-      refreshEXGrid();
-      goScreen2();
+    if (saved) {
+      const validIds = new Set(MT_OPTIONS.map(o => o.id));
+      const cleanMT = (saved.mt || []).filter(id => validIds.has(id));
+      if (cleanMT.length !== (saved.mt || []).length) {
+        // 구형 ID 제거 후 즉시 저장
+        localStorage.setItem('pt_settings', JSON.stringify({ mt: cleanMT }));
+      }
+      cleanMT.forEach(id => selectedMT.add(id));
+      if (selectedMT.size > 0) {
+        refreshMTGrid();
+        goScreen2();
+      }
     }
   });
 
@@ -935,12 +919,6 @@
       mtGrid.appendChild(card);
     });
 
-    const exGrid = document.getElementById('ex-grid');
-    EX_OPTIONS.forEach(opt => {
-      const card = makeCard(opt, () => toggleEX(opt.id));
-      card.id = 'card-' + opt.id;
-      exGrid.appendChild(card);
-    });
   }
 
   function makeCard(opt, handler) {
@@ -976,38 +954,12 @@
     });
   }
 
-  function toggleEX(id) {
-    if (selectedEX.has(id)) {
-      selectedEX.delete(id);
-    } else {
-      if (selectedEX.size >= 2) return; // hard block — max 2
-      selectedEX.add(id);
-    }
-    refreshEXGrid();
-    checkSaveBtn();
-  }
-
-  function refreshEXGrid() {
-    const atMax = selectedEX.size >= 2;
-    document.getElementById('ex-count').textContent = selectedEX.size + ' / 2';
-    const hint = document.getElementById('ex-hint');
-    hint.textContent = atMax ? '최대 선택 완료' : '최대 2개 선택';
-    hint.className = 'limit-hint' + (atMax ? ' warn' : '');
-
-    EX_OPTIONS.forEach(opt => {
-      const card = document.getElementById('card-' + opt.id);
-      const isSel = selectedEX.has(opt.id);
-      card.className = 'choice-card' + (isSel ? ' selected' : '') + (!isSel && atMax ? ' disabled' : '');
-    });
-  }
-
   function checkSaveBtn() {
-    document.getElementById('btn-save').disabled = (selectedMT.size === 0 && selectedEX.size === 0);
+    document.getElementById('btn-save').disabled = (selectedMT.size === 0);
   }
 
   function saveSettings() {
-    const data = { mt: [...selectedMT], ex: [...selectedEX] };
-    localStorage.setItem('pt_settings', JSON.stringify(data));
+    localStorage.setItem('pt_settings', JSON.stringify({ mt: [...selectedMT] }));
     goScreen2();
   }
 
@@ -1281,77 +1233,6 @@
       });
     }
 
-    // ── Therapeutic Exercise 렌더 ──
-    const exItems = result.therapeuticExercise || [];
-    const exBlock = document.getElementById('ex-rec-block');
-    const exList  = document.getElementById('ex-rec-list');
-    exList.innerHTML = '';
-    if (exItems.length === 0) {
-      exBlock.style.display = 'none';
-    } else {
-      exBlock.style.display = 'block';
-      exItems.forEach((item, idx) => {
-        const rankClass = idx === 0 ? 'rank-1' : idx === 1 ? 'rank-2' : idx === 2 ? 'rank-3' : '';
-        const card = document.createElement('div');
-        card.className = 'result-card';
-
-        // technique_steps — reuse renderMovement helper
-        const stepsHtml = item.technique_steps
-          ? renderMovement(Array.isArray(item.technique_steps)
-              ? item.technique_steps.map((s, i) => `${i + 1}. ${s}`).join(' ')
-              : item.technique_steps)
-          : '<p class="card-section-value">—</p>';
-
-        // absolute_contraindications
-        const contraHtml = item.absolute_contraindications
-          ? (Array.isArray(item.absolute_contraindications)
-              ? `<ul class="card-bullet-list">${item.absolute_contraindications.map(c => `<li>${c}</li>`).join('')}</ul>`
-              : `<p class="card-section-warn">${item.absolute_contraindications}</p>`)
-          : '<p class="card-section-value">—</p>';
-
-        card.innerHTML = `
-        <div class="card-header">
-          <div class="card-rank ${rankClass}">${idx + 1}</div>
-          <div class="card-title-group">
-            <div class="card-name-ko">🏃 ${item.name_ko || item.name || '운동'}</div>
-            <div class="card-meta">
-              <span class="badge badge-ex">${item.subcategory || 'Exercise'}</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="position-box">
-          <div class="position-row">
-            <span class="position-icon">📝</span>
-            <div>
-              <div class="position-label">운동 설명</div>
-              <div class="position-value">${item.description || '—'}</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card-expand-btn-wrap">
-          <button class="btn-expand-card" onclick="toggleCardDetail(this)">자세히 보기 ▼</button>
-        </div>
-
-        <div class="card-detail-section">
-          <div class="card-section">
-            <div class="card-section-title">🔢 단계별 운동 방법</div>
-            ${stepsHtml}
-          </div>
-          <div class="card-section">
-            <div class="card-section-title">💡 임상 팁</div>
-            <p class="card-section-value">${item.clinical_notes || '—'}</p>
-          </div>
-          <div class="card-section" style="padding-bottom:14px">
-            <div class="card-section-title">⚠️ 주의사항</div>
-            ${contraHtml}
-          </div>
-        </div>`;
-        exList.appendChild(card);
-      });
-    }
-
     // ── Clinical Note ──
     const noteWrap = document.getElementById('clinical-note-wrap');
     noteWrap.innerHTML = '';
@@ -1428,13 +1309,11 @@
   function goScreen3() { goScreen(3); }
 
   function goSettings() {
-    // Restore current settings to UI
     const settings = loadSettings();
     if (settings) {
-      selectedMT = new Set(settings.mt || []);
-      selectedEX = new Set(settings.ex || []);
+      const validIds = new Set(MT_OPTIONS.map(o => o.id));
+      selectedMT = new Set((settings.mt || []).filter(id => validIds.has(id)));
       refreshMTGrid();
-      refreshEXGrid();
       checkSaveBtn();
     }
     goScreen(1);
