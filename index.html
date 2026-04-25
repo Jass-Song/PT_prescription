@@ -752,6 +752,16 @@
       <div class="choice-grid" id="mt-grid"></div>
     </div>
 
+    <!-- Therapeutic Exercise -->
+    <div class="section-card">
+      <div class="section-title">
+        운동 처방
+        <span class="badge" id="ex-count">0 / 2</span>
+      </div>
+      <div class="limit-hint" id="ex-hint">최대 2개 선택</div>
+      <div class="choice-grid" id="ex-grid"></div>
+    </div>
+
     <div style="padding: 0 0 8px;">
       <button class="btn-primary" id="btn-save" onclick="saveSettings()" disabled>저장 후 시작</button>
     </div>
@@ -822,6 +832,11 @@
         <div id="mt-rec-list"></div>
       </div>
 
+      <div class="rec-block" id="ex-rec-block" style="display:none">
+        <div class="rec-block-title"><span class="icon">🏃</span> 운동 처방 추천</div>
+        <div id="ex-rec-list"></div>
+      </div>
+
       <div id="clinical-note-wrap"></div>
     </div>
 
@@ -841,6 +856,12 @@
     { id: 'mt_joint', label: '관절가동술', sub: 'Maitland · Mulligan · HVLA' },
     { id: 'mt_soft',  label: '연부조직 가동술', sub: 'MFR' },
     { id: 'mt_neuro', label: '신경가동술', sub: '' },
+  ];
+
+  const EX_OPTIONS = [
+    { id: 'ex_neuro',    label: '신경근 훈련',  sub: 'Motor Control · Proprioception' },
+    { id: 'ex_strength', label: '저항성 운동',  sub: 'Resistance · Body Weight' },
+    { id: 'ex_aerobic',  label: '유산소 운동',  sub: 'Walking · Aerobic' },
   ];
 
   const REGIONS   = [
@@ -881,6 +902,7 @@
      STATE
   ══════════════════════════════════════ */
   let selectedMT = new Set();
+  let selectedEX = new Set();
   let selectedRegion  = null;
   let selectedStage   = null;
   let selectedSymptom = null;
@@ -901,7 +923,14 @@
         localStorage.setItem('pt_settings', JSON.stringify({ mt: cleanMT }));
       }
       cleanMT.forEach(id => selectedMT.add(id));
-      if (selectedMT.size > 0) {
+
+      // EX 복원 — 반드시 유효 ID 필터 + 최대 2개 제한 적용
+      const validExIds = new Set(EX_OPTIONS.map(o => o.id));
+      const cleanEX = (saved.ex || []).filter(id => validExIds.has(id)).slice(0, 2);
+      cleanEX.forEach(id => selectedEX.add(id));
+      refreshEXGrid();
+
+      if (selectedMT.size > 0 || cleanEX.length > 0) {
         refreshMTGrid();
         goScreen2();
       }
@@ -919,6 +948,12 @@
       mtGrid.appendChild(card);
     });
 
+    const exGrid = document.getElementById('ex-grid');
+    EX_OPTIONS.forEach(opt => {
+      const card = makeCard(opt, () => toggleEX(opt.id));
+      card.id = 'card-ex-' + opt.id;
+      exGrid.appendChild(card);
+    });
   }
 
   function makeCard(opt, handler) {
@@ -954,12 +989,37 @@
     });
   }
 
+  function toggleEX(id) {
+    if (selectedEX.has(id)) {
+      selectedEX.delete(id);
+    } else {
+      if (selectedEX.size >= 2) return;
+      selectedEX.add(id);
+    }
+    refreshEXGrid();
+    checkSaveBtn();
+  }
+
+  function refreshEXGrid() {
+    const atMax = selectedEX.size >= 2;
+    document.getElementById('ex-count').textContent = selectedEX.size + ' / 2';
+    const hint = document.getElementById('ex-hint');
+    hint.textContent = atMax ? '최대 선택 완료' : '최대 2개 선택';
+    hint.className = 'limit-hint' + (atMax ? ' warn' : '');
+    EX_OPTIONS.forEach(opt => {
+      const card = document.getElementById('card-ex-' + opt.id);
+      if (!card) return;
+      const isSel = selectedEX.has(opt.id);
+      card.className = 'choice-card' + (isSel ? ' selected' : '') + (!isSel && atMax ? ' disabled' : '');
+    });
+  }
+
   function checkSaveBtn() {
-    document.getElementById('btn-save').disabled = (selectedMT.size === 0);
+    document.getElementById('btn-save').disabled = (selectedMT.size === 0 && selectedEX.size === 0);
   }
 
   function saveSettings() {
-    localStorage.setItem('pt_settings', JSON.stringify({ mt: [...selectedMT] }));
+    localStorage.setItem('pt_settings', JSON.stringify({ mt: [...selectedMT], ex: [...selectedEX] }));
     goScreen2();
   }
 
@@ -1314,6 +1374,9 @@
       const validIds = new Set(MT_OPTIONS.map(o => o.id));
       selectedMT = new Set((settings.mt || []).filter(id => validIds.has(id)));
       refreshMTGrid();
+      const validExIds = new Set(EX_OPTIONS.map(o => o.id));
+      selectedEX = new Set((settings.ex || []).filter(id => validExIds.has(id)).slice(0, 2));
+      refreshEXGrid();
       checkSaveBtn();
     }
     goScreen(1);
