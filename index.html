@@ -119,6 +119,65 @@
     .toggle-btn:hover { border-color: #2563eb; background: #eff6ff; }
     .toggle-btn.selected { border-color: #2563eb; background: #eff6ff; color: #1e40af; }
 
+    /* ─ 카드 선택 버튼 ─ */
+    .select-card-grid {
+      display: grid;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .select-card-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+    .select-card-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+    .select-card {
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 16px 12px;
+      background: #fff;
+      cursor: pointer;
+      text-align: left;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+      width: 100%;
+    }
+    .select-card:hover { border-color: #93c5fd; }
+    .select-card.selected {
+      border-color: #2563eb;
+      background: #eff6ff;
+    }
+    .select-card.selected .card-main { color: #2563eb; }
+    .select-card .card-main { font-size: 15px; font-weight: 600; color: #1e293b; line-height: 1.4; }
+    .select-card .card-sub  { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+    .select-card.selected .card-sub { color: #93c5fd; }
+
+    /* ─ 스텝 인디케이터 ─ */
+    .step-indicator {
+      display: flex;
+      align-items: center;
+      margin: 16px 0 24px;
+    }
+    .step-dot {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      color: #94a3b8;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700;
+      flex-shrink: 0;
+    }
+    .step-dot.active { background: #2563eb; color: #fff; }
+    .step-dot.done   { background: #10b981; color: #fff; }
+    .step-line {
+      flex: 1; height: 2px;
+      background: #e2e8f0;
+      margin: 0 4px;
+    }
+
+    /* 추천 보기 버튼 비활성 */
+    .btn-recommend:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+      opacity: 0.8;
+    }
+
     /* ── Submit Button ── */
     .btn-recommend {
       width: 100%;
@@ -843,58 +902,70 @@
     <!-- 선호 테크닉 요약 바 -->
     <div class="pref-summary-bar" id="pref-summary-bar">
       <span class="pref-label" id="pref-summary-text">내 선호 테크닉: —</span>
-      <button class="btn-edit-pref" onclick="editPreferences()">수정</button>
+      <button class="btn-edit-pref" onclick="editPreferences()">설정 변경</button>
     </div>
 
-    <!-- Input Form -->
     <div class="form-card">
-      <h2>환자 정보 입력</h2>
+      <h2 style="font-size:22px;font-weight:700;margin-bottom:4px">환자 정보 입력</h2>
+      <p style="color:#94a3b8;font-size:13px;margin-bottom:16px">아래 3가지를 순서대로 선택하세요</p>
+
+      <!-- 스텝 인디케이터 -->
+      <div class="step-indicator" id="step-indicator">
+        <div class="step-dot active" id="step-1">1</div>
+        <div class="step-line"></div>
+        <div class="step-dot" id="step-2">2</div>
+        <div class="step-line"></div>
+        <div class="step-dot" id="step-3">3</div>
+      </div>
 
       <!-- 부위 선택 -->
       <div class="form-group">
-        <label class="group-label" for="body-select">치료 부위</label>
-        <select id="body-select">
-          <option value="">-- 부위 선택 (전체) --</option>
-          <option value="cervical">경추 (목)</option>
-          <option value="lumbar">요추 (허리)</option>
-        </select>
-        <p style="font-size:12px; color:#888; margin-top:4px;">
-          MVP v0.1 — 현재 경추·요추 테크닉만 지원합니다.
-        </p>
-      </div>
-
-      <!-- 치료 목적 -->
-      <div class="form-group">
-        <label class="group-label">치료 목적 <span style="font-size:0.78rem;font-weight:400;color:#94a3b8">(복수 선택)</span></label>
-        <div class="toggle-btn-group" id="purpose-btn-group">
-          <div class="toggle-btn" data-value="pain_relief" onclick="toggleBtn(this)">통증 감소</div>
-          <div class="toggle-btn" data-value="rom_improvement" onclick="toggleBtn(this)">ROM 개선</div>
-          <div class="toggle-btn" data-value="neurodynamics" onclick="toggleBtn(this)">신경증상</div>
-          <div class="toggle-btn" data-value="stabilization" onclick="toggleBtn(this)">안정화</div>
+        <label class="group-label">부위</label>
+        <div class="select-card-grid cols-2" id="body-card-group">
+          <button class="select-card" data-value="cervical" onclick="selectCard(this, 'body')">
+            <div class="card-main">경추</div>
+            <div class="card-sub">목</div>
+          </button>
+          <button class="select-card" data-value="lumbar" onclick="selectCard(this, 'body')">
+            <div class="card-main">요추</div>
+            <div class="card-sub">허리</div>
+          </button>
         </div>
       </div>
 
-      <!-- 환자 상태 -->
+      <!-- 시기 -->
       <div class="form-group">
-        <label class="group-label">환자 상태 <span style="font-size:0.78rem;font-weight:400;color:#94a3b8">(복수 선택)</span></label>
-        <div class="toggle-btn-group" id="target-btn-group">
-          <div class="toggle-btn" data-value="acute" onclick="toggleBtn(this)">급성</div>
-          <div class="toggle-btn" data-value="chronic" onclick="toggleBtn(this)">만성</div>
+        <label class="group-label">시기</label>
+        <div class="select-card-grid cols-2" id="timing-card-group">
+          <button class="select-card" data-value="acute" onclick="selectCard(this, 'timing')">
+            <div class="card-main">급성</div>
+            <div class="card-sub">&lt; 6주</div>
+          </button>
+          <button class="select-card" data-value="chronic" onclick="selectCard(this, 'timing')">
+            <div class="card-main">만성</div>
+            <div class="card-sub">&gt; 6주</div>
+          </button>
         </div>
       </div>
 
-      <!-- 증상 유형 -->
+      <!-- 증상 패턴 -->
       <div class="form-group">
-        <label class="group-label">증상 유형 <span style="font-size:0.78rem;font-weight:400;color:#94a3b8">(복수 선택)</span></label>
-        <div class="toggle-btn-group" id="symptom-btn-group">
-          <div class="toggle-btn" data-value="movement_pain" onclick="toggleBtn(this)">움직일 때 통증</div>
-          <div class="toggle-btn" data-value="rest_pain" onclick="toggleBtn(this)">가만히 있을 때 통증</div>
-          <div class="toggle-btn" data-value="radicular_pain" onclick="toggleBtn(this)">방사통 / 퍼지는 통증</div>
+        <label class="group-label">증상 패턴</label>
+        <div class="select-card-grid cols-3" id="symptom-card-group">
+          <button class="select-card" data-value="movement_pain" onclick="selectCard(this, 'symptom')">
+            <div class="card-main">움직임 시<br>통증</div>
+          </button>
+          <button class="select-card" data-value="rest_pain" onclick="selectCard(this, 'symptom')">
+            <div class="card-main">안정 시<br>통증</div>
+          </button>
+          <button class="select-card" data-value="radicular_pain" onclick="selectCard(this, 'symptom')">
+            <div class="card-main">방사통</div>
+          </button>
         </div>
       </div>
 
-      <button class="btn-recommend" id="btn-recommend" onclick="runRecommend()">
-        추천받기 →
+      <button class="btn-recommend" id="btn-recommend" onclick="runRecommend()" disabled>
+        추천 보기
       </button>
     </div>
 
@@ -1590,15 +1661,70 @@ function toggleBtn(el) {
   el.classList.toggle('selected');
 }
 
+// ── 카드 단일 선택 + 스텝 인디케이터 업데이트 ──
+function selectCard(el, group) {
+  const groupId = group === 'body' ? 'body-card-group'
+               : group === 'timing' ? 'timing-card-group'
+               : 'symptom-card-group';
+  document.querySelectorAll('#' + groupId + ' .select-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  updateStepIndicator();
+  updateRecommendBtn();
+}
+
+function updateStepIndicator() {
+  const bodySelected    = document.querySelector('#body-card-group .select-card.selected');
+  const timingSelected  = document.querySelector('#timing-card-group .select-card.selected');
+  const symptomSelected = document.querySelector('#symptom-card-group .select-card.selected');
+
+  const s1 = document.getElementById('step-1');
+  const s2 = document.getElementById('step-2');
+  const s3 = document.getElementById('step-3');
+
+  if (!bodySelected) {
+    s1.className = 'step-dot active';
+    s2.className = 'step-dot';
+    s3.className = 'step-dot';
+    return;
+  }
+  s1.className = 'step-dot done';
+  if (!timingSelected) {
+    s2.className = 'step-dot active';
+    s3.className = 'step-dot';
+    return;
+  }
+  s2.className = 'step-dot done';
+  if (!symptomSelected) {
+    s3.className = 'step-dot active';
+  } else {
+    s3.className = 'step-dot done';
+  }
+}
+
+function updateRecommendBtn() {
+  const btn = document.getElementById('btn-recommend');
+  if (!btn) return;
+  const allSelected =
+    document.querySelector('#body-card-group .select-card.selected') &&
+    document.querySelector('#timing-card-group .select-card.selected') &&
+    document.querySelector('#symptom-card-group .select-card.selected');
+  btn.disabled = !allSelected;
+}
+
 // ── 추천 실행 ──
 async function runRecommend() {
-  const body_part    = document.getElementById('body-select').value;
-  const purpose_tags  = [...document.querySelectorAll('#purpose-btn-group .toggle-btn.selected')].map(el => el.dataset.value);
-  const target_tags   = [...document.querySelectorAll('#target-btn-group .toggle-btn.selected')].map(el => el.dataset.value);
-  const symptom_tags  = [...document.querySelectorAll('#symptom-btn-group .toggle-btn.selected')].map(el => el.dataset.value);
+  const bodyCard    = document.querySelector('#body-card-group .select-card.selected');
+  const timingCard  = document.querySelector('#timing-card-group .select-card.selected');
+  const symptomCard = document.querySelector('#symptom-card-group .select-card.selected');
+
+  if (!bodyCard || !timingCard || !symptomCard) return;
+
+  const body_part    = bodyCard.dataset.value;
+  const target_tags  = [timingCard.dataset.value];
+  const symptom_tags = [symptomCard.dataset.value];
+  const purpose_tags = ['pain_relief', 'rom_improvement'];
 
   const btn = document.getElementById('btn-recommend');
-
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> 분석 중...';
 
@@ -1614,7 +1740,8 @@ async function runRecommend() {
     alert('추천 중 오류가 발생했습니다. 다시 시도해주세요.');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '추천받기 →';
+    btn.innerHTML = '추천 보기';
+    updateRecommendBtn();
   }
 }
 
