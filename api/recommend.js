@@ -9,6 +9,59 @@ const MT_CATEGORY_MAP = {
   mt_neuro: ['category_d_neural'],
 };
 
+// 운동 처방 선호 ID → Supabase category 매핑
+const EX_CAT_MAP = {
+  ex_neuro:    ['category_f_therapeutic_exercise'],  // subcategory: Neuromuscular Training
+  ex_strength: ['category_f_therapeutic_exercise'],  // subcategory: Resistance Training + Body Weight Exercise
+  ex_aerobic:  ['category_f_therapeutic_exercise'],  // subcategory: Aerobic Exercise
+};
+
+// Supabase에서 운동 처방 데이터 조회 (subcategory + body_region 필터)
+async function fetchExercises(preferredEX, bodyRegion) {
+  const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gnusyjnviugpofvaicbv.supabase.co';
+  const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
+  if (!SUPABASE_KEY || preferredEX.length === 0) return [];
+
+  // 선호 ID → subcategory 필터 조건 매핑
+  const subcategoryFilters = [];
+  const subcategoryInList = [];
+
+  if (preferredEX.includes('ex_neuro')) {
+    subcategoryFilters.push('Neuromuscular Training');
+  }
+  if (preferredEX.includes('ex_strength')) {
+    subcategoryFilters.push('Resistance Training', 'Body Weight Exercise');
+  }
+  if (preferredEX.includes('ex_aerobic')) {
+    subcategoryFilters.push('Aerobic Exercise');
+  }
+
+  if (subcategoryFilters.length === 0) return [];
+
+  // body_region 필터 (cervical / lumbar)
+  const regionParam = bodyRegion ? `&body_region=eq.${encodeURIComponent(bodyRegion)}` : '';
+  const subcategoryParam = subcategoryFilters.length === 1
+    ? `subcategory=eq.${encodeURIComponent(subcategoryFilters[0])}`
+    : `subcategory=in.(${subcategoryFilters.map(s => encodeURIComponent(s)).join(',')})`;
+
+  const url = `${SUPABASE_URL}/rest/v1/techniques?is_active=eq.true&${subcategoryParam}${regionParam}` +
+    `&select=id,name_ko,name_en,abbreviation,subcategory,body_region,description,technique_steps,clinical_notes,absolute_contraindications,evidence_level,key_references`;
+
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`
+      }
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data || []).filter(t => t.name_ko);
+  } catch {
+    return [];
+  }
+}
+
 // Supabase에서 is_active=true 테크닉 상세 데이터 조회
 async function fetchActiveTechniques(categories) {
   const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gnusyjnviugpofvaicbv.supabase.co';
@@ -80,6 +133,7 @@ function formatTechniqueForPrompt(t) {
 
   return [
     `【${t.name_ko}】`,
+    `  category: ${t.category}`,
     `  환자자세: ${t.patient_position || ''}`,
     `  치료사위치: ${t.therapist_position || ''}`,
     `  접촉부위: ${t.contact_point || ''}`,
@@ -98,6 +152,7 @@ export default async function handler(req, res) {
     acuity,
     symptom,
     preferredMT = [],
+    preferredEX = [],
     sessionHistory = []
   } = req.body;
 
@@ -113,12 +168,13 @@ export default async function handler(req, res) {
   // preferredMT ID → Supabase category 변환
   const mtCategories = [...new Set(preferredMT.flatMap(id => MT_CATEGORY_MAP[id] || []))];
 
-  // Supabase에서 is_active=true 테크닉 + 카테고리 원칙 조회
-  let activeMT = [], categoryPrinciplesMap = {};
+  // Supabase에서 is_active=true 테크닉 + 카테고리 원칙 + 운동 처방 조회
+  let activeMT = [], categoryPrinciplesMap = {}, activeEX = [];
   try {
-    [activeMT, categoryPrinciplesMap] = await Promise.all([
+    [activeMT, categoryPrinciplesMap, activeEX] = await Promise.all([
       fetchActiveTechniques(mtCategories),
       fetchCategoryPrinciples(),
+      fetchExercises(preferredEX, region),
     ]);
   } catch {
     // Supabase 조회 실패 시 LLM이 자체 판단으로 추천
@@ -156,7 +212,8 @@ export default async function handler(req, res) {
    - therapistHands: DB "치료사위치 + 접촉부위"를 결합하여 쉬운 한국어로 (25자 이내)
    - movement: DB 시술단계를 번호 형식으로 요약 (각 단계 15자 이내)
    - targetMuscles: DB에 없음 — 기법명과 신체부위 기반으로 임상 지식에서 추론
-5. DB 정보가 없는 기법은 선택하지 마세요.`;
+5. DB 정보가 없는 기법은 선택하지 마세요.
+6. 각 기법의 category 값을 응답의 categoryKey 필드에 정확히 복사하세요. 절대 변형 금지.`;
 
   const userPrompt = `환자 정보:
 - 부위: ${region}
@@ -175,6 +232,7 @@ ${historyText}
   "manualTherapy": [
     {
       "technique": "기법명 (10자 이내)",
+      "categoryKey": "해당 기법의 category 값 그대로 복사 (예: category_joint_mobilization)",
       "patientPosition": "쉬운 일상 언어로 자세 설명 (25자 이내, 의학 약어 금지)",
       "therapistHands": "손 배치 위치와 방법 (25자 이내)",
       "movement": "1. [단계] 2. [단계] 3. [단계] 4. [단계] 번호 형식 필수",
@@ -220,24 +278,27 @@ manualTherapy는 정확히 3개, targetMuscles는 최대 3개.`;
 
     const result = JSON.parse(jsonMatch[0]);
 
-    // 선택한 MT 카테고리의 일반 원칙을 모든 추천 기법에 attach
-    // (카테고리별 general commentary — 개별 기법 매칭 불필요)
-    const catData = categoryPrinciplesMap[mtCategories[0]];
-    if (catData) {
-      (result.manualTherapy || []).forEach(item => {
+    // 각 기법의 categoryKey(LLM이 프롬프트에서 복사)로 해당 카테고리 원칙 attach
+    (result.manualTherapy || []).forEach(item => {
+      const catData = categoryPrinciplesMap[item.categoryKey]
+        || categoryPrinciplesMap[mtCategories[0]];
+      if (catData) {
         item.categoryInfo = {
           name_ko: catData.name_ko,
           name_en: catData.name_en,
           basic_principles: catData.basic_principles || [],
         };
-      });
-    }
+      }
+    });
+
+    result.therapeuticExercise = activeEX;
 
     result.sessionSummary = {
       region,
       acuity,
       symptom,
       mt: preferredMT,
+      ex: preferredEX,
     };
 
     return res.status(200).json(result);
