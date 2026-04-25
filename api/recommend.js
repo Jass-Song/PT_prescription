@@ -48,14 +48,14 @@ async function fetchActiveTechniques(categories) {
   }
 }
 
-// 카테고리 일반 원칙(basic_principles) 조회
+// 카테고리 일반 원칙(basic_principles) 조회 — 필터 없이 전체 조회
 async function fetchCategoryPrinciples() {
   const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gnusyjnviugpofvaicbv.supabase.co';
   const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
   if (!SUPABASE_KEY) return {};
 
-  const url = `${SUPABASE_URL}/rest/v1/technique_categories?is_active=eq.true` +
-    `&select=category_key,name_ko,name_en,basic_principles`;
+  const url = `${SUPABASE_URL}/rest/v1/technique_categories` +
+    `?select=category_key,name_ko,name_en,basic_principles`;
 
   try {
     const res = await fetch(url, {
@@ -66,11 +66,25 @@ async function fetchCategoryPrinciples() {
     });
     if (!res.ok) return {};
     const data = await res.json();
-    // category_key → { name_ko, name_en, basic_principles } 맵으로 변환
-    return Object.fromEntries((data || []).map(c => [c.category_key, c]));
+    return Object.fromEntries(
+      (data || [])
+        .filter(c => c.category_key && Array.isArray(c.basic_principles) && c.basic_principles.length > 0)
+        .map(c => [c.category_key, c])
+    );
   } catch {
     return {};
   }
+}
+
+// LLM 반환 기법명에서 영어 병기 제거 후 activeMT에서 category 찾기
+function resolveCategoryEnum(techniqueName, activeMT) {
+  const clean = techniqueName.replace(/\([^)]*\)/g, '').replace(/\s+/g, ' ').trim();
+  const match = activeMT.find(t =>
+    t.name_ko === clean ||
+    clean.includes(t.name_ko) ||
+    t.name_ko.includes(clean)
+  );
+  return match ? match.category : (activeMT[0] ? activeMT[0].category : null);
 }
 
 // techniques.category enum → technique_categories.category_key 매핑
@@ -89,7 +103,7 @@ function formatTechniqueForPrompt(t) {
     : '';
 
   return [
-    `【${t.name_ko} | categoryEnum:${t.category}】`,
+    `【${t.name_ko}】`,
     `  환자자세: ${t.patient_position || ''}`,
     `  치료사위치: ${t.therapist_position || ''}`,
     `  접촉부위: ${t.contact_point || ''}`,
@@ -214,7 +228,6 @@ ${historyText}
   "manualTherapy": [
     {
       "technique": "기법명 (10자 이내)",
-      "categoryEnum": "입력 데이터의 categoryEnum 값을 그대로 복사",
       "patientPosition": "쉬운 일상 언어로 자세 설명 (25자 이내, 의학 약어 금지)",
       "therapistHands": "손 배치 위치와 방법 (25자 이내)",
       "movement": "1. [단계] 2. [단계] 3. [단계] 4. [단계] 번호 형식 필수",
@@ -263,9 +276,10 @@ manualTherapy는 정확히 3개${exCountNote}, targetMuscles는 최대 3개.`;
     // exercise 데이터가 없으면 빈 배열 보장 (Supabase 미설정 시 LLM이 임의 생성하지 않도록)
     if (!hasExData) result.exercise = [];
 
-    // 각 기법에 카테고리 원칙 attach
+    // 각 기법에 카테고리 원칙 attach (서버 사이드 이름 매칭)
     (result.manualTherapy || []).forEach(item => {
-      const categoryKey = ENUM_TO_CATEGORY_KEY[item.categoryEnum] || item.categoryEnum;
+      const enumVal = resolveCategoryEnum(item.technique, activeMT);
+      const categoryKey = ENUM_TO_CATEGORY_KEY[enumVal] || enumVal;
       const catData = categoryPrinciplesMap[categoryKey];
       if (catData) {
         item.categoryInfo = {
@@ -274,7 +288,6 @@ manualTherapy는 정확히 3개${exCountNote}, targetMuscles는 최대 3개.`;
           basic_principles: catData.basic_principles || [],
         };
       }
-      delete item.categoryEnum;
     });
 
     // sessionSummary는 서버에서 직접 조립 (LLM에게 맡기지 않음)
