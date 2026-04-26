@@ -107,14 +107,16 @@ const REGION_BODY_REGION_MAP = {
 
 // Supabase에서 카테고리별 기법 전체 조회 (body_region 포함)
 // 부위 필터는 서버에서 처리: body_region이 NULL(범용)이거나 대상 부위에 해당하는 기법만 반환
-async function fetchActiveTechniques(categories, bodyRegions = []) {
+async function fetchActiveTechniques(categories, bodyRegions = [], userToken = null) {
   const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gnusyjnviugpofvaicbv.supabase.co';
   const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
   if (!SUPABASE_KEY || categories.length === 0) return [];
 
   const catFilter = categories.map(c => `category.eq.${c}`).join(',');
   const selectFields = `name_ko,category,body_region,patient_position,therapist_position,contact_point,direction,technique_steps`;
-  const headers = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` };
+  // RLS는 auth.uid() 기반 — 사용자 JWT가 있으면 사용, 없으면 anon key fallback
+  const authToken = userToken || SUPABASE_KEY;
+  const headers = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${authToken}` };
   const url = `${SUPABASE_URL}/rest/v1/techniques?is_active=eq.true&or=(${catFilter})&select=${selectFields}`;
 
   try {
@@ -175,7 +177,7 @@ async function callLLMAndParse(systemPrompt, userPrompt, apiKey) {
 
 // 카테고리 일반 원칙(basic_principles) 조회
 // category_key를 구/신 두 형태로 모두 인덱싱 (migration 004b가 category_a_ → category_ 로 rename했기 때문)
-async function fetchCategoryPrinciples() {
+async function fetchCategoryPrinciples(userToken = null) {
   const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gnusyjnviugpofvaicbv.supabase.co';
   const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
   if (!SUPABASE_KEY) return {};
@@ -183,11 +185,12 @@ async function fetchCategoryPrinciples() {
   const url = `${SUPABASE_URL}/rest/v1/technique_categories?is_active=eq.true` +
     `&select=category_key,name_ko,name_en,basic_principles`;
 
+  const authToken = userToken || SUPABASE_KEY;
   try {
     const res = await fetch(url, {
       headers: {
         'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`
+        'Authorization': `Bearer ${authToken}`
       }
     });
     if (!res.ok) return {};
@@ -246,6 +249,7 @@ export default async function handler(req, res) {
   if (authError) {
     return res.status(401).json({ error: authError });
   }
+  const userToken = (req.headers['authorization'] || '').split(' ')[1] || null;
 
   const {
     region,
@@ -275,8 +279,8 @@ export default async function handler(req, res) {
   // Supabase에서 is_active=true 테크닉 + 카테고리 원칙 병렬 조회
   let activeMT = [], activeEX = [], categoryPrinciplesMap = {};
   try {
-    const fetches = [fetchActiveTechniques(mtCategories, bodyRegions), fetchCategoryPrinciples()];
-    if (exCategories.length > 0) fetches.push(fetchActiveTechniques(exCategories, bodyRegions));
+    const fetches = [fetchActiveTechniques(mtCategories, bodyRegions, userToken), fetchCategoryPrinciples(userToken)];
+    if (exCategories.length > 0) fetches.push(fetchActiveTechniques(exCategories, bodyRegions, userToken));
     const results = await Promise.all(fetches);
     activeMT = results[0];
     categoryPrinciplesMap = results[1];
