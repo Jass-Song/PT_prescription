@@ -38,6 +38,63 @@ const EX_PREFERENCE_LABEL = {
   ex_aerobic:  '유산소·활동성 운동 (Aerobic)',
 };
 
+// 환자 컨디션(acuity + symptom) 기반 카테고리 우선순위 점수표
+// 그룹 내 기법을 이 점수 기준으로 정렬 후 상위 3개 선택. 미정의 카테고리 기본값 0.
+const CONDITION_CATEGORY_SCORES = {
+  '급성': {
+    '움직임 시 통증': {
+      category_mulligan: 3, category_mdt: 3, category_scs: 2,
+      category_mfr: 1, category_joint_mobilization: 1, category_d_neural: 1, category_pne: 1,
+      category_deep_friction: -1,
+    },
+    '안정 시 통증': {
+      category_scs: 3, category_mfr: 2, category_pne: 2,
+      category_trigger_point: 1, category_mulligan: 1, category_d_neural: 1,
+      category_ctm: 1, category_anatomy_trains: 1,
+      category_deep_friction: -1,
+    },
+    '방사통': {
+      category_d_neural: 3, category_mfr: 2, category_pne: 2,
+      category_mulligan: 1, category_scs: 1, category_mdt: 1, category_anatomy_trains: 1,
+      category_deep_friction: -1,
+    },
+  },
+  '아급성': {
+    '움직임 시 통증': {
+      category_joint_mobilization: 3, category_mulligan: 2, category_mdt: 2,
+      category_art: 1, category_trigger_point: 1, category_mfr: 1,
+      category_d_neural: 1, category_pne: 1,
+    },
+    '안정 시 통증': {
+      category_mfr: 2, category_trigger_point: 2, category_scs: 2, category_pne: 2,
+      category_art: 1, category_ctm: 1, category_d_neural: 1, category_mulligan: 1,
+      category_anatomy_trains: 1,
+    },
+    '방사통': {
+      category_d_neural: 3, category_mulligan: 2, category_mfr: 2, category_pne: 2,
+      category_mdt: 1, category_scs: 1, category_anatomy_trains: 1, category_art: 1,
+    },
+  },
+  '만성': {
+    '움직임 시 통증': {
+      category_joint_mobilization: 3, category_mdt: 3,
+      category_art: 2, category_mulligan: 2, category_deep_friction: 2,
+      category_trigger_point: 1, category_mfr: 1, category_anatomy_trains: 1,
+      category_d_neural: 1, category_pne: 1,
+    },
+    '안정 시 통증': {
+      category_trigger_point: 3, category_pne: 3,
+      category_mfr: 2, category_art: 2, category_ctm: 2, category_anatomy_trains: 2,
+      category_scs: 1, category_joint_mobilization: 1, category_mulligan: 1, category_d_neural: 1,
+    },
+    '방사통': {
+      category_d_neural: 3, category_pne: 3,
+      category_mulligan: 2, category_mfr: 2, category_mdt: 2, category_anatomy_trains: 2,
+      category_art: 1, category_joint_mobilization: 1, category_scs: 1, category_trigger_point: 1,
+    },
+  },
+};
+
 // 프론트엔드 region 레이블 → DB body_region enum 값 매핑
 const REGION_BODY_REGION_MAP = {
   '경추': ['cervical', 'thoracic'],
@@ -241,9 +298,12 @@ export default async function handler(req, res) {
       if (mtId && techniquesByGroup[mtId]) techniquesByGroup[mtId].push(t);
     });
 
-    // 그룹당 최대 3개 사전 선택 (추후 가중치 기반으로 고도화 예정)
+    // 환자 컨디션 기반 카테고리 점수로 정렬 후 상위 3개 선택
+    const conditionScores = (CONDITION_CATEGORY_SCORES[acuity] || {})[symptom] || {};
     preferredMT.forEach(mtId => {
-      techniquesByGroup[mtId] = techniquesByGroup[mtId].slice(0, 3);
+      techniquesByGroup[mtId] = [...(techniquesByGroup[mtId] || [])]
+        .sort((a, b) => (conditionScores[b.category] ?? 0) - (conditionScores[a.category] ?? 0))
+        .slice(0, 3);
     });
 
     // 그룹 구분 없이 단일 평면 목록으로 제시 (LLM이 임상 적용 순서로 통합 정렬)
