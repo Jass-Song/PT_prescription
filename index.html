@@ -2027,7 +2027,7 @@
     if (result.clinicalNote) {
       // ① ② 기호로 섹션 분리
       const NOTE_SECTIONS = [
-        { marker: '①', title: 'MT 추천 순서 근거' },
+        { marker: '①', title: '추천 근거' },
         { marker: '②', title: '환자 임상 메시지' },
       ];
       const raw = result.clinicalNote;
@@ -2044,15 +2044,9 @@
         // 선행 콜론·공백 제거
         content = content.replace(/^[\s:：]+/, '');
 
-        // 쉼표나 줄바꿈으로 bullet 항목 분리 (1순위/2순위 패턴 감지)
-        let items;
-        if (/\d순위/.test(content)) {
-          // "1순위 X→Y, 2순위 X→Y" 형태
-          items = content.split(/,\s*(?=\d+순위)/).map(t => t.trim()).filter(Boolean);
-        } else {
-          // 일반 텍스트 → 통째로 하나의 bullet
-          items = [content];
-        }
+        // "기법명→이유, 기법명→이유" 형태: 쉼표로 bullet 분리
+        const commaItems = content.split(/,\s+/).map(t => t.trim()).filter(Boolean);
+        const items = commaItems.length > 1 ? commaItems : [content];
 
         const liHTML = items.map(t => `<li>${t}</li>`).join('');
         sectionsHTML += `
