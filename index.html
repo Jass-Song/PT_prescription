@@ -814,6 +814,60 @@
       cursor: default;
     }
 
+    /* ── 대안 후보 기법 버튼 섹션 ── */
+    .candidate-btn-row {
+      padding: 14px 16px 6px;
+      border-top: 1px dashed var(--border);
+      margin-top: 8px;
+    }
+    .candidate-btn-row::before {
+      content: '다른 후보 기법';
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .btn-candidate {
+      display: inline-block;
+      margin: 0 6px 6px 0;
+      padding: 6px 13px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--primary);
+      background: var(--primary-light);
+      border: 1px solid var(--primary-border);
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-candidate:hover:not(:disabled) { background: #d0e8ff; }
+    .btn-candidate:disabled { opacity: 0.45; cursor: default; }
+    .btn-candidate.selected {
+      background: var(--primary);
+      color: #fff;
+      opacity: 1;
+    }
+    .candidate-hint {
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+    /* 대안 카드 강조 */
+    .alt-card { border-left: 3px solid #a0aec0; }
+    .alt-rank {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      color: #4a5568;
+      font-size: 0.65rem;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
     /* ── Feedback Modal ── */
     .fb-modal-overlay {
       display: none;
@@ -1220,6 +1274,7 @@
       <div class="rec-block" id="mt-rec-block">
         <div class="rec-block-title"><span class="icon">🔧</span> Manual Therapy 추천</div>
         <div id="mt-rec-list"></div>
+        <div id="candidate-techniques-wrap"></div>
       </div>
 
       <div class="rec-block" id="ex-rec-block" style="display:none">
@@ -1897,6 +1952,88 @@
         </div>`;
         mtList.appendChild(card);
       });
+    }
+
+    // ── 대안 후보 기법 버튼 (1회 교체) ──
+    // 기법은 한 번만 변경할 수 있습니다
+    const candidates = result.candidateTechniques || [];
+    const candidateWrap = document.getElementById('candidate-techniques-wrap');
+    candidateWrap.innerHTML = '';
+    if (candidates.length > 0) {
+      let swapped = false; // 교체 여부 추적 — 1회만 허용
+      const btnRow = document.createElement('div');
+      btnRow.className = 'candidate-btn-row';
+      candidates.forEach(c => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-candidate';
+        btn.textContent = c.name_ko;
+        btn.title = c.groupLabel;
+        btn.addEventListener('click', () => {
+          if (swapped) return;
+          swapped = true;
+          // 버튼 전체 비활성화
+          btnRow.querySelectorAll('.btn-candidate').forEach(b => {
+            b.disabled = true;
+            b.classList.add('used');
+          });
+          btn.classList.add('selected');
+          btnRow.querySelector('.candidate-hint').textContent = '기법은 한 번만 변경할 수 있습니다.';
+          // 선택된 후보 카드를 MT 목록 하단에 추가
+          const altCard = document.createElement('div');
+          altCard.className = 'result-card alt-card';
+          const catInfoAttr = c.categoryInfo
+            ? `data-catinfo='${JSON.stringify(c.categoryInfo).replace(/'/g, "&apos;")}'`
+            : '';
+          const catBtn = c.categoryInfo
+            ? `<button class="btn-category-info" onclick="showCategoryModal(this)" ${catInfoAttr}>📖 원칙 보기</button>`
+            : '';
+          const stepsHtml = c.steps.map(s => `<div class="movement-step"><span class="step-num">${s.step}</span><span class="step-text">${s.instruction}</span></div>`).join('');
+          altCard.innerHTML = `
+            <div class="card-header">
+              <div class="card-rank alt-rank">대안</div>
+              <div class="card-title-group">
+                <div class="card-name-ko">${c.name_ko}</div>
+                <div class="card-meta">
+                  <span class="badge badge-mt">${c.groupLabel}</span>
+                </div>
+              </div>
+              ${catBtn}
+            </div>
+            <div class="position-box">
+              <div class="position-row">
+                <span class="position-icon">🧑‍⚕️</span>
+                <div>
+                  <div class="position-label">① 환자 자세 세팅</div>
+                  <div class="position-value">${c.patientPosition || '—'}</div>
+                </div>
+              </div>
+              <div class="position-divider"></div>
+              <div class="position-row">
+                <span class="position-icon">👐</span>
+                <div>
+                  <div class="position-label">② 치료사 손 배치</div>
+                  <div class="position-value">${c.therapistPosition || '—'}${c.contactPoint ? ' · ' + c.contactPoint : ''}${c.direction ? ' · ' + c.direction : ''}</div>
+                </div>
+              </div>
+            </div>
+            <div class="card-expand-btn-wrap">
+              <button class="btn-expand-card" onclick="toggleCardDetail(this)">자세히 보기 ▼</button>
+            </div>
+            <div class="card-detail-section">
+              <div class="card-section">
+                <div class="card-section-title">📋 시술 방법</div>
+                <div class="movement-list">${stepsHtml || '<div class="movement-step"><span class="step-text">DB 정보 없음</span></div>'}</div>
+              </div>
+            </div>`;
+          mtList.appendChild(altCard);
+        });
+        btnRow.appendChild(btn);
+      });
+      const hint = document.createElement('div');
+      hint.className = 'candidate-hint';
+      hint.textContent = '추천이 마음에 들지 않으면 다른 후보를 선택하세요. (1회만 변경 가능)';
+      btnRow.appendChild(hint);
+      candidateWrap.appendChild(btnRow);
     }
 
     // ── Exercise 렌더 (그룹별) ──
