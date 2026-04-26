@@ -152,7 +152,7 @@ async function callLLMAndParse(systemPrompt, userPrompt, apiKey) {
     if (!response.ok) {
       const errText = await response.text();
       console.error('Anthropic API 오류:', response.status, errText);
-      return { error: `AI 서비스 오류 (${response.status})`, status: 502 };
+      return { error: `AI 서비스 오류 (${response.status}): ${errText.slice(0, 300)}`, status: 502 };
     }
     const data = await response.json();
     const rawText = data?.content?.[0]?.text || '';
@@ -287,6 +287,12 @@ export default async function handler(req, res) {
     console.error('[DEBUG] Supabase fetch error:', e);
   }
 
+  // 기법이 없으면 DB 접근 실패 (RLS 차단 또는 미승인 계정)
+  if (activeMT.length === 0 && mtCategories.length > 0) {
+    return res.status(503).json({
+      error: `기법 데이터를 불러오지 못했습니다. (DB 조회 실패 — 계정 승인 여부 또는 DB 마이그레이션을 확인하세요. mtCategories: ${JSON.stringify(mtCategories)})`
+    });
+  }
 
   // MT 기법에 고유 인덱스 ID 부여
   const indexedTechniques = new Map(); // 'MT-001' → technique object

@@ -1718,7 +1718,9 @@
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        let detail = '';
+        try { const j = await response.json(); detail = j.error || ''; } catch {}
+        throw new Error(`HTTP ${response.status}${detail ? ' — ' + detail : ''}`);
       }
 
       const result = await response.json();
