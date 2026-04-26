@@ -241,9 +241,27 @@ export default async function handler(req, res) {
       if (mtId && techniquesByGroup[mtId]) techniquesByGroup[mtId].push(t);
     });
 
-    // 그룹당 최대 3개 사전 선택 (추후 가중치 기반으로 고도화 예정)
+    // 그룹당 최대 3개 사전 선택: 카테고리 순환 방식으로 다양성 보장
+    // (예: mt_soft → MFR 1개·ART 1개·Trigger Point 1개, MFR 3개 독점 방지)
     preferredMT.forEach(mtId => {
-      techniquesByGroup[mtId] = techniquesByGroup[mtId].slice(0, 3);
+      const techniques = techniquesByGroup[mtId] || [];
+      const byCategory = {};
+      techniques.forEach(t => {
+        (byCategory[t.category] = byCategory[t.category] || []).push(t);
+      });
+      const cats = Object.keys(byCategory);
+      const selected = [];
+      let round = 0;
+      while (selected.length < 3) {
+        let added = false;
+        for (const cat of cats) {
+          if (selected.length >= 3) break;
+          if (byCategory[cat][round]) { selected.push(byCategory[cat][round]); added = true; }
+        }
+        if (!added) break;
+        round++;
+      }
+      techniquesByGroup[mtId] = selected;
     });
 
     // 그룹 구분 없이 단일 평면 목록으로 제시 (LLM이 임상 적용 순서로 통합 정렬)
