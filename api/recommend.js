@@ -381,8 +381,9 @@ clinicalNote 작성 원칙: 원인을 단정하지 말고 가능성으로 표현
    - patientPosition: DB 환자자세 → 쉬운 한국어 (15자 이내)
    - therapistHands: DB "치료사위치 + 접촉부위" 결합 (15자 이내)
 5. 운동 처방 기법: DB 정보(환자자세·방향·시술단계)를 기반으로 재작성.
-   - patientPosition: 운동 시작 자세 → 쉬운 한국어 (15자 이내)
+   - patientPosition: 운동 시작 자세 → 쉬운 한국어 (15자 이내). Rule 1 금지 용어 동일 적용 (앙와위→등 대고 눕기, 측와위→옆으로 눕기, 복와위→엎드려 눕기, 신전→쭉 펴기 등)
    - therapistHands: 세트/횟수 또는 핵심 포인트 (15자 이내)
+   - movement: 동작 설명에도 Rule 1 금지 용어 적용. 한자어·의학 약어 금지.
 6. DB 정보가 없는 기법은 선택하지 마세요.
 7. 각 기법의 ID를 techniqueId 필드에 정확히 복사하세요. 절대 변형 금지.
    MT 기법: [MT-007] → "techniqueId": "MT-007" / EX 기법: [EX-003] → "techniqueId": "EX-003"`;
