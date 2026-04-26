@@ -307,31 +307,49 @@
     }
     .rec-block-title .icon { font-size: 16px; }
 
-    .mt-group-section { margin-bottom: 20px; }
+    .mt-group-section { margin-bottom: 10px; }
     .mt-group-section:last-child { margin-bottom: 0; }
     .mt-group-header {
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 6px 0 10px;
-      border-bottom: 2px solid var(--primary-light);
-      margin-bottom: 12px;
+      padding: 11px 14px;
+      background: var(--primary-light);
+      border: 1px solid #c3d9f0;
+      border-radius: 10px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s;
     }
+    .mt-group-header:hover { background: #d1e4f7; }
     .mt-group-header-label {
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 700;
       color: var(--primary);
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
+      letter-spacing: -0.2px;
     }
     .mt-group-header-count {
       font-size: 11px;
-      background: var(--primary-light);
+      background: #fff;
       color: var(--primary);
       border-radius: 20px;
       padding: 1px 8px;
       font-weight: 600;
+      border: 1px solid #c3d9f0;
     }
+    .mt-group-header-arrow {
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--primary);
+      transition: transform 0.25s ease;
+      flex-shrink: 0;
+    }
+    .mt-group-header.open .mt-group-header-arrow { transform: rotate(180deg); }
+    .mt-group-cards {
+      display: none;
+      padding-top: 10px;
+    }
+    .mt-group-cards.open { display: block; }
 
     .rec-item {
       display: flex;
@@ -442,6 +460,40 @@
       color: #22543d;
       line-height: 1.6;
       margin-bottom: 14px;
+    }
+    .clinical-note-section {
+      padding: 10px 0;
+      border-bottom: 1px solid #c6f6d5;
+    }
+    .clinical-note-section:last-child { border-bottom: none; padding-bottom: 0; }
+    .clinical-note-section:first-child { padding-top: 0; }
+    .clinical-note-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #276749;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 6px;
+    }
+    .clinical-note-items {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .clinical-note-items li {
+      display: flex;
+      gap: 7px;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .clinical-note-items li::before {
+      content: '•';
+      color: #48bb78;
+      font-weight: 700;
+      flex-shrink: 0;
     }
     .clinical-note-label {
       font-size: 11px;
@@ -1507,12 +1559,16 @@
         const section = document.createElement('div');
         section.className = 'mt-group-section';
 
-        // 그룹 헤더
+        // 그룹 헤더 (클릭으로 펼치기/접기)
         section.innerHTML = `
-          <div class="mt-group-header">
+          <div class="mt-group-header" onclick="toggleGroupSection(this)">
             <span class="mt-group-header-label">🔧 ${groupLabel}</span>
             <span class="mt-group-header-count">${entries.length}개</span>
-          </div>`;
+            <span class="mt-group-header-arrow">▼</span>
+          </div>
+          <div class="mt-group-cards"></div>`;
+
+        const cardsContainer = section.querySelector('.mt-group-cards');
 
         // 그룹 내 카드 (그룹 내 순위로 1·2·3 번호)
         entries.forEach(({ item, globalIdx }, rankInGroup) => {
@@ -1581,14 +1637,26 @@
               </button>
             </div>
           </div>`;
-          section.appendChild(card);
+          cardsContainer.appendChild(card);
         });
 
         mtList.appendChild(section);
       });
     }
 
-    // ── Exercise 렌더 ──
+    // ── Exercise 렌더 (그룹별) ──
+    const CATEGORY_TO_EX_GROUP_FE = {
+      'category_ex_neuromuscular': 'ex_neuro',
+      'category_ex_resistance':    'ex_strength',
+      'category_ex_bodyweight':    'ex_strength',
+      'category_ex_aerobic':       'ex_aerobic',
+    };
+    const EX_GROUP_LABEL_FE = {
+      'ex_neuro':    '신경근·운동조절 훈련',
+      'ex_strength': '근력·저항성 운동',
+      'ex_aerobic':  '유산소·활동성 운동',
+    };
+
     const exBlock = document.getElementById('ex-rec-block');
     const exList  = document.getElementById('ex-rec-list');
     exList.innerHTML = '';
@@ -1597,73 +1665,106 @@
       exBlock.style.display = 'none';
     } else {
       exBlock.style.display = 'block';
-      exItems.forEach((item, idx) => {
-        const rankClass = idx === 0 ? 'rank-1' : idx === 1 ? 'rank-2' : idx === 2 ? 'rank-3' : '';
-        const card = document.createElement('div');
-        card.className = 'result-card';
-        const catInfoAttr = item.categoryInfo
-          ? `data-catinfo='${JSON.stringify(item.categoryInfo).replace(/'/g, "&apos;")}'`
-          : '';
-        const catBtn = item.categoryInfo
-          ? `<button class="btn-category-info" onclick="showCategoryModal(this)" ${catInfoAttr}>📖 원칙 보기</button>`
-          : '';
-        card.innerHTML = `
-        <div class="card-header">
-          <div class="card-rank ${rankClass}">${idx + 1}</div>
-          <div class="card-title-group">
-            <div class="card-name-ko">🏃 ${item.technique}</div>
-            <div class="card-meta">
-              <span class="badge badge-ex">운동 처방</span>
+
+      // 그룹별로 분류 (순서 유지)
+      const exGrouped = {};
+      const exGroupOrder = [];
+      exItems.forEach((item, globalIdx) => {
+        const catKey = item.categoryInfo?.category_key || '';
+        const groupId = CATEGORY_TO_EX_GROUP_FE[catKey] || '_other';
+        if (!exGrouped[groupId]) {
+          exGrouped[groupId] = [];
+          exGroupOrder.push(groupId);
+        }
+        exGrouped[groupId].push({ item, globalIdx });
+      });
+
+      exGroupOrder.forEach(groupId => {
+        const entries = exGrouped[groupId];
+        const groupLabel = EX_GROUP_LABEL_FE[groupId] || groupId;
+
+        const section = document.createElement('div');
+        section.className = 'mt-group-section';
+        section.innerHTML = `
+          <div class="mt-group-header" onclick="toggleGroupSection(this)">
+            <span class="mt-group-header-label">🏃 ${groupLabel}</span>
+            <span class="mt-group-header-count">${entries.length}개</span>
+            <span class="mt-group-header-arrow">▼</span>
+          </div>
+          <div class="mt-group-cards"></div>`;
+
+        const cardsContainer = section.querySelector('.mt-group-cards');
+
+        entries.forEach(({ item, globalIdx }, rankInGroup) => {
+          const rankClass = rankInGroup === 0 ? 'rank-1' : rankInGroup === 1 ? 'rank-2' : rankInGroup === 2 ? 'rank-3' : '';
+          const card = document.createElement('div');
+          card.className = 'result-card';
+          const catInfoAttr = item.categoryInfo
+            ? `data-catinfo='${JSON.stringify(item.categoryInfo).replace(/'/g, "&apos;")}'`
+            : '';
+          const catBtn = item.categoryInfo
+            ? `<button class="btn-category-info" onclick="showCategoryModal(this)" ${catInfoAttr}>📖 원칙 보기</button>`
+            : '';
+          card.innerHTML = `
+          <div class="card-header">
+            <div class="card-rank ${rankClass}">${rankInGroup + 1}</div>
+            <div class="card-title-group">
+              <div class="card-name-ko">${item.technique}</div>
+              <div class="card-meta">
+                <span class="badge badge-ex">운동 처방</span>
+              </div>
+            </div>
+            ${catBtn}
+          </div>
+
+          <div class="position-box">
+            <div class="position-row">
+              <span class="position-icon">🧑</span>
+              <div>
+                <div class="position-label">① 시작 자세</div>
+                <div class="position-sublabel">어떤 자세로 시작하나요?</div>
+                <div class="position-value">${item.patientPosition || '—'}</div>
+              </div>
+            </div>
+            <div class="position-divider"></div>
+            <div class="position-row">
+              <span class="position-icon">🔁</span>
+              <div>
+                <div class="position-label">② 운동 설정</div>
+                <div class="position-sublabel">세트/횟수 또는 핵심 포인트</div>
+                <div class="position-value">${item.therapistHands || '—'}</div>
+              </div>
             </div>
           </div>
-          ${catBtn}
-        </div>
 
-        <div class="position-box">
-          <div class="position-row">
-            <span class="position-icon">🧑</span>
-            <div>
-              <div class="position-label">① 시작 자세</div>
-              <div class="position-sublabel">어떤 자세로 시작하나요?</div>
-              <div class="position-value">${item.patientPosition || '—'}</div>
+          <div class="card-expand-btn-wrap">
+            <button class="btn-expand-card" onclick="toggleCardDetail(this)">자세히 보기 ▼</button>
+          </div>
+
+          <div class="card-detail-section">
+            <div class="card-section">
+              <div class="card-section-title">📋 운동 방법 — 어떻게 진행하나요?</div>
+              ${renderMovement(item.movement)}
             </div>
-          </div>
-          <div class="position-divider"></div>
-          <div class="position-row">
-            <span class="position-icon">🔁</span>
-            <div>
-              <div class="position-label">② 운동 설정</div>
-              <div class="position-sublabel">세트/횟수 또는 핵심 포인트</div>
-              <div class="position-value">${item.therapistHands || '—'}</div>
+            <div class="card-section">
+              <div class="card-section-title">🎯 목표 근육 — 어디에 작용하나요?</div>
+              ${renderMuscles(item.targetMuscles)}
             </div>
-          </div>
-        </div>
+            <div class="card-section" style="padding-bottom:14px">
+              <div class="card-section-title">🔍 환자 반응 확인 — 잘 되고 있는 건가요?</div>
+              ${renderFeedback(item.patientFeedback)}
+            </div>
+            <div class="feedback-btn-wrap">
+              <button class="btn-feedback" id="fb-ex-${globalIdx}"
+                onclick="openFeedback('${item.technique.replace(/'/g, "\\'")}', '${(item.categoryInfo && item.categoryInfo.category_key) || ''}', 'fb-ex-${globalIdx}')">
+                ★ 사용 평가
+              </button>
+            </div>
+          </div>`;
+          cardsContainer.appendChild(card);
+        });
 
-        <div class="card-expand-btn-wrap">
-          <button class="btn-expand-card" onclick="toggleCardDetail(this)">자세히 보기 ▼</button>
-        </div>
-
-        <div class="card-detail-section">
-          <div class="card-section">
-            <div class="card-section-title">📋 운동 방법 — 어떻게 진행하나요?</div>
-            ${renderMovement(item.movement)}
-          </div>
-          <div class="card-section">
-            <div class="card-section-title">🎯 목표 근육 — 어디에 작용하나요?</div>
-            ${renderMuscles(item.targetMuscles)}
-          </div>
-          <div class="card-section" style="padding-bottom:14px">
-            <div class="card-section-title">🔍 환자 반응 확인 — 잘 되고 있는 건가요?</div>
-            ${renderFeedback(item.patientFeedback)}
-          </div>
-          <div class="feedback-btn-wrap">
-            <button class="btn-feedback" id="fb-ex-${idx}"
-              onclick="openFeedback('${item.technique.replace(/'/g, "\\'")}', '${(item.categoryInfo && item.categoryInfo.category_key) || ''}', 'fb-ex-${idx}')">
-              ★ 사용 평가
-            </button>
-          </div>
-        </div>`;
-        exList.appendChild(card);
+        exList.appendChild(section);
       });
     }
 
@@ -1671,11 +1772,51 @@
     const noteWrap = document.getElementById('clinical-note-wrap');
     noteWrap.innerHTML = '';
     if (result.clinicalNote) {
+      // ① ② 기호로 섹션 분리
+      const NOTE_SECTIONS = [
+        { marker: '①', title: 'MT 추천 순서 근거' },
+        { marker: '②', title: '환자 임상 메시지' },
+      ];
+      const raw = result.clinicalNote;
+      // 각 섹션의 시작 인덱스 찾기
+      const positions = NOTE_SECTIONS.map(s => ({ ...s, idx: raw.indexOf(s.marker) }))
+                                     .filter(s => s.idx !== -1)
+                                     .sort((a, b) => a.idx - b.idx);
+
+      let sectionsHTML = '';
+      positions.forEach((s, i) => {
+        const start = s.idx + s.marker.length;
+        const end   = positions[i + 1] ? positions[i + 1].idx : raw.length;
+        let content = raw.slice(start, end).trim();
+        // 선행 콜론·공백 제거
+        content = content.replace(/^[\s:：]+/, '');
+
+        // 쉼표나 줄바꿈으로 bullet 항목 분리 (1순위/2순위 패턴 감지)
+        let items;
+        if (/\d순위/.test(content)) {
+          // "1순위 X→Y, 2순위 X→Y" 형태
+          items = content.split(/,\s*(?=\d+순위)/).map(t => t.trim()).filter(Boolean);
+        } else {
+          // 일반 텍스트 → 통째로 하나의 bullet
+          items = [content];
+        }
+
+        const liHTML = items.map(t => `<li>${t}</li>`).join('');
+        sectionsHTML += `
+          <div class="clinical-note-section">
+            <div class="clinical-note-section-title">${s.title}</div>
+            <ul class="clinical-note-items">${liHTML}</ul>
+          </div>`;
+      });
+
+      // 파싱 실패 시 원문 그대로
+      if (!sectionsHTML) sectionsHTML = `<p>${raw}</p>`;
+
       noteWrap.innerHTML = `
-      <div class="clinical-note-block">
-        <div class="clinical-note-label">임상 메모</div>
-        ${result.clinicalNote}
-      </div>`;
+        <div class="clinical-note-block">
+          <div class="clinical-note-label">임상 메모</div>
+          ${sectionsHTML}
+        </div>`;
     }
   }
 
@@ -1698,6 +1839,13 @@
     if (e && e.target !== document.getElementById('catModalOverlay')) return;
     document.getElementById('catModalOverlay').classList.remove('open');
     document.body.style.overflow = '';
+  }
+
+  function toggleGroupSection(headerEl) {
+    const cards = headerEl.nextElementSibling;
+    const isOpen = headerEl.classList.contains('open');
+    headerEl.classList.toggle('open', !isOpen);
+    cards.classList.toggle('open', !isOpen);
   }
 
   function toggleCardDetail(btn) {
