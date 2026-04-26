@@ -144,7 +144,7 @@ async function callLLMAndParse(systemPrompt, userPrompt, apiKey) {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5',
-        max_tokens: 4096,
+        max_tokens: 8192,
         system: systemPrompt,
         messages: [{ role: 'user', content: userPrompt }]
       })
@@ -326,7 +326,7 @@ export default async function handler(req, res) {
     // mt_soft: 6개 (다양한 연부조직 기법 제공), 나머지: 3개
     const conditionScores = (CONDITION_CATEGORY_SCORES[acuity] || {})[symptom] || {};
     preferredMT.forEach(mtId => {
-      const maxCount = mtId === 'mt_soft' ? 6 : 3;
+      const maxCount = 3;
       techniquesByGroup[mtId] = [...(techniquesByGroup[mtId] || [])]
         .sort((a, b) => (conditionScores[b.category] ?? 0) - (conditionScores[a.category] ?? 0))
         .slice(0, maxCount);
@@ -451,7 +451,7 @@ techniqueId는 [MT-XXX] 또는 [EX-XXX] ID를 그대로 복사.`;
         const t = indexedTechniques.get(item.techniqueId);
         const catKey = t?.category;
         const mtGroup = (catKey && CATEGORY_TO_MT_GROUP[catKey]) || '_ungrouped';
-        const maxCount = mtGroup === 'mt_soft' ? 6 : 3;
+        const maxCount = 3;
         groupCounts[mtGroup] = (groupCounts[mtGroup] || 0) + 1;
         return groupCounts[mtGroup] <= maxCount;
       });
