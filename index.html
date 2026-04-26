@@ -1813,16 +1813,39 @@
     return { ok, warn };
   }
 
+  const TERM_REPLACEMENTS = [
+    ['앙와위', '등 대고 눕기'], ['양와위', '등 대고 눕기'],
+    ['측와위', '옆으로 눕기'], ['복와위', '엎드려 눕기'],
+    ['복위', '엎드려 눕기'], ['반좌위', '등받이 세워 앉기'],
+    ['장좌위', '다리 뻗고 앉기'], ['슬흉위', '무릎 꿇고 엎드리기'],
+    ['전굴', '앞으로 굽히기'], ['후굴', '뒤로 젖히기'],
+    ['측굴', '옆으로 기울이기'],
+    ['신연', '늘이기'], ['거상', '들어올리기'],
+    ['표재층', '피부 가까운 얕은 층'],
+    ['신전', '펴기'],
+    ['미측', '발 쪽'], ['두측', '머리 쪽'],
+    ['촉진', '손으로 부드럽게 누르기'],
+    ['내전', '안쪽으로 모으기'], ['외전', '바깥쪽으로 벌리기'],
+    ['내회전', '안쪽으로 돌리기'], ['외회전', '바깥쪽으로 돌리기'],
+  ];
+  function sanitizeTerms(text) {
+    if (!text) return text;
+    let r = String(text);
+    TERM_REPLACEMENTS.forEach(([f, t]) => { r = r.replaceAll(f, t); });
+    return r;
+  }
+
   function renderMuscles(muscles) {
     if (!muscles || muscles.length === 0) return '<p class="card-section-value">—</p>';
-    return `<ul class="card-bullet-list">${muscles.map(m => `<li>${m}</li>`).join('')}</ul>`;
+    return `<ul class="card-bullet-list">${muscles.map(m => `<li>${sanitizeTerms(m)}</li>`).join('')}</ul>`;
   }
 
   function renderMovement(text) {
     if (!text) return '<p class="card-section-value">—</p>';
-    const parts = text.split(/(?=\d+\.\s)/).filter(s => s.trim());
+    const clean = sanitizeTerms(text);
+    const parts = clean.split(/(?=\d+\.\s)/).filter(s => s.trim());
     if (parts.length <= 1 || !/^\d+\./.test(parts[0].trim())) {
-      return `<p class="card-section-value">${text}</p>`;
+      return `<p class="card-section-value">${clean}</p>`;
     }
     const items = parts.map((p, i) => {
       const content = p.replace(/^\d+\.\s*/, '').trim();
@@ -1832,7 +1855,7 @@
   }
 
   function renderFeedback(text) {
-    const { ok, warn } = parseFeedback(text);
+    const { ok, warn } = parseFeedback(sanitizeTerms(text));
     let html = '';
     if (ok) html += `<div class="feedback-ok">✅ <strong>올바른 반응:</strong> ${ok}</div>`;
     if (warn) html += `<div class="feedback-warn">⚠️ <strong>주의신호:</strong> ${warn}</div>`;
@@ -1912,7 +1935,7 @@
             <div>
               <div class="position-label">① 환자 자세 세팅</div>
               <div class="position-sublabel">환자를 어디에, 어떻게 눕히나요?</div>
-              <div class="position-value">${item.patientPosition}</div>
+              <div class="position-value">${sanitizeTerms(item.patientPosition)}</div>
             </div>
           </div>
           <div class="position-divider"></div>
@@ -1921,7 +1944,7 @@
             <div>
               <div class="position-label">② 치료사 손 배치</div>
               <div class="position-sublabel">손을 어디에, 어떻게 놓나요?</div>
-              <div class="position-value">${item.therapistHands}</div>
+              <div class="position-value">${sanitizeTerms(item.therapistHands)}</div>
             </div>
           </div>
         </div>
@@ -1987,7 +2010,7 @@
           const catBtn = c.categoryInfo
             ? `<button class="btn-category-info" onclick="showCategoryModal(this)" ${catInfoAttr}>📖 원칙 보기</button>`
             : '';
-          const stepsHtml = c.steps.map(s => `<div class="movement-step"><span class="step-num">${s.step}</span><span class="step-text">${s.instruction}</span></div>`).join('');
+          const stepsHtml = c.steps.map(s => `<div class="movement-step"><span class="step-num">${s.step}</span><span class="step-text">${sanitizeTerms(s.instruction)}</span></div>`).join('');
           altCard.innerHTML = `
             <div class="card-header">
               <div class="card-rank alt-rank">대안</div>
@@ -2004,7 +2027,7 @@
                 <span class="position-icon">🧑‍⚕️</span>
                 <div>
                   <div class="position-label">① 환자 자세 세팅</div>
-                  <div class="position-value">${c.patientPosition || '—'}</div>
+                  <div class="position-value">${sanitizeTerms(c.patientPosition) || '—'}</div>
                 </div>
               </div>
               <div class="position-divider"></div>
@@ -2012,7 +2035,7 @@
                 <span class="position-icon">👐</span>
                 <div>
                   <div class="position-label">② 치료사 손 배치</div>
-                  <div class="position-value">${c.therapistPosition || '—'}${c.contactPoint ? ' · ' + c.contactPoint : ''}${c.direction ? ' · ' + c.direction : ''}</div>
+                  <div class="position-value">${sanitizeTerms(c.therapistPosition) || '—'}${c.contactPoint ? ' · ' + sanitizeTerms(c.contactPoint) : ''}${c.direction ? ' · ' + sanitizeTerms(c.direction) : ''}</div>
                 </div>
               </div>
             </div>
@@ -2115,7 +2138,7 @@
               <div>
                 <div class="position-label">① 시작 자세</div>
                 <div class="position-sublabel">어떤 자세로 시작하나요?</div>
-                <div class="position-value">${item.patientPosition || '—'}</div>
+                <div class="position-value">${sanitizeTerms(item.patientPosition) || '—'}</div>
               </div>
             </div>
             <div class="position-divider"></div>
@@ -2124,7 +2147,7 @@
               <div>
                 <div class="position-label">② 운동 설정</div>
                 <div class="position-sublabel">세트/횟수 또는 핵심 포인트</div>
-                <div class="position-value">${item.therapistHands || '—'}</div>
+                <div class="position-value">${sanitizeTerms(item.therapistHands) || '—'}</div>
               </div>
             </div>
           </div>
@@ -2179,7 +2202,7 @@
       positions.forEach((s, i) => {
         const start = s.idx + s.marker.length;
         const end   = positions[i + 1] ? positions[i + 1].idx : raw.length;
-        let content = raw.slice(start, end).trim();
+        let content = sanitizeTerms(raw.slice(start, end).trim());
         // 선행 콜론·공백 제거
         content = content.replace(/^[\s:：]+/, '');
 
@@ -2214,8 +2237,8 @@
     const list = document.getElementById('catPrincipleList');
     list.innerHTML = (info.basic_principles || []).map(p => `
       <div class="cat-principle-card">
-        <div class="cat-principle-title">${p.icon ? p.icon + ' ' : ''}${p.title_ko}</div>
-        <div class="cat-principle-desc">${p.desc_ko}</div>
+        <div class="cat-principle-title">${p.icon ? p.icon + ' ' : ''}${sanitizeTerms(p.title_ko)}</div>
+        <div class="cat-principle-desc">${sanitizeTerms(p.desc_ko)}</div>
       </div>`).join('');
     document.getElementById('catModalOverlay').classList.add('open');
     document.body.style.overflow = 'hidden';
