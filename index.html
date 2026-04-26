@@ -307,6 +307,32 @@
     }
     .rec-block-title .icon { font-size: 16px; }
 
+    .mt-group-section { margin-bottom: 20px; }
+    .mt-group-section:last-child { margin-bottom: 0; }
+    .mt-group-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0 10px;
+      border-bottom: 2px solid var(--primary-light);
+      margin-bottom: 12px;
+    }
+    .mt-group-header-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .mt-group-header-count {
+      font-size: 11px;
+      background: var(--primary-light);
+      color: var(--primary);
+      border-radius: 20px;
+      padding: 1px 8px;
+      font-weight: 600;
+    }
+
     .rec-item {
       display: flex;
       align-items: flex-start;
@@ -1051,9 +1077,11 @@
      DATA
   ══════════════════════════════════════ */
   const MT_OPTIONS = [
-    { id: 'mt_joint', label: '관절가동술', sub: 'Maitland · Mulligan · HVLA' },
-    { id: 'mt_soft',  label: '연부조직 가동술', sub: 'MFR' },
-    { id: 'mt_neuro', label: '신경가동술', sub: '' },
+    { id: 'mt_joint',   label: '관절가동술',         sub: 'Maitland · Mulligan · HVLA' },
+    { id: 'mt_soft',    label: '연부조직 가동술',     sub: 'MFR · ART · CTM · Deep Friction · Trigger Point' },
+    { id: 'mt_neuro',   label: '신경가동술',          sub: '' },
+    { id: 'mt_special', label: '특수기법',            sub: 'MDT · SCS' },
+    { id: 'mt_edu',     label: '통증 신경과학 교육',  sub: 'PNE' },
   ];
 
   const EX_OPTIONS = [
@@ -1430,80 +1458,133 @@
       symptom: SYMPTOM_LABEL[selectedSymptom]|| '',
     };
 
-    // ── Manual Therapy 렌더 ──
+    // ── Manual Therapy 렌더 (그룹별) ──
+    const CATEGORY_TO_MT_GROUP_FE = {
+      'category_joint_mobilization': 'mt_joint',
+      'category_mulligan':           'mt_joint',
+      'category_mfr':                'mt_soft',
+      'category_art':                'mt_soft',
+      'category_ctm':                'mt_soft',
+      'category_deep_friction':      'mt_soft',
+      'category_trigger_point':      'mt_soft',
+      'category_anatomy_trains':     'mt_soft',
+      'category_d_neural':           'mt_neuro',
+      'category_mdt':                'mt_special',
+      'category_scs':                'mt_special',
+      'category_pne':                'mt_edu',
+    };
+    const MT_GROUP_LABEL_FE = {
+      'mt_joint':   '관절가동술',
+      'mt_soft':    '연부조직 가동술',
+      'mt_neuro':   '신경가동술',
+      'mt_special': '특수기법',
+      'mt_edu':     '통증 신경과학 교육',
+    };
+
     const mtList = document.getElementById('mt-rec-list');
     mtList.innerHTML = '';
     const mtItems = result.manualTherapy || [];
     if (mtItems.length === 0) {
       mtList.innerHTML = `<div class="no-rec">해당 조합에 맞는 Manual Therapy 추천이 없습니다.</div>`;
     } else {
-      mtItems.forEach((item, idx) => {
-        const rankClass = idx === 0 ? 'rank-1' : idx === 1 ? 'rank-2' : idx === 2 ? 'rank-3' : '';
-        const card = document.createElement('div');
-        card.className = 'result-card';
-        const catInfoAttr = item.categoryInfo
-          ? `data-catinfo='${JSON.stringify(item.categoryInfo).replace(/'/g, "&apos;")}'`
-          : '';
-        const catBtn = item.categoryInfo
-          ? `<button class="btn-category-info" onclick="showCategoryModal(this)" ${catInfoAttr}>📖 원칙 보기</button>`
-          : '';
-        card.innerHTML = `
-        <div class="card-header">
-          <div class="card-rank ${rankClass}">${idx + 1}</div>
-          <div class="card-title-group">
-            <div class="card-name-ko">🔧 ${item.technique}</div>
-            <div class="card-meta">
-              <span class="badge badge-mt">Manual Therapy</span>
+      // 그룹별로 분류 (순서 유지)
+      const mtGrouped = {};
+      const mtGroupOrder = [];
+      mtItems.forEach((item, globalIdx) => {
+        const catKey = item.categoryInfo?.category_key || '';
+        const groupId = CATEGORY_TO_MT_GROUP_FE[catKey] || '_other';
+        if (!mtGrouped[groupId]) {
+          mtGrouped[groupId] = [];
+          mtGroupOrder.push(groupId);
+        }
+        mtGrouped[groupId].push({ item, globalIdx });
+      });
+
+      mtGroupOrder.forEach(groupId => {
+        const entries = mtGrouped[groupId];
+        const groupLabel = MT_GROUP_LABEL_FE[groupId] || groupId;
+
+        const section = document.createElement('div');
+        section.className = 'mt-group-section';
+
+        // 그룹 헤더
+        section.innerHTML = `
+          <div class="mt-group-header">
+            <span class="mt-group-header-label">🔧 ${groupLabel}</span>
+            <span class="mt-group-header-count">${entries.length}개</span>
+          </div>`;
+
+        // 그룹 내 카드 (그룹 내 순위로 1·2·3 번호)
+        entries.forEach(({ item, globalIdx }, rankInGroup) => {
+          const rankClass = rankInGroup === 0 ? 'rank-1' : rankInGroup === 1 ? 'rank-2' : rankInGroup === 2 ? 'rank-3' : '';
+          const card = document.createElement('div');
+          card.className = 'result-card';
+          const catInfoAttr = item.categoryInfo
+            ? `data-catinfo='${JSON.stringify(item.categoryInfo).replace(/'/g, "&apos;")}'`
+            : '';
+          const catBtn = item.categoryInfo
+            ? `<button class="btn-category-info" onclick="showCategoryModal(this)" ${catInfoAttr}>📖 원칙 보기</button>`
+            : '';
+          card.innerHTML = `
+          <div class="card-header">
+            <div class="card-rank ${rankClass}">${rankInGroup + 1}</div>
+            <div class="card-title-group">
+              <div class="card-name-ko">${item.technique}</div>
+              <div class="card-meta">
+                <span class="badge badge-mt">Manual Therapy</span>
+              </div>
+            </div>
+            ${catBtn}
+          </div>
+
+          <div class="position-box">
+            <div class="position-row">
+              <span class="position-icon">🧑‍⚕️</span>
+              <div>
+                <div class="position-label">① 환자 자세 세팅</div>
+                <div class="position-sublabel">환자를 어디에, 어떻게 눕히나요?</div>
+                <div class="position-value">${item.patientPosition}</div>
+              </div>
+            </div>
+            <div class="position-divider"></div>
+            <div class="position-row">
+              <span class="position-icon">👐</span>
+              <div>
+                <div class="position-label">② 치료사 손 배치</div>
+                <div class="position-sublabel">손을 어디에, 어떻게 놓나요?</div>
+                <div class="position-value">${item.therapistHands}</div>
+              </div>
             </div>
           </div>
-          ${catBtn}
-        </div>
 
-        <div class="position-box">
-          <div class="position-row">
-            <span class="position-icon">🧑‍⚕️</span>
-            <div>
-              <div class="position-label">① 환자 자세 세팅</div>
-              <div class="position-sublabel">환자를 어디에, 어떻게 눕히나요?</div>
-              <div class="position-value">${item.patientPosition}</div>
+          <div class="card-expand-btn-wrap">
+            <button class="btn-expand-card" onclick="toggleCardDetail(this)">자세히 보기 ▼</button>
+          </div>
+
+          <div class="card-detail-section">
+            <div class="card-section">
+              <div class="card-section-title">📋 시술 방법 — 어떻게 진행하나요?</div>
+              ${renderMovement(item.movement)}
             </div>
-          </div>
-          <div class="position-divider"></div>
-          <div class="position-row">
-            <span class="position-icon">👐</span>
-            <div>
-              <div class="position-label">② 치료사 손 배치</div>
-              <div class="position-sublabel">손을 어디에, 어떻게 놓나요?</div>
-              <div class="position-value">${item.therapistHands}</div>
+            <div class="card-section">
+              <div class="card-section-title">🎯 목표 구조물 — 어디에 작용하나요?</div>
+              ${renderMuscles(item.targetMuscles)}
             </div>
-          </div>
-        </div>
+            <div class="card-section" style="padding-bottom:14px">
+              <div class="card-section-title">🔍 환자 반응 확인 — 잘 되고 있는 건가요?</div>
+              ${renderFeedback(item.patientFeedback)}
+            </div>
+            <div class="feedback-btn-wrap">
+              <button class="btn-feedback" id="fb-mt-${globalIdx}"
+                onclick="openFeedback('${item.technique.replace(/'/g, "\\'")}', '${(item.categoryInfo && item.categoryInfo.category_key) || ''}', 'fb-mt-${globalIdx}')">
+                ★ 사용 평가
+              </button>
+            </div>
+          </div>`;
+          section.appendChild(card);
+        });
 
-        <div class="card-expand-btn-wrap">
-          <button class="btn-expand-card" onclick="toggleCardDetail(this)">자세히 보기 ▼</button>
-        </div>
-
-        <div class="card-detail-section">
-          <div class="card-section">
-            <div class="card-section-title">📋 시술 방법 — 어떻게 진행하나요?</div>
-            ${renderMovement(item.movement)}
-          </div>
-          <div class="card-section">
-            <div class="card-section-title">🎯 목표 구조물 — 어디에 작용하나요?</div>
-            ${renderMuscles(item.targetMuscles)}
-          </div>
-          <div class="card-section" style="padding-bottom:14px">
-            <div class="card-section-title">🔍 환자 반응 확인 — 잘 되고 있는 건가요?</div>
-            ${renderFeedback(item.patientFeedback)}
-          </div>
-          <div class="feedback-btn-wrap">
-            <button class="btn-feedback" id="fb-mt-${idx}"
-              onclick="openFeedback('${item.technique.replace(/'/g, "\\'")}', '${(item.categoryInfo && item.categoryInfo.category_key) || ''}', 'fb-mt-${idx}')">
-              ★ 사용 평가
-            </button>
-          </div>
-        </div>`;
-        mtList.appendChild(card);
+        mtList.appendChild(section);
       });
     }
 
