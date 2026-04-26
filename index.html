@@ -946,7 +946,51 @@
       opacity: 1;
       transform: translateX(-50%) translateY(0);
     }
+    /* ── Auth ── */
+    .auth-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .auth-tab {
+      flex: 1;
+      padding: 10px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      background: transparent;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+      color: var(--text-secondary);
+    }
+    .auth-tab.active {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: white;
+    }
+    .auth-error {
+      color: #ef4444;
+      font-size: 13px;
+      margin-top: 8px;
+      padding: 8px 12px;
+      background: #fef2f2;
+      border-radius: 6px;
+    }
+    .btn-logout {
+      font-size: 13px;
+      color: var(--text-secondary);
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 12px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.15s;
+    }
+    .btn-logout:hover { background: #fff5f5; border-color: #fc8181; color: var(--danger); }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
 <!-- ── Category Principles Modal ── -->
@@ -1005,13 +1049,83 @@
   <!-- ── Sticky header ── -->
   <header class="app-header">
     <div class="logo">PT 처방 도우미 <span>임상 의사결정 지원</span></div>
-    <button class="btn-settings" id="btnGoSettings" style="display:none" onclick="goSettings()">설정 변경</button>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="btn-settings" id="btnGoSettings" style="display:none" onclick="goSettings()">설정 변경</button>
+      <button class="btn-logout" id="btnLogout" style="display:none;" onclick="doLogout()">로그아웃</button>
+    </div>
   </header>
+
+  <!-- ══════════════════════════════
+       Screen 0 — 로그인 / 회원가입
+  ══════════════════════════════ -->
+  <div class="screen active" id="screen0">
+    <div class="screen-intro">
+      <div class="icon">🔐</div>
+      <h1>PT 처방 도우미</h1>
+      <p>임상 의사결정 지원 시스템</p>
+    </div>
+
+    <!-- 탭 -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">로그인</button>
+      <button class="auth-tab" id="tabSignup" onclick="switchAuthTab('signup')">회원가입</button>
+    </div>
+
+    <!-- 로그인 폼 -->
+    <div class="section-card" id="formLogin">
+      <div class="section-title">로그인</div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label class="form-label" style="display:block;font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;">이메일</label>
+        <input type="email" id="loginEmail" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;outline:none;transition:border-color 0.15s;" placeholder="example@email.com" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'" />
+      </div>
+      <div class="form-group" style="margin-bottom:4px;">
+        <label class="form-label" style="display:block;font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;">비밀번호</label>
+        <input type="password" id="loginPassword" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;outline:none;transition:border-color 0.15s;" placeholder="비밀번호 입력" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'" onkeydown="if(event.key==='Enter')doLogin()" />
+      </div>
+      <div id="loginError" class="auth-error" style="display:none;"></div>
+      <button class="btn-primary" id="btnLogin" onclick="doLogin()" style="margin-top:16px;">로그인</button>
+    </div>
+
+    <!-- 회원가입 폼 -->
+    <div class="section-card" id="formSignup" style="display:none;">
+      <div class="section-title">회원가입</div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label class="form-label" style="display:block;font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;">이름</label>
+        <input type="text" id="signupName" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;outline:none;transition:border-color 0.15s;" placeholder="홍길동" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'" />
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label class="form-label" style="display:block;font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;">이메일</label>
+        <input type="email" id="signupEmail" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;outline:none;transition:border-color 0.15s;" placeholder="example@email.com" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'" />
+      </div>
+      <div class="form-group" style="margin-bottom:4px;">
+        <label class="form-label" style="display:block;font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;">비밀번호</label>
+        <input type="password" id="signupPassword" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;outline:none;transition:border-color 0.15s;" placeholder="8자 이상" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'" />
+      </div>
+      <div id="signupError" class="auth-error" style="display:none;"></div>
+      <button class="btn-primary" id="btnSignup" onclick="doSignup()" style="margin-top:16px;">회원가입 신청</button>
+    </div>
+  </div>
+
+  <!-- 승인 대기 화면 -->
+  <div class="screen" id="screenPending">
+    <div class="screen-intro">
+      <div class="icon">⏳</div>
+      <h1>승인 대기 중</h1>
+      <p>가입 신청이 완료되었습니다.</p>
+    </div>
+    <div class="section-card" style="text-align:center;">
+      <p style="color:var(--text-secondary);line-height:1.8;font-size:14px;">
+        운영자 승인 후 서비스를 이용하실 수 있습니다.<br>
+        승인 완료 시 이메일로 안내드립니다.
+      </p>
+      <button class="btn-secondary" onclick="doLogout()" style="margin-top:16px;">로그아웃</button>
+    </div>
+  </div>
 
   <!-- ══════════════════════════════
        1단계 — 설정
   ══════════════════════════════ -->
-  <div class="screen active" id="screen1">
+  <div class="screen" id="screen1">
     <div class="screen-intro">
       <div class="icon">⚕️</div>
       <h1>사용 기법 설정</h1>
@@ -1187,23 +1301,86 @@
   let selectedSymptom = null;
 
   /* ══════════════════════════════════════
-     INIT
+     SUPABASE AUTH
   ══════════════════════════════════════ */
-  document.addEventListener('DOMContentLoaded', () => {
-    renderSettingsGrid();
-    renderPatientGrids();
+  let supabaseClient = null;
+  let currentAccessToken = null;
 
+  async function initSupabase() {
+    try {
+      const res = await fetch('/api/config');
+      const cfg = await res.json();
+      supabaseClient = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+    } catch (e) {
+      console.error('Supabase init failed:', e);
+    }
+  }
+
+  async function initApp() {
+    await initSupabase();
+    if (!supabaseClient) { goScreen('screen0'); return; }
+
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session) {
+      currentAccessToken = session.access_token;
+      await checkAllowedAndEnter(session.user.id);
+    } else {
+      goScreen('screen0');
+    }
+
+    supabaseClient.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        currentAccessToken = null;
+        document.getElementById('btnLogout').style.display = 'none';
+        goScreen('screen0');
+      }
+      if (event === 'TOKEN_REFRESHED' && session) {
+        currentAccessToken = session.access_token;
+      }
+    });
+  }
+
+  async function checkAllowedAndEnter(userId) {
+    const { data, error } = await supabaseClient
+      .from('user_profiles')
+      .select('is_allowed')
+      .eq('id', userId)
+      .single();
+
+    if (error || !data) {
+      // 트리거 지연 가능성 → 800ms 후 1회 재시도
+      await new Promise(r => setTimeout(r, 800));
+      const { data: retry } = await supabaseClient
+        .from('user_profiles')
+        .select('is_allowed')
+        .eq('id', userId)
+        .single();
+      if (retry?.is_allowed) {
+        goScreen('screen1');
+        loadSavedSettingsAndNavigate();
+      } else {
+        goScreen('screenPending');
+      }
+      return;
+    }
+
+    if (data.is_allowed) {
+      loadSavedSettingsAndNavigate();
+    } else {
+      goScreen('screenPending');
+    }
+  }
+
+  function loadSavedSettingsAndNavigate() {
     const saved = loadSettings();
     if (saved) {
       const validIds = new Set(MT_OPTIONS.map(o => o.id));
       const cleanMT = (saved.mt || []).filter(id => validIds.has(id));
       if (cleanMT.length !== (saved.mt || []).length) {
-        // 구형 ID 제거 후 즉시 저장 — ex 필드 보존
         localStorage.setItem('pt_settings', JSON.stringify({ mt: cleanMT, ex: saved.ex || [] }));
       }
       cleanMT.forEach(id => selectedMT.add(id));
 
-      // EX 복원 — 반드시 유효 ID 필터 + 최대 2개 제한 적용
       const validExIds = new Set(EX_OPTIONS.map(o => o.id));
       const cleanEX = (saved.ex || []).filter(id => validExIds.has(id)).slice(0, 2);
       cleanEX.forEach(id => selectedEX.add(id));
@@ -1212,8 +1389,98 @@
       if (selectedMT.size > 0 || cleanEX.length > 0) {
         refreshMTGrid();
         goScreen2();
+        return;
       }
     }
+    goScreen('screen1');
+  }
+
+  async function doLogin() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const errEl = document.getElementById('loginError');
+    const btn = document.getElementById('btnLogin');
+
+    errEl.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = '로그인 중...';
+
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      errEl.textContent = error.message.includes('Invalid login credentials')
+        ? '이메일 또는 비밀번호가 올바르지 않습니다.'
+        : error.message;
+      errEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = '로그인';
+      return;
+    }
+
+    currentAccessToken = data.session.access_token;
+    await checkAllowedAndEnter(data.user.id);
+    btn.disabled = false;
+    btn.textContent = '로그인';
+  }
+
+  async function doSignup() {
+    const name = document.getElementById('signupName').value.trim();
+    const email = document.getElementById('signupEmail').value.trim();
+    const password = document.getElementById('signupPassword').value;
+    const errEl = document.getElementById('signupError');
+    const btn = document.getElementById('btnSignup');
+
+    if (password.length < 8) {
+      errEl.textContent = '비밀번호는 8자 이상이어야 합니다.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    errEl.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = '신청 중...';
+
+    const { data, error } = await supabaseClient.auth.signUp({
+      email,
+      password,
+      options: { data: { display_name: name } },
+    });
+
+    if (error) {
+      errEl.textContent = error.message;
+      errEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = '회원가입 신청';
+      return;
+    }
+
+    currentAccessToken = data.session?.access_token || null;
+    goScreen('screenPending');
+    btn.disabled = false;
+    btn.textContent = '회원가입 신청';
+  }
+
+  async function doLogout() {
+    if (supabaseClient) await supabaseClient.auth.signOut();
+    currentAccessToken = null;
+    document.getElementById('btnLogout').style.display = 'none';
+    goScreen('screen0');
+  }
+
+  function switchAuthTab(tab) {
+    document.getElementById('formLogin').style.display = tab === 'login' ? '' : 'none';
+    document.getElementById('formSignup').style.display = tab === 'signup' ? '' : 'none';
+    document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
+    document.getElementById('tabSignup').classList.toggle('active', tab === 'signup');
+  }
+
+  /* ══════════════════════════════════════
+     INIT
+  ══════════════════════════════════════ */
+  document.addEventListener('DOMContentLoaded', () => {
+    renderSettingsGrid();
+    renderPatientGrids();
+    initApp();
   });
 
   /* ══════════════════════════════════════
@@ -1428,7 +1695,10 @@
     try {
       const response = await fetch('/api/recommend', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${currentAccessToken}`,
+        },
         body: JSON.stringify(payload),
       });
 
@@ -1889,7 +2159,10 @@
     try {
       const res = await fetch('/api/feedback', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${currentAccessToken}`,
+        },
         body: JSON.stringify({
           technique: fbCurrentTech,
           category:  fbCurrentCategory,
@@ -1933,11 +2206,18 @@
   /* ══════════════════════════════════════
      SCREEN NAVIGATION
   ══════════════════════════════════════ */
-  function goScreen(n) {
-    document.querySelectorAll('.screen').forEach((s, i) => {
-      s.classList.toggle('active', i === n - 1);
-    });
-    document.getElementById('btnGoSettings').style.display = (n === 2 || n === 3) ? 'block' : 'none';
+  function goScreen(screenId) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const target = document.getElementById(screenId);
+    if (target) target.classList.add('active');
+
+    // 설정·로그아웃 버튼은 screen1/2/3에서만 표시
+    const showNav = ['screen1', 'screen2', 'screen3'].includes(screenId);
+    const settingsBtn = document.getElementById('btnGoSettings');
+    if (settingsBtn) settingsBtn.style.display = (screenId === 'screen2' || screenId === 'screen3') ? 'block' : 'none';
+    const logoutBtn = document.getElementById('btnLogout');
+    if (logoutBtn) logoutBtn.style.display = showNav ? '' : 'none';
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -1953,10 +2233,10 @@
     });
     updateStepDots();
     checkRecommendBtn();
-    goScreen(2);
+    goScreen('screen2');
   }
 
-  function goScreen3() { goScreen(3); }
+  function goScreen3() { goScreen('screen3'); }
 
   function goSettings() {
     const settings = loadSettings();
@@ -1969,7 +2249,7 @@
       refreshEXGrid();
       checkSaveBtn();
     }
-    goScreen(1);
+    goScreen('screen1');
   }
 </script>
 </body>

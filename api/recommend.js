@@ -2,6 +2,10 @@
 // Input:  { region, acuity, symptom, preferredMT, sessionHistory }
 // Output: { manualTherapy[], exercise[], clinicalNote, sessionSummary }
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const { verifyToken } = require('./_auth');
+
 // 치료사 선호 ID → Supabase category 매핑
 const MT_CATEGORY_MAP = {
   mt_joint:   ['category_joint_mobilization', 'category_mulligan'],
@@ -227,8 +231,20 @@ function formatTechniqueForPrompt(t, groupLabel) {
 }
 
 export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') return res.status(200).end();
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // JWT 검증
+  const { user, error: authError } = await verifyToken(req);
+  if (authError) {
+    return res.status(401).json({ error: authError });
   }
 
   const {

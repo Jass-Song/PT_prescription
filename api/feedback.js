@@ -2,13 +2,23 @@
 // Input:  { technique, category, region, acuity, symptom, rating, notes }
 // Output: { success: true }
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const { verifyToken } = require('./_auth');
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  // JWT 검증
+  const { user, error: authError } = await verifyToken(req);
+  if (authError) {
+    return res.status(401).json({ error: authError });
+  }
 
   const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gnusyjnviugpofvaicbv.supabase.co';
   const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
