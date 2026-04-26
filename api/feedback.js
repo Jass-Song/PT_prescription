@@ -2,9 +2,7 @@
 // Input:  { technique, category, region, acuity, symptom, rating, notes }
 // Output: { success: true }
 
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const { verifyToken } = require('./_auth');
+import { verifyToken } from './_auth.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');

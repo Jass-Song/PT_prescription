@@ -1,7 +1,7 @@
 // api/_auth.js
 // Vercel에서 _로 시작하는 파일은 라우팅 제외 (private helper)
 
-async function verifyToken(req) {
+export async function verifyToken(req) {
   const authHeader = req.headers['authorization'] || '';
   if (!authHeader.startsWith('Bearer ')) {
     return { user: null, error: '인증 토큰이 없습니다.' };
@@ -35,5 +35,3 @@ async function verifyToken(req) {
     return { user: null, error: '인증 처리 중 오류가 발생했습니다.' };
   }
 }
-
-module.exports = { verifyToken };

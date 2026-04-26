@@ -2,9 +2,7 @@
 // Input:  { region, acuity, symptom, preferredMT, sessionHistory }
 // Output: { manualTherapy[], exercise[], clinicalNote, sessionSummary }
 
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const { verifyToken } = require('./_auth');
+import { verifyToken } from './_auth.js';
 
 // 치료사 선호 ID → Supabase category 매핑
 const MT_CATEGORY_MAP = {
