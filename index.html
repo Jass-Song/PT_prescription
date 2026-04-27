@@ -885,6 +885,12 @@
       border-color: var(--primary); background: var(--primary-light); color: var(--primary);
     }
     .cat-chip.dimmed { opacity: 0.35; cursor: not-allowed; }
+    .cat-freq {
+      display: inline-flex; align-items: center; justify-content: center;
+      background: #e5e7eb; color: #6b7280; font-size: 0.67rem; font-weight: 700;
+      border-radius: 10px; padding: 1px 5px; margin-left: 5px; vertical-align: middle;
+    }
+    .cat-chip.selected .cat-freq { background: #bfdbfe; color: var(--primary); }
 
     .cat-slot-label { font-size: 0.75rem; color: var(--text-secondary); margin: 14px 0 6px; }
     .cat-slot-row { display: flex; flex-wrap: wrap; gap: 8px; min-height: 32px; }
@@ -1549,6 +1555,7 @@
   let selectedStage   = null;
   let selectedSymptom = null;
   let selectedCategories = [];
+  let categoryFrequency  = {}; // category_key → 사용 횟수 (DB에서 로드)
 
   /* ══════════════════════════════════════
      SUPABASE AUTH
@@ -1623,7 +1630,30 @@
     }
   }
 
-  function loadSavedSettingsAndNavigate() {
+  async function loadSavedSettingsAndNavigate() {
+    // DB에서 설정 + 카테고리 빈도 로드 (크로스 디바이스 동기화)
+    if (currentAccessToken) {
+      try {
+        const res = await fetch('/api/settings', {
+          headers: { 'Authorization': `Bearer ${currentAccessToken}` },
+        });
+        if (res.ok) {
+          const dbSettings = await res.json();
+          if (dbSettings.mt_groups?.length > 0 || dbSettings.ex_groups?.length > 0) {
+            localStorage.setItem('pt_settings', JSON.stringify({
+              mt: dbSettings.mt_groups || [],
+              ex: dbSettings.ex_groups || [],
+            }));
+          }
+          if (dbSettings.categoryFrequency) {
+            categoryFrequency = dbSettings.categoryFrequency;
+          }
+        }
+      } catch (e) {
+        console.warn('[settings sync]', e.message);
+      }
+    }
+
     const saved = loadSettings();
     if (saved) {
       const validIds = new Set(MT_OPTIONS.map(o => o.id));
@@ -1832,7 +1862,17 @@
   }
 
   function saveSettings() {
-    localStorage.setItem('pt_settings', JSON.stringify({ mt: [...selectedMT], ex: [...selectedEX] }));
+    const mt = [...selectedMT];
+    const ex = [...selectedEX];
+    localStorage.setItem('pt_settings', JSON.stringify({ mt, ex }));
+    // DB 동기화 (fire-and-forget)
+    if (currentAccessToken) {
+      fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentAccessToken}` },
+        body: JSON.stringify({ mt_groups: mt, ex_groups: ex }),
+      }).catch(e => console.warn('[settings save]', e.message));
+    }
     goScreen2();
   }
 
@@ -1980,7 +2020,8 @@
         const btn = document.createElement('button');
         btn.className = 'cat-chip' + (isSelected ? ' selected' : '') + (isDimmed ? ' dimmed' : '');
         btn.disabled = isDimmed;
-        btn.textContent = `${meta.icon} ${meta.label}`;
+        const freq = categoryFrequency[catKey] || 0;
+        btn.innerHTML = `${meta.icon} ${meta.label}${freq > 0 ? `<span class="cat-freq">${freq}</span>` : ''}`;
         btn.addEventListener('click', () => toggleCategory(catKey));
         chipsRow.appendChild(btn);
       });

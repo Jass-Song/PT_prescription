@@ -41,58 +41,65 @@ const EX_PREFERENCE_LABEL = {
 };
 
 // 환자 컨디션(acuity + symptom) 기반 카테고리 우선순위 점수표
-// 그룹 내 기법을 이 점수 기준으로 정렬 후 상위 3개 선택. 미정의 카테고리 기본값 0.
+// 근거: Maitland 8th ed. / Mulligan 6th ed. / Travell & Simons Vol.1-2 / Myers AT 4th ed.
+//       Butler Mobilisation of the Nervous System / McKenzie MDT / Jones SCS / Moseley Explain Pain
+// 그룹 내 기법을 이 점수 기준으로 정렬 후 상위 6개 후보 → Claude 최종 3개 선택. 미정의 기본값 0.
 const CONDITION_CATEGORY_SCORES = {
   '급성': {
     '움직임 시 통증': {
-      category_mulligan: 3, category_mdt: 3, category_scs: 2,
-      category_mfr: 1, category_joint_mobilization: 1, category_d_neural: 1, category_pne: 1,
-      category_deep_friction: -1,
+      category_mulligan: 3, category_mdt: 3, category_scs: 3,
+      category_d_neural: 2,
+      category_joint_mobilization: 1, category_mfr: 1, category_ctm: 1,
+      category_trigger_point: 1, category_pne: 1,
     },
     '안정 시 통증': {
-      category_scs: 3, category_mfr: 2, category_pne: 2,
-      category_trigger_point: 1, category_mulligan: 1, category_d_neural: 1,
-      category_ctm: 1, category_anatomy_trains: 1,
-      category_deep_friction: -1,
+      category_scs: 3,
+      category_mdt: 2,
+      category_d_neural: 1, category_pne: 1,
     },
     '방사통': {
-      category_d_neural: 3, category_mfr: 2, category_pne: 2,
-      category_mulligan: 1, category_scs: 1, category_mdt: 1, category_anatomy_trains: 1,
-      category_deep_friction: -1,
+      category_d_neural: 3, category_mdt: 3,
+      category_mulligan: 1, category_scs: 1, category_pne: 1,
     },
   },
   '아급성': {
     '움직임 시 통증': {
-      category_joint_mobilization: 3, category_mulligan: 2, category_mdt: 2,
-      category_art: 1, category_trigger_point: 1, category_mfr: 1,
-      category_d_neural: 1, category_pne: 1,
-    },
-    '안정 시 통증': {
-      category_mfr: 2, category_trigger_point: 2, category_scs: 2, category_pne: 2,
-      category_art: 1, category_ctm: 1, category_d_neural: 1, category_mulligan: 1,
+      category_joint_mobilization: 3, category_mdt: 3,
+      category_mulligan: 2, category_mfr: 2, category_art: 2, category_ctm: 2,
+      category_deep_friction: 2, category_trigger_point: 2, category_d_neural: 2,
+      category_scs: 2, category_pne: 2,
       category_anatomy_trains: 1,
     },
+    '안정 시 통증': {
+      category_scs: 2, category_trigger_point: 2, category_mdt: 2, category_ctm: 2, category_pne: 2,
+      category_joint_mobilization: 1, category_mulligan: 1, category_mfr: 1, category_art: 1,
+      category_deep_friction: 1, category_anatomy_trains: 1, category_d_neural: 1,
+    },
     '방사통': {
-      category_d_neural: 3, category_mulligan: 2, category_mfr: 2, category_pne: 2,
-      category_mdt: 1, category_scs: 1, category_anatomy_trains: 1, category_art: 1,
+      category_d_neural: 3, category_mdt: 3,
+      category_mulligan: 2,
+      category_joint_mobilization: 1, category_mfr: 1, category_art: 1, category_ctm: 1,
+      category_deep_friction: 1, category_trigger_point: 1, category_scs: 1, category_pne: 1,
     },
   },
   '만성': {
     '움직임 시 통증': {
-      category_joint_mobilization: 3, category_mdt: 3,
-      category_art: 2, category_mulligan: 2, category_deep_friction: 2,
-      category_trigger_point: 1, category_mfr: 1, category_anatomy_trains: 1,
-      category_d_neural: 1, category_pne: 1,
+      category_joint_mobilization: 3, category_mfr: 3, category_art: 3,
+      category_deep_friction: 3, category_trigger_point: 3, category_pne: 3,
+      category_mulligan: 2, category_ctm: 2, category_anatomy_trains: 2,
+      category_d_neural: 2, category_mdt: 2, category_scs: 2,
     },
     '안정 시 통증': {
-      category_trigger_point: 3, category_pne: 3,
-      category_mfr: 2, category_art: 2, category_ctm: 2, category_anatomy_trains: 2,
-      category_scs: 1, category_joint_mobilization: 1, category_mulligan: 1, category_d_neural: 1,
+      category_ctm: 3, category_pne: 3,
+      category_mfr: 2, category_art: 2, category_deep_friction: 2, category_trigger_point: 2,
+      category_joint_mobilization: 1, category_mulligan: 1, category_anatomy_trains: 1,
+      category_d_neural: 1, category_mdt: 1, category_scs: 1,
     },
     '방사통': {
-      category_d_neural: 3, category_pne: 3,
-      category_mulligan: 2, category_mfr: 2, category_mdt: 2, category_anatomy_trains: 2,
-      category_art: 1, category_joint_mobilization: 1, category_scs: 1, category_trigger_point: 1,
+      category_d_neural: 3,
+      category_mulligan: 2, category_mdt: 2, category_art: 2, category_pne: 2,
+      category_joint_mobilization: 1, category_mfr: 1, category_ctm: 1,
+      category_deep_friction: 1, category_trigger_point: 1,
     },
   },
 };
@@ -193,7 +200,7 @@ async function fetchActiveTechniques(categories, bodyRegions = [], userToken = n
   if (!SUPABASE_KEY || categories.length === 0) return [];
 
   const catFilter = categories.map(c => `category.eq.${c}`).join(',');
-  const selectFields = `abbreviation,name_ko,category,body_region,patient_position,therapist_position,contact_point,direction,technique_steps`;
+  const selectFields = `abbreviation,name_ko,category,body_region,patient_position,therapist_position,contact_point,direction,technique_steps,target_tags`;
   // RLS는 auth.uid() 기반 — 사용자 JWT가 있으면 사용, 없으면 anon key fallback
   const authToken = userToken || SUPABASE_KEY;
   const headers = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${authToken}` };
@@ -318,6 +325,36 @@ function selectTopTechniquesGlobally(activeMT, acuity, symptom, maxTotal = 6, ma
   return selected;
 }
 
+// 추천 세션 로깅 (recommendation_logs 테이블, fire-and-forget)
+async function logRecommendationSession(userId, userToken, { region, acuity, symptom, selectedCategories, result }) {
+  const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gnusyjnviugpofvaicbv.supabase.co';
+  const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
+  if (!SUPABASE_KEY || !userId) return;
+
+  const recommended = [
+    ...(result.manualTherapy || []).map(t => ({ name: t.technique, category_key: t.categoryInfo?.category_key || null })),
+    ...(result.exercise || []).map(t => ({ name: t.technique, category_key: t.categoryInfo?.category_key || null })),
+  ];
+
+  await fetch(`${SUPABASE_URL}/rest/v1/recommendation_logs`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${userToken}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal',
+    },
+    body: JSON.stringify({
+      user_id: userId,
+      region,
+      acuity,
+      symptom,
+      selected_categories: selectedCategories,
+      recommended_techniques: recommended,
+    }),
+  });
+}
+
 // 기법 객체를 LLM 프롬프트용 텍스트 블록으로 변환
 // groupLabel: 사용자 그룹명 (category 필드 대신 표시 — LLM이 category 경계로 그룹을 오해하는 것 방지)
 function formatTechniqueForPrompt(t, groupLabel) {
@@ -416,13 +453,19 @@ export default async function handler(req, res) {
       categoryInfo,
     }));
 
-    return res.status(200).json({
+    const atResponse = {
       manualTherapy: atItems,
       exercise: [],
       clinicalNote: `Anatomy Trains는 치료 관점입니다. ${regionKey} 통증과 관련된 근막경선을 평가한 후, MFR·ART·CTM·심부마찰 등 연부조직 기법으로 해당 라인의 구조물을 치료하세요.`,
       selectedCategories: ['category_anatomy_trains'],
       sessionSummary: { region, acuity, symptom, selectedCategories: ['category_anatomy_trains'] },
-    });
+    };
+
+    logRecommendationSession(user.id, userToken, {
+      region, acuity, symptom, selectedCategories: ['category_anatomy_trains'], result: atResponse,
+    }).catch(e => console.error('[logging AT]', e.message));
+
+    return res.status(200).json(atResponse);
   }
 
   // region 레이블 → body_region enum 값 변환 (관련 없는 부위 기법 필터링)
@@ -442,6 +485,17 @@ export default async function handler(req, res) {
     if (excludedTechniqueIds.length > 0) {
       activeMT = activeMT.filter(t => !excludedTechniqueIds.includes(t.abbreviation));
       activeEX = activeEX.filter(t => !excludedTechniqueIds.includes(t.abbreviation));
+    }
+
+    // target_tags hard filter: 해당 acuity 없는 기법 제외
+    const acuityTagMap = { '급성': 'acute', '아급성': 'subacute', '만성': 'chronic' };
+    const requiredTag = acuityTagMap[acuity];
+    if (requiredTag) {
+      activeMT = activeMT.filter(t =>
+        !Array.isArray(t.target_tags) ||
+        t.target_tags.length === 0 ||
+        t.target_tags.includes(requiredTag)
+      );
     }
   } catch (e) {
     console.error('[DEBUG] Supabase fetch error:', e);
@@ -634,6 +688,10 @@ techniqueId는 [MT-XXX] 또는 [EX-XXX] ID를 그대로 복사.`;
       symptom,
       selectedCategories,
     };
+
+    logRecommendationSession(user.id, userToken, {
+      region, acuity, symptom, selectedCategories, result,
+    }).catch(e => console.error('[logging]', e.message));
 
     return res.status(200).json(result);
 
