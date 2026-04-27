@@ -2033,36 +2033,47 @@
     goScreen3();
     setRecLoading(true);
 
-    const payload = {
+    const basePayload = {
       region:              REGION_LABEL[selectedRegion],
       acuity:              STAGE_LABEL[selectedStage],
       symptom:             SYMPTOM_LABEL[selectedSymptom],
-      selectedCategories,
       excludedTechniqueIds: [],
       sessionHistory:      getSessionHistory(),
     };
 
     try {
-      const response = await fetch('/api/recommend', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${currentAccessToken}`,
-        },
-        body: JSON.stringify(payload),
-      });
+      // 카테고리별 병렬 API 호출 → 각각 3개씩 추천 (refreshCategory와 동일 방식)
+      const responses = await Promise.all(
+        selectedCategories.map(catKey =>
+          fetch('/api/recommend', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentAccessToken}` },
+            body: JSON.stringify({ ...basePayload, selectedCategories: [catKey] }),
+          })
+        )
+      );
 
-      if (!response.ok) {
-        let detail = '';
-        try { const j = await response.json(); detail = j.error || ''; } catch {}
-        throw new Error(`HTTP ${response.status}${detail ? ' — ' + detail : ''}`);
-      }
+      const results = await Promise.all(responses.map(async res => {
+        if (!res.ok) {
+          let detail = '';
+          try { const j = await res.json(); detail = j.error || ''; } catch {}
+          throw new Error(`HTTP ${res.status}${detail ? ' — ' + detail : ''}`);
+        }
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        return data;
+      }));
 
-      const result = await response.json();
-      if (result.error) throw new Error(result.error);
+      // 카테고리별 결과 병합
+      const merged = {
+        manualTherapy:     results.flatMap(r => r.manualTherapy || []),
+        exercise:          results.flatMap(r => r.exercise || []),
+        clinicalNote:      results.map(r => r.clinicalNote).filter(Boolean).join(' | '),
+        selectedCategories,
+      };
 
       setRecLoading(false);
-      renderAIResult(result);
+      renderAIResult(merged);
     } catch (err) {
       setRecLoading(false);
       showRecError();
