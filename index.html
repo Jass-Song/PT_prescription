@@ -781,9 +781,63 @@
     }
 
     /* ── Mobile tweaks ── */
-    @media (max-width: 380px) {
+    @media (max-width: 390px) {
+      /* Header: subtitle 숨기기 + 버튼 크기 축소 */
+      .app-header { padding: 10px 14px; }
+      .app-header .logo span { display: none; }
+      .app-header .logo { font-size: 14px; }
+      .btn-settings, .btn-logout, .btn-header-feedback {
+        font-size: 12px;
+        padding: 4px 8px;
+      }
+
+      /* Screen padding 축소 */
+      .screen { padding: 18px 12px 0; }
+
+      /* Section card 안쪽 여백 축소 */
+      .section-card { padding: 14px; }
+
+      /* 결과 카드 헤더 여백 */
+      .card-header { padding: 14px 14px 10px; gap: 10px; }
+
+      /* Position box 좌우 margin 축소 */
+      .position-box { margin: 0 12px 0; }
+      .position-row { padding: 10px 12px; gap: 10px; }
+      .position-divider { margin: 0 12px; }
+
+      /* Dosage 칩 여백 */
+      .dosage-row { margin: 0 12px 10px; }
+
+      /* Rec block */
+      .rec-block { padding: 14px 14px; }
+      .rec-block-title { flex-wrap: wrap; gap: 4px; }
+      .btn-refresh-section { margin-left: 0; margin-top: 4px; font-size: 0.72rem; }
+
+      /* Card detail section */
+      .card-section { padding: 10px 14px 4px; }
+      .card-expand-btn-wrap { padding: 10px 14px; }
+
+      /* Choice grids */
       .choice-grid { grid-template-columns: 1fr; }
-      .choice-grid-3 { grid-template-columns: 1fr; }
+      .choice-grid-3 { grid-template-columns: 1fr 1fr; }
+
+      /* Category picker chips — 더 작게 */
+      .cat-chip { font-size: 0.8rem; padding: 6px 11px; }
+
+      /* Position box sublabel (이탤릭 힌트 텍스트) — 좁은 화면에서 숨김 */
+      .position-sublabel { display: none; }
+
+      /* 카드 제목 폰트 살짝 축소 */
+      .card-name-ko { font-size: 0.93rem; }
+
+      /* 설정 버튼 컨테이너 gap 축소 */
+      .app-header > div { gap: 6px !important; }
+    }
+
+    /* Galaxy S26+ 등 넓은 화면 — 현재 앱은 max-width 520px이라 별도 breakpoint 불필요.
+       단, 430px 이상에서는 choice-grid-3 3열 유지 */
+    @media (min-width: 391px) {
+      .choice-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
     }
 
     /* ── Feedback Button ── */
