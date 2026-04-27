@@ -1169,6 +1169,86 @@
     }
     .gfb-save-btn:hover { background: #4338ca; }
     .gfb-save-btn:disabled { background: #a5b4fc; cursor: default; }
+
+    /* ── History Modal ── */
+    .hist-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(15,23,42,0.55); z-index: 1000;
+      align-items: flex-end; justify-content: center;
+    }
+    .hist-overlay.open { display: flex; }
+    .hist-modal {
+      background: #fff; border-radius: 20px 20px 0 0;
+      width: 100%; max-width: 520px; max-height: 88vh;
+      display: flex; flex-direction: column;
+      animation: slideUp 0.25s ease;
+    }
+    .hist-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 20px 14px; border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; background: #fff; border-radius: 20px 20px 0 0;
+      flex-shrink: 0;
+    }
+    .hist-header-title { font-size: 1rem; font-weight: 700; color: var(--text); }
+    .hist-close {
+      background: #f1f5f9; border: none; border-radius: 50%;
+      width: 30px; height: 30px; font-size: 1rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; color: #64748b;
+    }
+    .hist-close:hover { background: #e2e8f0; }
+    .hist-tabs {
+      display: flex; border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .hist-tab {
+      flex: 1; padding: 10px; text-align: center; font-size: 13px; font-weight: 600;
+      color: var(--text-secondary); border-bottom: 2px solid transparent;
+      cursor: pointer; transition: all 0.15s; background: none; border-top: none;
+      border-left: none; border-right: none;
+    }
+    .hist-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .hist-body { flex: 1; overflow-y: auto; padding: 14px 16px 24px; }
+    .hist-log-card {
+      background: var(--bg); border-radius: var(--radius-sm);
+      padding: 12px 14px; margin-bottom: 10px;
+    }
+    .hist-log-meta { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+    .hist-meta-chip {
+      font-size: 0.72rem; font-weight: 600; padding: 2px 9px;
+      border-radius: 10px; background: var(--primary-light); color: var(--primary);
+    }
+    .hist-tech-list {
+      font-size: 0.83rem; color: var(--text); line-height: 1.75;
+    }
+    .hist-date { font-size: 0.72rem; color: var(--text-secondary); margin-top: 6px; }
+    .hist-liked-card {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--bg); border-radius: var(--radius-sm);
+      padding: 10px 14px; margin-bottom: 8px;
+    }
+    .hist-liked-stars { color: #f6ad55; font-size: 14px; letter-spacing: 1px; flex-shrink: 0; }
+    .hist-liked-info { flex: 1; min-width: 0; }
+    .hist-liked-name {
+      font-size: 0.88rem; font-weight: 600; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .hist-liked-cat { font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px; }
+    .hist-empty {
+      text-align: center; color: var(--text-secondary); font-size: 0.88rem;
+      padding: 40px 16px; line-height: 1.7;
+    }
+    /* 히스토리 열기 버튼 */
+    .patient-heading-row {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      margin-bottom: 0;
+    }
+    .btn-hist-trigger {
+      font-size: 12px; color: var(--text-secondary); background: #f1f5f9;
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 5px 11px; cursor: pointer; font-weight: 500;
+      white-space: nowrap; margin-top: 2px; transition: background 0.15s;
+    }
+    .btn-hist-trigger:hover { background: #e2e8f0; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
@@ -1211,6 +1291,21 @@
       <button class="cat-modal-close" onclick="closeCategoryModal()">✕</button>
     </div>
     <div class="cat-principle-list" id="catPrincipleList"></div>
+  </div>
+</div>
+
+<!-- ── History Modal ── -->
+<div class="hist-overlay" id="histOverlay" onclick="closeHistory(event)">
+  <div class="hist-modal" onclick="event.stopPropagation()">
+    <div class="hist-header">
+      <span class="hist-header-title">📋 추천 이력</span>
+      <button class="hist-close" onclick="closeHistory()">✕</button>
+    </div>
+    <div class="hist-tabs">
+      <button class="hist-tab active" id="histTab1" onclick="switchHistTab(1)">최근 추천</button>
+      <button class="hist-tab" id="histTab2" onclick="switchHistTab(2)">⭐ 좋은 평가 기법</button>
+    </div>
+    <div class="hist-body" id="histBody"></div>
   </div>
 </div>
 
@@ -1369,8 +1464,13 @@
        2단계 — 환자 입력
   ══════════════════════════════ -->
   <div class="screen" id="screen2">
-    <div class="patient-heading">환자 정보 입력</div>
-    <div class="patient-subhead">아래 3가지를 순서대로 선택하세요</div>
+    <div class="patient-heading-row">
+      <div>
+        <div class="patient-heading">환자 정보 입력</div>
+        <div class="patient-subhead">아래 3가지를 순서대로 선택하세요</div>
+      </div>
+      <button class="btn-hist-trigger" onclick="openHistory()">📋 이력</button>
+    </div>
 
     <div class="step-indicator">
       <div class="step-dot active" id="sdot1">1</div>
@@ -2649,6 +2749,111 @@
       btn.disabled = false;
       btn.textContent = '보내기';
       showToast('전송에 실패했습니다. 다시 시도해주세요.');
+    }
+  }
+
+  /* ══════════════════════════════════════
+     HISTORY MODAL
+  ══════════════════════════════════════ */
+  let histCurrentData = null;
+  let histActiveTab   = 1;
+
+  async function openHistory() {
+    const overlay = document.getElementById('histOverlay');
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    document.getElementById('histBody').innerHTML =
+      '<div class="hist-empty">불러오는 중…</div>';
+
+    try {
+      const res = await fetch('/api/history', {
+        headers: { 'Authorization': `Bearer ${currentAccessToken}` },
+      });
+      if (!res.ok) throw new Error(res.status);
+      histCurrentData = await res.json();
+      renderHistTab(histActiveTab);
+    } catch (e) {
+      document.getElementById('histBody').innerHTML =
+        '<div class="hist-empty">이력을 불러오지 못했습니다.<br>잠시 후 다시 시도해주세요.</div>';
+    }
+  }
+
+  function closeHistory(e) {
+    if (e && e.target !== document.getElementById('histOverlay')) return;
+    document.getElementById('histOverlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  function switchHistTab(n) {
+    histActiveTab = n;
+    document.getElementById('histTab1').classList.toggle('active', n === 1);
+    document.getElementById('histTab2').classList.toggle('active', n === 2);
+    if (histCurrentData) renderHistTab(n);
+  }
+
+  function renderHistTab(n) {
+    const body = document.getElementById('histBody');
+    body.innerHTML = '';
+
+    if (n === 1) {
+      const logs = histCurrentData?.recentLogs || [];
+      if (logs.length === 0) {
+        body.innerHTML = '<div class="hist-empty">아직 추천 이력이 없습니다.</div>';
+        return;
+      }
+      logs.forEach(log => {
+        const card = document.createElement('div');
+        card.className = 'hist-log-card';
+
+        const techs = (log.recommended_techniques || [])
+          .map(t => t.name).filter(Boolean);
+        const dt = new Date(log.created_at);
+        const dateStr = dt.toLocaleDateString('ko-KR', {
+          month: 'short', day: 'numeric',
+        }) + ' ' + dt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+
+        card.innerHTML = `
+          <div class="hist-log-meta">
+            ${log.region  ? `<span class="hist-meta-chip">${log.region}</span>`  : ''}
+            ${log.acuity  ? `<span class="hist-meta-chip">${log.acuity}</span>`  : ''}
+            ${log.symptom ? `<span class="hist-meta-chip">${log.symptom}</span>` : ''}
+          </div>
+          <div class="hist-tech-list">${
+            techs.length > 0
+              ? techs.map(n => `· ${n}`).join('<br>')
+              : '<span style="color:var(--text-secondary)">—</span>'
+          }</div>
+          <div class="hist-date">${dateStr}</div>`;
+        body.appendChild(card);
+      });
+
+    } else {
+      const liked = histCurrentData?.likedTechniques || [];
+      if (liked.length === 0) {
+        body.innerHTML = `<div class="hist-empty">
+          별 3개 이상 평가한 기법이 없습니다.
+          <span style="font-size:0.8rem;display:block;margin-top:6px">
+            추천 결과의 ★ 사용 평가 버튼으로 평가해보세요
+          </span>
+        </div>`;
+        return;
+      }
+      liked.forEach(t => {
+        const card = document.createElement('div');
+        card.className = 'hist-liked-card';
+        const filled  = '★'.repeat(t.star_rating);
+        const empty   = '☆'.repeat(5 - t.star_rating);
+        const dateStr = new Date(t.created_at).toLocaleDateString('ko-KR', {
+          month: 'short', day: 'numeric',
+        });
+        card.innerHTML = `
+          <div class="hist-liked-stars">${filled}<span style="opacity:.3">${empty}</span></div>
+          <div class="hist-liked-info">
+            <div class="hist-liked-name">${t.name_ko || '—'}</div>
+            <div class="hist-liked-cat">${t.category_name ? t.category_name + ' · ' : ''}${dateStr}</div>
+          </div>`;
+        body.appendChild(card);
+      });
     }
   }
 
