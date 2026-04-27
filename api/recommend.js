@@ -103,6 +103,88 @@ const REGION_BODY_REGION_MAP = {
   '요추': ['lumbar', 'sacroiliac'],
 };
 
+// ── Anatomy Trains 라인 데이터 (리전별) ──
+// Anatomy Trains는 치료 기법이 아닌 치료 관점이므로
+// 리전에 해당하는 근막경선을 평가 지침으로 제공하고, 치료는 타 연부조직 기법으로 유도합니다.
+const ANATOMY_TRAINS_DATA = {
+  '경추': [
+    {
+      name: '심부 전방선 (Deep Front Line)',
+      patientPosition: '바로 눕기. 경추 전방 심부 구조물 촉진·평가',
+      therapistHands: 'MFR · ART · 호흡 패턴 운동 연계',
+      movement: '1. 장경근·두장근 긴장도 촉진 2. 사각근·설골근 연결 확인 3. MFR·ART로 전방 라인 이완',
+      targetMuscles: ['장경근(longus colli)', '두장근(longus capitis)', '사각근(scalenes)', '설골근(hyoid muscles)', '횡격막(diaphragm)'],
+      patientFeedback: '두통·경추 전방 통증·호흡 패턴 이상 동반 시 우선 평가하세요',
+      symptomPriority: { '방사통': 3, '안정 시 통증': 3, '움직임 시 통증': 1 },
+    },
+    {
+      name: '표층 후방선 (Superficial Back Line)',
+      patientPosition: '엎드려 눕기. 후두부~경추 이행부 긴장 촉진',
+      therapistHands: 'MFR · 심부마찰 · CTM 적용',
+      movement: '1. 후두하근 긴장도 확인 2. 경추~흉추 이행부 평가 3. MFR·심부마찰로 후방 라인 치료',
+      targetMuscles: ['후두하근(suboccipital muscles)', '척추기립근(erector spinae)', '흉요근막(thoracolumbar fascia)', '슬굴곡근(hamstrings)', '족저근막(plantar fascia)'],
+      patientFeedback: '경추 신전 통증·긴장성 두통·자세성 두통 시 후두하근부터 라인 전체 평가',
+      symptomPriority: { '방사통': 1, '안정 시 통증': 2, '움직임 시 통증': 3 },
+    },
+    {
+      name: '나선선 (Spiral Line)',
+      patientPosition: '앉은 자세. 견갑골 안정성·흉추 회전 패턴 평가',
+      therapistHands: '능형근 · 전거근 MFR · ART 적용',
+      movement: '1. 능형근~전거근 연결 긴장도 촉진 2. 회전 대칭성 확인 3. MFR·ART로 나선 패턴 이완',
+      targetMuscles: ['능형근(rhomboids)', '전거근(serratus anterior)', '외복사근(external oblique)', '내복사근(internal oblique)', '대퇴근막장근(TFL)'],
+      patientFeedback: '경추 회전 제한·견갑골 익상·흉추 회전 비대칭 동반 시 우선 평가',
+      symptomPriority: { '방사통': 2, '안정 시 통증': 1, '움직임 시 통증': 2 },
+    },
+    {
+      name: '측방선 (Lateral Line)',
+      patientPosition: '앉은 자세. 경추 측굴 범위·측방 긴장 패턴 평가',
+      therapistHands: 'SCM · 사각근 ART · CTM 적용',
+      movement: '1. SCM~사각근 긴장도 촉진 2. 측굴 대칭성 확인 3. ART·CTM으로 측방 라인 치료',
+      targetMuscles: ['흉쇄유돌근(SCM)', '사각근(scalenes)', '외복사근(external oblique)', '요방형근(quadratus lumborum)', '비골근(peroneus)'],
+      patientFeedback: '경추 측굴 제한·일측성 두통·어지러움 동반 시 SCM~사각근 우선 확인',
+      symptomPriority: { '방사통': 2, '안정 시 통증': 2, '움직임 시 통증': 2 },
+    },
+  ],
+  '요추': [
+    {
+      name: '표층 후방선 (Superficial Back Line)',
+      patientPosition: '엎드려 눕기. 흉요근막 긴장도·분절 평가',
+      therapistHands: 'MFR · CTM · 심부마찰 적용',
+      movement: '1. 흉요근막 긴장 패턴 확인 2. 척추기립근~둔근 연결 평가 3. MFR·CTM으로 후방 라인 치료',
+      targetMuscles: ['척추기립근(erector spinae)', '흉요근막(thoracolumbar fascia)', '대둔근(gluteus maximus)', '슬굴곡근(hamstrings)', '족저근막(plantar fascia)'],
+      patientFeedback: '요추 굴곡 제한·후방 통증 패턴의 가장 흔한 장력선. 라인 전체를 평가하세요',
+      symptomPriority: { '방사통': 1, '안정 시 통증': 2, '움직임 시 통증': 3 },
+    },
+    {
+      name: '심부 전방선 (Deep Front Line)',
+      patientPosition: '바로 눕기. 복부 심부 촉진·호흡 패턴 관찰',
+      therapistHands: '장요근 MFR · ART · 안정화 운동 연계',
+      movement: '1. 장요근 긴장도·단축 확인 2. 복횡근 활성화 패턴 평가 3. MFR·ART로 전방 라인 이완 후 안정화 운동 연계',
+      targetMuscles: ['장요근(iliopsoas)', '복횡근(transversus abdominis)', '골반저근(pelvic floor)', '횡격막(diaphragm)', '전종인대(anterior longitudinal ligament)'],
+      patientFeedback: '만성 요통·골반 통증·호흡 패턴 이상 동반 시 장요근부터 우선 평가',
+      symptomPriority: { '방사통': 3, '안정 시 통증': 3, '움직임 시 통증': 1 },
+    },
+    {
+      name: '후방 기능선 (Back Functional Line)',
+      patientPosition: '엎드려 눕기. 광배근~대둔근 대각선 연결 확인',
+      therapistHands: '광배근 · 대둔근 MFR · ART 적용',
+      movement: '1. 광배근~흉요근막~대둔근 대각선 장력 촉진 2. 상·하지 연결 패턴 평가 3. MFR·ART로 기능선 이완',
+      targetMuscles: ['광배근(latissimus dorsi)', '흉요근막(thoracolumbar fascia)', '대둔근(gluteus maximus)', '대퇴근막장근(TFL)'],
+      patientFeedback: '천장관절 통증·보행 시 요통·회전 불안정 패턴에서 광배근~대둔근 연결 우선 평가',
+      symptomPriority: { '방사통': 2, '안정 시 통증': 2, '움직임 시 통증': 2 },
+    },
+    {
+      name: '측방선 (Lateral Line)',
+      patientPosition: '앉은 자세. 요추 측굴 대칭성·요방형근 긴장 평가',
+      therapistHands: '요방형근 · TFL ART · 심부마찰 적용',
+      movement: '1. 요방형근~TFL 긴장도 촉진 2. 측방 굴곡 대칭성·장경인대 확인 3. ART·심부마찰로 측방 라인 치료',
+      targetMuscles: ['요방형근(quadratus lumborum)', '대퇴근막장근(TFL)', '장경인대(IT band)', '외복사근(external oblique)', '비골근(peroneus)'],
+      patientFeedback: '측방 요통·하지 방사통·다리 길이 차이 동반 시 요방형근~TFL 연결 우선 확인',
+      symptomPriority: { '방사통': 2, '안정 시 통증': 1, '움직임 시 통증': 2 },
+    },
+  ],
+};
+
 // Supabase에서 카테고리별 기법 전체 조회 (body_region 포함)
 // 부위 필터는 서버에서 처리: body_region이 NULL(범용)이거나 대상 부위에 해당하는 기법만 반환
 async function fetchActiveTechniques(categories, bodyRegions = [], userToken = null) {
@@ -298,6 +380,50 @@ export default async function handler(req, res) {
   ]);
   const mtCategories = selectedCategories.filter(k => !EX_CAT_KEYS_SERVER.has(k));
   const exCategories = selectedCategories.filter(k => EX_CAT_KEYS_SERVER.has(k));
+
+  // ── Anatomy Trains 단독 요청 → 라인 기반 조기 반환 (DB·LLM 불필요) ──
+  if (mtCategories.length === 1 && mtCategories[0] === 'category_anatomy_trains' && exCategories.length === 0) {
+    const regionKey = ANATOMY_TRAINS_DATA[region] ? region : '요추';
+    const allLines = ANATOMY_TRAINS_DATA[regionKey];
+
+    // symptom 기반 우선순위 정렬
+    const sorted = [...allLines].sort((a, b) => {
+      const sa = a.symptomPriority?.[symptom] ?? 0;
+      const sb = b.symptomPriority?.[symptom] ?? 0;
+      return sb - sa;
+    });
+
+    // excludedTechniqueIds(라인 이름 기반)로 이미 본 라인 제외
+    const available = sorted.filter(line => !excludedTechniqueIds.includes(line.name));
+    const top3 = available.slice(0, 3);
+
+    // categoryInfo 조회 (📖 원칙 보기용)
+    const catMap = await fetchCategoryPrinciples(userToken);
+    const catData = catMap['category_anatomy_trains'];
+    const categoryInfo = catData
+      ? { category_key: 'category_anatomy_trains', name_ko: catData.name_ko || '근막경선 Anatomy Trains', basic_principles: catData.basic_principles || [] }
+      : null;
+
+    const atItems = top3.map(line => ({
+      techniqueId:     line.name,
+      technique:       line.name,
+      patientPosition: line.patientPosition,
+      therapistHands:  line.therapistHands,
+      movement:        line.movement,
+      dosage:          '',
+      targetMuscles:   line.targetMuscles,
+      patientFeedback: line.patientFeedback,
+      categoryInfo,
+    }));
+
+    return res.status(200).json({
+      manualTherapy: atItems,
+      exercise: [],
+      clinicalNote: `Anatomy Trains는 치료 관점입니다. ${regionKey} 통증과 관련된 근막경선을 평가한 후, MFR·ART·CTM·심부마찰 등 연부조직 기법으로 해당 라인의 구조물을 치료하세요.`,
+      selectedCategories: ['category_anatomy_trains'],
+      sessionSummary: { region, acuity, symptom, selectedCategories: ['category_anatomy_trains'] },
+    });
+  }
 
   // region 레이블 → body_region enum 값 변환 (관련 없는 부위 기법 필터링)
   const bodyRegions = REGION_BODY_REGION_MAP[region] || [];
