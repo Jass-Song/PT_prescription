@@ -433,7 +433,7 @@ async function fetchActiveTechniques(categories, bodyRegions = [], userToken = n
 
   try {
     const res = await fetch(url, { headers });
-    if (!res.ok) return [];
+    if (!res.ok) return null; // DB 실제 오류 (RLS 차단 등) — null로 구분
     const data = await res.json();
     const all = (data || []).filter(t => t.name_ko);
     // 서버에서 body_region 필터링: NULL(범용) 또는 대상 부위와 일치하는 기법만 포함
@@ -442,7 +442,7 @@ async function fetchActiveTechniques(categories, bodyRegions = [], userToken = n
     }
     return all;
   } catch {
-    return [];
+    return null; // 네트워크 예외 — null로 구분
   }
 }
 
@@ -732,7 +732,7 @@ export default async function handler(req, res) {
     ];
     if (exCategories.length > 0) fetches.push(fetchActiveTechniques(exCategories, bodyRegions, userToken));
     const results = await Promise.all(fetches);
-    activeMT = results[0];
+    activeMT = results[0]; // null = DB 오류, [] = 정상 조회 결과 없음
     categoryPrinciplesMap = results[1];
 
     // vector 결과를 { [id]: similarity } 맵으로 변환
@@ -741,10 +741,17 @@ export default async function handler(req, res) {
 
     activeEX = results[3] || [];
 
+    // activeMT null(DB 오류) 조기 반환
+    if (activeMT === null) {
+      return res.status(503).json({
+        error: `기법 데이터를 불러오지 못했습니다. (DB 조회 실패 — 계정 승인 여부를 확인하세요. mtCategories: ${JSON.stringify(mtCategories)})`
+      });
+    }
+
     // excludedTechniqueIds(abbreviation 기준)로 이미 본 기법 제외
     if (excludedTechniqueIds.length > 0) {
       activeMT = activeMT.filter(t => !excludedTechniqueIds.includes(t.abbreviation));
-      activeEX = activeEX.filter(t => !excludedTechniqueIds.includes(t.abbreviation));
+      activeEX = (activeEX || []).filter(t => !excludedTechniqueIds.includes(t.abbreviation));
     }
 
     // target_tags hard filter: 해당 acuity 없는 기법 제외
@@ -761,12 +768,8 @@ export default async function handler(req, res) {
     console.error('[DEBUG] Supabase fetch error:', e);
   }
 
-  // 기법이 없으면 DB 접근 실패 (RLS 차단 또는 미승인 계정)
-  if (activeMT.length === 0 && mtCategories.length > 0) {
-    return res.status(503).json({
-      error: `기법 데이터를 불러오지 못했습니다. (DB 조회 실패 — 계정 승인 여부 또는 DB 마이그레이션을 확인하세요. mtCategories: ${JSON.stringify(mtCategories)})`
-    });
-  }
+  // 빈 결과는 오류가 아님 — LLM이 "해당 조건 없음" 안내를 생성하도록 흘려보냄
+  // (activeMT === null인 DB 오류는 위에서 이미 503 반환 완료)
 
   // MT 기법에 고유 인덱스 ID 부여
   const indexedTechniques = new Map(); // 'MT-001' → technique object
