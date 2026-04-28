@@ -427,6 +427,10 @@
       <option>안정 시 통증</option>
       <option>방사통</option>
     </select>
+    <label style="font-size:11px;display:flex;align-items:center;gap:4px;cursor:pointer">
+      <input type="checkbox" id="chk-all-regions" style="accent-color:var(--accent)">
+      모든 부위
+    </label>
     <button class="primary" id="btn-run">▶ 점수 계산</button>
     <div class="stats-bar" id="stats-bar">쿼리를 실행하세요</div>
   </div>
@@ -537,9 +541,10 @@ const CAT_GROUP = {
 
 // ── Fetch ──
 async function fetchScores() {
-  const region   = document.getElementById('sel-region').value;
-  const acuity   = document.getElementById('sel-acuity').value;
-  const symptom  = document.getElementById('sel-symptom').value;
+  const region     = document.getElementById('sel-region').value;
+  const acuity     = document.getElementById('sel-acuity').value;
+  const symptom    = document.getElementById('sel-symptom').value;
+  const allRegions = document.getElementById('chk-all-regions').checked;
 
   const loading = document.getElementById('loading');
   loading.style.display = 'flex';
@@ -548,7 +553,7 @@ async function fetchScores() {
     const res = await fetch(`${API_BASE}/api/debug-scores`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ region, acuity, symptom }),
+      body: JSON.stringify({ region, acuity, symptom, allRegions }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
@@ -824,14 +829,28 @@ function hideTooltip() {
 function renderStats(stats) {
   const bar = document.getElementById('stats-bar');
   if (!stats) { bar.textContent = ''; return; }
+
+  const catCounts = stats.categoryCounts || {};
+  const catOrder = [
+    ['관절', ['category_joint_mobilization','category_mulligan']],
+    ['연부', ['category_mfr','category_art','category_ctm','category_deep_friction','category_trigger_point','category_anatomy_trains']],
+    ['신경', ['category_d_neural']],
+    ['특수', ['category_mdt','category_scs']],
+    ['교육', ['category_pne']],
+  ];
+  const catBreakdown = catOrder.map(([label, cats]) => {
+    const n = cats.reduce((s, c) => s + (catCounts[c] || 0), 0);
+    const color = n > 0 ? 'var(--text)' : 'var(--red)';
+    return `<span style="color:${color}">${label}:${n}</span>`;
+  }).join(' ');
+
   bar.innerHTML = `
-    쿼리: <span>"${stats.queryText}"</span> &nbsp;|&nbsp;
-    임베딩: <span style="color:${stats.hasEmbedding ? 'var(--green)' : 'var(--red)'}">${stats.hasEmbedding ? '✓ 생성됨' : '✗ 없음'}</span> &nbsp;|&nbsp;
-    기법: <span>${stats.totalTechniques}개</span> &nbsp;|&nbsp;
-    벡터 매핑: <span style="color:${stats.techniquesWithVector > 0 ? 'var(--orange)' : 'var(--red)'}">
-      ${stats.techniquesWithVector}/${stats.totalTechniques}개</span> &nbsp;|&nbsp;
-    태그 통과: <span>${stats.techniquesPassingTagFilter}개</span> &nbsp;|&nbsp;
-    유사쌍: <span>${stats.embeddingPairsComputed}쌍</span>
+    임베딩: <span style="color:${stats.hasEmbedding ? 'var(--green)' : 'var(--red)'}">${stats.hasEmbedding ? '✓' : '✗'}</span> &nbsp;|&nbsp;
+    기법: <span>${stats.totalTechniques}개</span> (${catBreakdown}) &nbsp;|&nbsp;
+    벡터: <span style="color:${stats.techniquesWithVector > 0 ? 'var(--orange)' : 'var(--red)'}">
+      ${stats.techniquesWithVector}/${stats.totalTechniques}</span> &nbsp;|&nbsp;
+    태그통과: <span>${stats.techniquesPassingTagFilter}개</span>
+    ${stats.allRegions ? '<span style="color:var(--yellow)"> [모든 부위]</span>' : ''}
   `;
 }
 

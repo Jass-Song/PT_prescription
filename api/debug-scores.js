@@ -120,7 +120,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const body = req.method === 'GET' ? req.query : req.body;
-  const { region = '경추', acuity = '아급성', symptom = '움직임 시 통증', selectedCategories } = body;
+  const { region = '경추', acuity = '아급성', symptom = '움직임 시 통증', selectedCategories, allRegions } = body;
 
   const categories = selectedCategories
     ? (typeof selectedCategories === 'string' ? JSON.parse(selectedCategories) : selectedCategories)
@@ -129,7 +129,8 @@ export default async function handler(req, res) {
        'category_d_neural', 'category_mdt', 'category_scs', 'category_pne'];
 
   const regionConfig = REGION_MAP[region] || { primary: [], secondary: [] };
-  const bodyRegions = [...regionConfig.primary, ...regionConfig.secondary];
+  // allRegions=true 이면 body_region 필터 비활성화 (진단용)
+  const bodyRegions = allRegions ? [] : [...regionConfig.primary, ...regionConfig.secondary];
 
   const queryText = `${region} ${acuity} ${symptom}`;
 
@@ -198,6 +199,12 @@ export default async function handler(req, res) {
     }
   }
 
+  // 카테고리별 기법 수 집계
+  const categoryCounts = {};
+  scoredTechniques.forEach(t => {
+    categoryCounts[t.category] = (categoryCounts[t.category] || 0) + 1;
+  });
+
   const stats = {
     queryText,
     hasEmbedding: !!queryEmbedding,
@@ -206,6 +213,8 @@ export default async function handler(req, res) {
     techniquesPassingTagFilter: scoredTechniques.filter(t => t.passesTagFilter).length,
     vectorRowsReturned: vectorRows.length,
     embeddingPairsComputed: links.length,
+    categoryCounts,
+    allRegions: !!allRegions,
     region, acuity, symptom,
     bodyRegions,
     categories,
