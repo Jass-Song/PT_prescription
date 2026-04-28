@@ -371,6 +371,13 @@
     align-items: center;
     gap: 6px;
     margin-bottom: 3px;
+    border-radius: 4px;
+    padding: 2px 4px;
+    transition: background 0.15s, opacity 0.2s;
+  }
+
+  .cat-filter:hover {
+    background: rgba(124,108,252,0.15);
   }
 
   .cat-legend-dot {
@@ -457,12 +464,13 @@
     </div>
 
     <div class="cat-legend">
-      <div style="font-weight:600;margin-bottom:5px;color:var(--text-muted)">카테고리</div>
-      <div class="cat-legend-row"><div class="cat-legend-dot" style="background:var(--c-joint)"></div>관절가동술</div>
-      <div class="cat-legend-row"><div class="cat-legend-dot" style="background:var(--c-soft)"></div>연부조직</div>
-      <div class="cat-legend-row"><div class="cat-legend-dot" style="background:var(--c-neuro)"></div>신경가동술</div>
-      <div class="cat-legend-row"><div class="cat-legend-dot" style="background:var(--c-special)"></div>특수기법</div>
-      <div class="cat-legend-row"><div class="cat-legend-dot" style="background:var(--c-edu)"></div>교육</div>
+      <div style="font-weight:600;margin-bottom:5px;color:var(--text-muted)">카테고리 <span style="font-weight:400;font-size:9px">(클릭하면 하이라이트)</span></div>
+      <div class="cat-legend-row cat-filter" data-group="joint"><div class="cat-legend-dot" style="background:var(--c-joint)"></div>관절가동술</div>
+      <div class="cat-legend-row cat-filter" data-group="soft"><div class="cat-legend-dot" style="background:var(--c-soft)"></div>연부조직</div>
+      <div class="cat-legend-row cat-filter" data-group="neuro"><div class="cat-legend-dot" style="background:var(--c-neuro)"></div>신경가동술</div>
+      <div class="cat-legend-row cat-filter" data-group="special"><div class="cat-legend-dot" style="background:var(--c-special)"></div>특수기법</div>
+      <div class="cat-legend-row cat-filter" data-group="edu"><div class="cat-legend-dot" style="background:var(--c-edu)"></div>교육</div>
+      <div class="cat-legend-row cat-filter" data-group="" style="margin-top:4px;color:var(--text-muted)">전체 보기</div>
     </div>
   </div>
 </main>
@@ -509,6 +517,23 @@ let simulation = null;
 let zoom = null;
 let currentData = null;
 let selectedNodeId = null;
+let activeFilterGroup = null;
+
+// 카테고리 그룹 매핑
+const CAT_GROUP = {
+  category_joint_mobilization: 'joint',
+  category_mulligan:            'joint',
+  category_mfr:                 'soft',
+  category_art:                 'soft',
+  category_ctm:                 'soft',
+  category_deep_friction:       'soft',
+  category_trigger_point:       'soft',
+  category_anatomy_trains:      'soft',
+  category_d_neural:            'neuro',
+  category_mdt:                 'special',
+  category_scs:                 'special',
+  category_pne:                 'edu',
+};
 
 // ── Fetch ──
 async function fetchScores() {
@@ -736,6 +761,45 @@ function highlightNode(id, nodeData) {
   }
 }
 
+// ── Category Group Highlight ──
+function highlightGroup(group) {
+  activeFilterGroup = group || null;
+
+  // 범례 스타일
+  document.querySelectorAll('.cat-filter').forEach(el => {
+    const isActive = !group || el.dataset.group === group;
+    el.style.opacity = isActive ? '1' : '0.35';
+    el.style.fontWeight = (el.dataset.group === group) ? '700' : '400';
+  });
+
+  if (!window._graphNodes) return;
+
+  window._graphNodes.select('circle')
+    .transition().duration(200)
+    .attr('r', d => {
+      const inGroup = !group || CAT_GROUP[d.category] === group;
+      return inGroup ? Math.max(10, 8 + d.finalScore * 18) : 5;
+    })
+    .attr('fill-opacity', d => {
+      if (!group) return d.passes ? 0.85 : 0.3;
+      return CAT_GROUP[d.category] === group ? 1 : 0.1;
+    })
+    .attr('stroke-width', d => (!group || CAT_GROUP[d.category] === group) ? 2.5 : 1)
+    .attr('stroke', d => (!group || CAT_GROUP[d.category] === group)
+      ? (CAT_COLOR[d.category] || '#888') : '#333');
+
+  window._graphNodes.select('text')
+    .transition().duration(200)
+    .attr('fill-opacity', d => (!group || CAT_GROUP[d.category] === group) ? 1 : 0.15);
+
+  // 카드 패널도 카테고리 그룹으로 필터
+  document.querySelectorAll('.technique-card').forEach(card => {
+    const t = currentData?.techniques?.find(t => t.id === card.dataset.id);
+    const inGroup = !group || (t && CAT_GROUP[t.category] === group);
+    card.style.opacity = inGroup ? '1' : '0.2';
+  });
+}
+
 // ── Tooltip ──
 function showTooltip(event, d) {
   const tt = document.getElementById('tooltip');
@@ -798,11 +862,24 @@ document.getElementById('btn-zoom-fit').addEventListener('click', () => {
 
 document.getElementById('btn-run').addEventListener('click', run);
 
-// Enter key
-document.querySelectorAll('select').forEach(s => s.addEventListener('change', () => {}));
+// ── 범례 클릭 → 카테고리 하이라이트 ──
+document.querySelectorAll('.cat-filter').forEach(el => {
+  el.style.cursor = 'pointer';
+  el.addEventListener('click', () => {
+    const group = el.dataset.group;
+    // 같은 그룹 재클릭 시 전체 보기로 초기화
+    if (activeFilterGroup === group) {
+      highlightGroup('');
+    } else {
+      highlightGroup(group);
+    }
+  });
+});
 
-// Auto-run on page load (optional)
-// window.addEventListener('load', run);
+// 그래프 빈 공간 클릭 → 필터 해제
+document.getElementById('graph-svg').addEventListener('click', () => {
+  if (activeFilterGroup) highlightGroup('');
+});
 </script>
 </body>
 </html>

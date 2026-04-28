@@ -125,7 +125,8 @@ export default async function handler(req, res) {
   const categories = selectedCategories
     ? (typeof selectedCategories === 'string' ? JSON.parse(selectedCategories) : selectedCategories)
     : ['category_joint_mobilization', 'category_mulligan', 'category_mfr', 'category_art',
-       'category_trigger_point', 'category_d_neural', 'category_mdt', 'category_scs', 'category_pne'];
+       'category_ctm', 'category_deep_friction', 'category_trigger_point', 'category_anatomy_trains',
+       'category_d_neural', 'category_mdt', 'category_scs', 'category_pne'];
 
   const regionConfig = REGION_MAP[region] || { primary: [], secondary: [] };
   const bodyRegions = [...regionConfig.primary, ...regionConfig.secondary];
