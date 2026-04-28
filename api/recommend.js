@@ -446,8 +446,8 @@ async function fetchActiveTechniques(categories, bodyRegions = [], userToken = n
   }
 }
 
-// LLM 호출 + JSON 파싱 헬퍼 (실패 시 null 반환)
-async function callLLMAndParse(systemPrompt, userPrompt, apiKey) {
+// LLM 호출 + JSON 파싱 헬퍼 (파싱 실패 시 1회 자동 재시도)
+async function callLLMAndParse(systemPrompt, userPrompt, apiKey, retryCount = 0) {
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -470,15 +470,27 @@ async function callLLMAndParse(systemPrompt, userPrompt, apiKey) {
     }
     const data = await response.json();
     const rawText = data?.content?.[0]?.text || '';
-    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
+
+    // JSON 블록 추출: ```json ... ``` 또는 { ... } 패턴 모두 처리
+    const jsonMatch = rawText.match(/```json\s*([\s\S]*?)```/) || rawText.match(/(\{[\s\S]*\})/);
+    const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]).trim() : null;
+
+    if (!jsonStr) {
       console.error('JSON 추출 실패. 원문:', rawText.slice(0, 200));
+      if (retryCount < 1) {
+        console.log('[retry] JSON 추출 실패 → 1회 재시도');
+        return callLLMAndParse(systemPrompt, userPrompt, apiKey, retryCount + 1);
+      }
       return { error: 'AI 응답 파싱 오류', status: 502 };
     }
     try {
-      return { result: JSON.parse(jsonMatch[0]) };
+      return { result: JSON.parse(jsonStr) };
     } catch (parseErr) {
       console.error('JSON.parse 실패:', parseErr.message, '| 원문:', rawText.slice(0, 400));
+      if (retryCount < 1) {
+        console.log('[retry] JSON.parse 실패 → 1회 재시도');
+        return callLLMAndParse(systemPrompt, userPrompt, apiKey, retryCount + 1);
+      }
       return { error: 'AI 응답 파싱 오류', status: 502 };
     }
   } catch (err) {

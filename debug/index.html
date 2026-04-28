@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PT 처방 도우미 — 벡터 점수 & 기법 연결 그래프</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --surface: #1a1a1a;
+    --surface2: #242424;
+    --border: #333;
+    --text: #e8e8e8;
+    --text-muted: #888;
+    --accent: #7c6cfc;
+    --green: #4ade80;
+    --yellow: #facc15;
+    --orange: #fb923c;
+    --red: #f87171;
+    --blue: #60a5fa;
+
+    /* category colors */
+    --c-joint: #60a5fa;
+    --c-soft: #4ade80;
+    --c-neuro: #fb923c;
+    --c-special: #a78bfa;
+    --c-edu: #f472b6;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ─── Header ─── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+
+  header h1 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+
+  .controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    flex: 1;
+  }
+
+  select, button {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+    font-weight: 600;
+    padding: 5px 16px;
+  }
+
+  button.primary:hover { opacity: 0.85; }
+
+  .stats-bar {
+    display: flex;
+    gap: 16px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .stats-bar span { color: var(--text); font-weight: 600; }
+
+  /* ─── Main Layout ─── */
+  main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ─── Left: Score Panel ─── */
+  #score-panel {
+    width: 380px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 10px 14px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .legend {
+    display: flex;
+    gap: 8px;
+    font-size: 10px;
+  }
+
+  .legend-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 3px;
+    vertical-align: middle;
+  }
+
+  #score-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+  }
+
+  .technique-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  .technique-card:hover, .technique-card.active {
+    border-color: var(--accent);
+    background: #1e1a2e;
+  }
+
+  .technique-card.filtered {
+    opacity: 0.35;
+  }
+
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 6px;
+  }
+
+  .card-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    flex: 1;
+  }
+
+  .card-abbr {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 1px;
+  }
+
+  .final-score {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--green);
+    margin-left: 8px;
+  }
+
+  .score-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .score-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+  }
+
+  .score-label {
+    width: 60px;
+    color: var(--text-muted);
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .bar-track {
+    flex: 1;
+    height: 6px;
+    background: #2a2a2a;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s ease;
+  }
+
+  .bar-rule { background: var(--blue); }
+  .bar-vector { background: var(--orange); }
+  .bar-final { background: var(--green); }
+
+  .score-val {
+    width: 36px;
+    text-align: right;
+    color: var(--text-muted);
+    font-size: 10px;
+  }
+
+  .cat-badge {
+    display: inline-block;
+    font-size: 9px;
+    padding: 1px 6px;
+    border-radius: 10px;
+    margin-top: 4px;
+    font-weight: 500;
+  }
+
+  .tag-filter-warning {
+    font-size: 9px;
+    color: var(--red);
+    margin-top: 3px;
+  }
+
+  /* ─── Right: Graph Panel ─── */
+  #graph-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  #graph-svg {
+    flex: 1;
+    width: 100%;
+  }
+
+  /* Graph nodes */
+  .node circle {
+    stroke-width: 2px;
+    cursor: pointer;
+    transition: r 0.15s;
+  }
+
+  .node:hover circle { stroke: white !important; }
+
+  .node text {
+    font-size: 9px;
+    fill: var(--text);
+    pointer-events: none;
+    text-anchor: middle;
+  }
+
+  .link {
+    stroke: #444;
+    stroke-opacity: 0.6;
+  }
+
+  /* ─── Tooltip ─── */
+  #tooltip {
+    position: fixed;
+    background: var(--surface2);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 11px;
+    max-width: 240px;
+    pointer-events: none;
+    z-index: 100;
+    display: none;
+    line-height: 1.6;
+  }
+
+  #tooltip .tt-name { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+  #tooltip .tt-row { display: flex; justify-content: space-between; gap: 12px; }
+  #tooltip .tt-key { color: var(--text-muted); }
+  #tooltip .tt-val { font-weight: 600; }
+
+  /* ─── Loading ─── */
+  #loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(13,13,13,0.85);
+    font-size: 14px;
+    color: var(--text-muted);
+    z-index: 50;
+  }
+
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 10px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ─── Graph controls ─── */
+  .graph-controls {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 10;
+  }
+
+  .gc-btn {
+    width: 28px; height: 28px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text);
+  }
+
+  .gc-btn:hover { border-color: var(--accent); }
+
+  /* ─── Category legend ─── */
+  .cat-legend {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 10px;
+    z-index: 10;
+  }
+
+  .cat-legend-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 3px;
+  }
+
+  .cat-legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ─── Scrollbar ─── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .empty-state {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  .link-path {
+    fill: none;
+    stroke-opacity: 0.5;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔬 벡터 점수 디버거</h1>
+  <div class="controls">
+    <select id="sel-region">
+      <option>경추</option>
+      <option>요추</option>
+      <option>어깨 관절</option>
+      <option>무릎 관절</option>
+      <option>엉덩 관절</option>
+      <option>발목 관절</option>
+    </select>
+    <select id="sel-acuity">
+      <option>급성</option>
+      <option selected>아급성</option>
+      <option>만성</option>
+    </select>
+    <select id="sel-symptom">
+      <option selected>움직임 시 통증</option>
+      <option>안정 시 통증</option>
+      <option>방사통</option>
+    </select>
+    <button class="primary" id="btn-run">▶ 점수 계산</button>
+    <div class="stats-bar" id="stats-bar">쿼리를 실행하세요</div>
+  </div>
+</header>
+
+<main>
+  <!-- Left: Score Panel -->
+  <div id="score-panel">
+    <div class="panel-header">
+      기법별 점수 내역
+      <div class="legend">
+        <div><span class="legend-dot" style="background:var(--blue)"></span>Rule</div>
+        <div><span class="legend-dot" style="background:var(--orange)"></span>Vector</div>
+        <div><span class="legend-dot" style="background:var(--green)"></span>Final</div>
+      </div>
+    </div>
+    <div id="score-list">
+      <div class="empty-state">설정을 선택 후 ▶ 점수 계산을 누르세요</div>
+    </div>
+  </div>
+
+  <!-- Right: Graph Panel -->
+  <div id="graph-panel">
+    <div id="loading" style="display:none">
+      <div class="spinner"></div>
+      데이터 로딩 중...
+    </div>
+
+    <svg id="graph-svg"></svg>
+
+    <div class="graph-controls">
+      <div class="gc-btn" id="btn-zoom-in" title="확대">+</div>
+      <div class="gc-btn" id="btn-zoom-out" title="축소">−</div>
+      <div class="gc-btn" id="btn-zoom-fit" title="전체 보기">⊡</div>
+    </div>
+
+    <div class="cat-legend">
+      <div style="font-weight:600;margin-bottom:5px;color:var(--text-muted)">카테고리</div>
+      <div class="cat-legend-row"><div class="cat-legend-dot" style="background:var(--c-joint)"></div>관절가동술</div>
+      <div class="cat-legend-row"><div class="cat-legend-dot" style="background:var(--c-soft)"></div>연부조직</div>
+      <div class="cat-legend-row"><div class="cat-legend-dot" style="background:var(--c-neuro)"></div>신경가동술</div>
+      <div class="cat-legend-row"><div class="cat-legend-dot" style="background:var(--c-special)"></div>특수기법</div>
+      <div class="cat-legend-row"><div class="cat-legend-dot" style="background:var(--c-edu)"></div>교육</div>
+    </div>
+  </div>
+</main>
+
+<div id="tooltip"></div>
+
+<script>
+// ── Config ──
+const API_BASE = window.location.origin;
+// 로컬 개발 시: const API_BASE = 'https://pt-prescription.vercel.app';
+
+const CAT_COLOR = {
+  category_joint_mobilization: 'var(--c-joint)',
+  category_mulligan:            'var(--c-joint)',
+  category_mfr:                 'var(--c-soft)',
+  category_art:                 'var(--c-soft)',
+  category_ctm:                 'var(--c-soft)',
+  category_deep_friction:       'var(--c-soft)',
+  category_trigger_point:       'var(--c-soft)',
+  category_anatomy_trains:      'var(--c-soft)',
+  category_d_neural:            'var(--c-neuro)',
+  category_mdt:                 'var(--c-special)',
+  category_scs:                 'var(--c-special)',
+  category_pne:                 'var(--c-edu)',
+};
+
+const CAT_LABEL = {
+  category_joint_mobilization: '관절가동술',
+  category_mulligan:            'Mulligan',
+  category_mfr:                 'MFR',
+  category_art:                 'ART',
+  category_ctm:                 'CTM',
+  category_deep_friction:       'Deep Friction',
+  category_trigger_point:       'Trigger Point',
+  category_anatomy_trains:      'Anatomy Trains',
+  category_d_neural:            '신경가동술',
+  category_mdt:                 'MDT',
+  category_scs:                 'SCS',
+  category_pne:                 'PNE',
+};
+
+// D3 graph state
+let simulation = null;
+let zoom = null;
+let currentData = null;
+let selectedNodeId = null;
+
+// ── Fetch ──
+async function fetchScores() {
+  const region   = document.getElementById('sel-region').value;
+  const acuity   = document.getElementById('sel-acuity').value;
+  const symptom  = document.getElementById('sel-symptom').value;
+
+  const loading = document.getElementById('loading');
+  loading.style.display = 'flex';
+
+  try {
+    const res = await fetch(`${API_BASE}/api/debug-scores`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ region, acuity, symptom }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    alert('API 오류: ' + err.message);
+    return null;
+  } finally {
+    loading.style.display = 'none';
+  }
+}
+
+// ── Render Score Panel ──
+function renderScoreList(techniques) {
+  const container = document.getElementById('score-list');
+  if (!techniques || techniques.length === 0) {
+    container.innerHTML = '<div class="empty-state">기법 없음</div>';
+    return;
+  }
+
+  container.innerHTML = techniques.map((t, i) => {
+    const ruleW  = Math.round(t.ruleNorm * 100);
+    const vecW   = Math.round(t.vectorScore * 100);
+    const finW   = Math.round(t.finalScore * 100);
+    const color  = t.passesTagFilter ? 'var(--green)' : 'var(--red)';
+    const opacity = t.passesTagFilter ? '' : ' filtered';
+    const catColor = CAT_COLOR[t.category] || 'var(--text-muted)';
+    const catLabel = CAT_LABEL[t.category] || t.category;
+
+    return `
+    <div class="technique-card${opacity}" data-id="${t.id}" data-idx="${i}">
+      <div class="card-top">
+        <div>
+          <div class="card-name">${t.name_ko}</div>
+          <div class="card-abbr">${t.abbreviation || ''}</div>
+        </div>
+        <div class="final-score" style="color:${color}">${t.finalScore.toFixed(3)}</div>
+      </div>
+      <div class="score-bars">
+        <div class="score-row">
+          <div class="score-label">Rule</div>
+          <div class="bar-track"><div class="bar-fill bar-rule" style="width:${ruleW}%"></div></div>
+          <div class="score-val">${t.ruleNorm.toFixed(2)}</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label">Vector</div>
+          <div class="bar-track"><div class="bar-fill bar-vector" style="width:${Math.min(vecW, 100)}%"></div></div>
+          <div class="score-val">${t.vectorScore.toFixed(3)}</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label">Final</div>
+          <div class="bar-track"><div class="bar-fill bar-final" style="width:${Math.min(finW, 100)}%"></div></div>
+          <div class="score-val">${t.finalScore.toFixed(3)}</div>
+        </div>
+      </div>
+      <span class="cat-badge" style="background:${catColor}22;color:${catColor}">${catLabel}</span>
+      ${!t.passesTagFilter ? '<div class="tag-filter-warning">⚠ target_tags 필터에 제외됨</div>' : ''}
+    </div>`;
+  }).join('');
+
+  // 카드 클릭 → 그래프 하이라이트
+  container.querySelectorAll('.technique-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const id = card.dataset.id;
+      highlightNode(id);
+    });
+  });
+}
+
+// ── Render Graph ──
+function renderGraph(data) {
+  const svg = d3.select('#graph-svg');
+  svg.selectAll('*').remove();
+
+  const { width, height } = document.getElementById('graph-svg').getBoundingClientRect();
+  if (!width || !height) return;
+
+  // Zoom
+  const g = svg.append('g');
+  zoom = d3.zoom()
+    .scaleExtent([0.1, 4])
+    .on('zoom', e => g.attr('transform', e.transform));
+  svg.call(zoom);
+
+  const techniques = data.techniques || [];
+  const links = data.links || [];
+
+  if (techniques.length === 0) return;
+
+  // Nodes — 점수가 있는 기법만, 너무 많으면 상위 40개
+  const nodes = techniques.slice(0, 60).map(t => ({
+    id: t.id,
+    name: t.name_ko,
+    abbr: t.abbreviation,
+    category: t.category,
+    finalScore: t.finalScore,
+    ruleScore: t.ruleNorm,
+    vectorScore: t.vectorScore,
+    passes: t.passesTagFilter,
+  }));
+
+  const nodeIds = new Set(nodes.map(n => n.id));
+
+  // Edges — 유사도 0.6 이상인 기법 간 연결 + 같은 카테고리 연결
+  const edgeSet = new Set();
+  const edges = [];
+
+  // 1) semantic links (>0.6)
+  links.forEach(l => {
+    if (!nodeIds.has(l.source) || !nodeIds.has(l.target)) return;
+    const key = [l.source, l.target].sort().join('|');
+    if (!edgeSet.has(key)) {
+      edgeSet.add(key);
+      edges.push({ source: l.source, target: l.target, sim: l.similarity, type: 'semantic' });
+    }
+  });
+
+  // 2) category links (같은 카테고리 기법끼리 약한 연결)
+  const byCat = {};
+  nodes.forEach(n => { (byCat[n.category] = byCat[n.category] || []).push(n.id); });
+  Object.values(byCat).forEach(ids => {
+    if (ids.length < 2) return;
+    for (let i = 0; i < ids.length - 1; i++) {
+      const key = [ids[i], ids[i + 1]].sort().join('|');
+      if (!edgeSet.has(key)) {
+        edgeSet.add(key);
+        edges.push({ source: ids[i], target: ids[i + 1], sim: 0.3, type: 'category' });
+      }
+    }
+  });
+
+  // Force simulation
+  simulation = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(edges).id(d => d.id).distance(d => d.type === 'semantic' ? 60 : 90).strength(d => d.type === 'semantic' ? 0.6 : 0.2))
+    .force('charge', d3.forceManyBody().strength(-120))
+    .force('center', d3.forceCenter(width / 2, height / 2))
+    .force('collision', d3.forceCollide().radius(24));
+
+  // Edges
+  const link = g.append('g').selectAll('line')
+    .data(edges)
+    .join('line')
+    .attr('class', 'link')
+    .attr('stroke-width', d => d.type === 'semantic' ? Math.max(1, d.sim * 3) : 0.5)
+    .attr('stroke', d => d.type === 'semantic' ? '#6b6b9a' : '#333')
+    .attr('stroke-dasharray', d => d.type === 'category' ? '3,3' : null);
+
+  // Nodes
+  const node = g.append('g').selectAll('g')
+    .data(nodes)
+    .join('g')
+    .attr('class', 'node')
+    .call(d3.drag()
+      .on('start', (e, d) => { if (!e.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+      .on('drag',  (e, d) => { d.fx = e.x; d.fy = e.y; })
+      .on('end',   (e, d) => { if (!e.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; }))
+    .on('click', (e, d) => {
+      e.stopPropagation();
+      highlightNode(d.id, d);
+    })
+    .on('mouseover', (e, d) => showTooltip(e, d))
+    .on('mouseout', () => hideTooltip());
+
+  node.append('circle')
+    .attr('r', d => 8 + d.finalScore * 14)
+    .attr('fill', d => {
+      const c = CAT_COLOR[d.category] || '#888';
+      return d.passes ? c : '#444';
+    })
+    .attr('stroke', d => CAT_COLOR[d.category] || '#888')
+    .attr('fill-opacity', d => d.passes ? 0.85 : 0.3);
+
+  node.append('text')
+    .text(d => d.name.length > 8 ? d.name.slice(0, 8) + '…' : d.name)
+    .attr('dy', d => 14 + d.finalScore * 14)
+    .style('font-size', '9px');
+
+  simulation.on('tick', () => {
+    link
+      .attr('x1', d => d.source.x)
+      .attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x)
+      .attr('y2', d => d.target.y);
+    node.attr('transform', d => `translate(${d.x},${d.y})`);
+  });
+
+  // Store for highlight
+  window._graphNodes = node;
+  window._graphLinks = link;
+  window._graphData = { nodes, edges };
+}
+
+// ── Highlight Node ──
+function highlightNode(id, nodeData) {
+  selectedNodeId = id;
+
+  // 카드 하이라이트
+  document.querySelectorAll('.technique-card').forEach(c => {
+    c.classList.toggle('active', c.dataset.id === id);
+  });
+
+  // 선택 카드 스크롤
+  const active = document.querySelector(`.technique-card[data-id="${id}"]`);
+  if (active) active.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  // 그래프 노드 강조
+  if (window._graphNodes) {
+    window._graphNodes.select('circle')
+      .attr('stroke-width', d => d.id === id ? 3 : 2)
+      .attr('stroke', d => d.id === id ? 'white' : (CAT_COLOR[d.category] || '#888'));
+  }
+}
+
+// ── Tooltip ──
+function showTooltip(event, d) {
+  const tt = document.getElementById('tooltip');
+  tt.innerHTML = `
+    <div class="tt-name">${d.name}</div>
+    <div style="color:var(--text-muted);font-size:10px;margin-bottom:6px">${d.abbr || ''} · ${CAT_LABEL[d.category] || d.category}</div>
+    <div class="tt-row"><span class="tt-key">Rule Score</span><span class="tt-val" style="color:var(--blue)">${d.ruleScore.toFixed(3)}</span></div>
+    <div class="tt-row"><span class="tt-key">Vector Score</span><span class="tt-val" style="color:var(--orange)">${d.vectorScore.toFixed(3)}</span></div>
+    <div class="tt-row"><span class="tt-key">Final Score</span><span class="tt-val" style="color:var(--green)">${d.finalScore.toFixed(3)}</span></div>
+    <div class="tt-row"><span class="tt-key">Tag Filter</span><span class="tt-val" style="color:${d.passes ? 'var(--green)' : 'var(--red)'}">${d.passes ? '통과' : '제외됨'}</span></div>
+  `;
+  tt.style.display = 'block';
+  tt.style.left = (event.clientX + 14) + 'px';
+  tt.style.top  = (event.clientY - 10) + 'px';
+}
+
+function hideTooltip() {
+  document.getElementById('tooltip').style.display = 'none';
+}
+
+// ── Stats Bar ──
+function renderStats(stats) {
+  const bar = document.getElementById('stats-bar');
+  if (!stats) { bar.textContent = ''; return; }
+  bar.innerHTML = `
+    쿼리: <span>"${stats.queryText}"</span> &nbsp;|&nbsp;
+    임베딩: <span style="color:${stats.hasEmbedding ? 'var(--green)' : 'var(--red)'}">${stats.hasEmbedding ? '✓ 생성됨' : '✗ 없음'}</span> &nbsp;|&nbsp;
+    기법: <span>${stats.totalTechniques}개</span> &nbsp;|&nbsp;
+    벡터 매핑: <span style="color:${stats.techniquesWithVector > 0 ? 'var(--orange)' : 'var(--red)'}">
+      ${stats.techniquesWithVector}/${stats.totalTechniques}개</span> &nbsp;|&nbsp;
+    태그 통과: <span>${stats.techniquesPassingTagFilter}개</span> &nbsp;|&nbsp;
+    유사쌍: <span>${stats.embeddingPairsComputed}쌍</span>
+  `;
+}
+
+// ── Run ──
+async function run() {
+  const data = await fetchScores();
+  if (!data) return;
+
+  currentData = data;
+  renderStats(data.stats);
+  renderScoreList(data.techniques);
+  renderGraph(data);
+}
+
+// ── Zoom controls ──
+document.getElementById('btn-zoom-in').addEventListener('click', () => {
+  if (!zoom) return;
+  d3.select('#graph-svg').transition().call(zoom.scaleBy, 1.4);
+});
+document.getElementById('btn-zoom-out').addEventListener('click', () => {
+  if (!zoom) return;
+  d3.select('#graph-svg').transition().call(zoom.scaleBy, 0.7);
+});
+document.getElementById('btn-zoom-fit').addEventListener('click', () => {
+  if (!zoom) return;
+  d3.select('#graph-svg').transition().call(zoom.transform, d3.zoomIdentity);
+});
+
+document.getElementById('btn-run').addEventListener('click', run);
+
+// Enter key
+document.querySelectorAll('select').forEach(s => s.addEventListener('change', () => {}));
+
+// Auto-run on page load (optional)
+// window.addEventListener('load', run);
+</script>
+</body>
+</html>
