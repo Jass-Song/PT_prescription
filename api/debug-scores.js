@@ -23,12 +23,13 @@ async function getQueryEmbedding(text) {
 async function fetchVectorSimilarities(queryEmbedding) {
   if (!queryEmbedding) return [];
   const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gnusyjnviugpofvaicbv.supabase.co';
-  const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
-  if (!SUPABASE_KEY) return [];
+  const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+  const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || SUPABASE_ANON_KEY;
+  if (!SUPABASE_ANON_KEY) return [];
   try {
     const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/match_techniques`, {
       method: 'POST',
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ query_embedding: queryEmbedding, match_threshold: 0.1, match_count: 50 }),
     });
     if (!response.ok) return [];
@@ -37,11 +38,12 @@ async function fetchVectorSimilarities(queryEmbedding) {
   } catch { return []; }
 }
 
-// ── 전체 기법 조회 ──
+// ── 전체 기법 조회 (서비스 롤 키로 RLS 우회) ──
 async function fetchAllTechniques(categories, bodyRegions) {
   const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gnusyjnviugpofvaicbv.supabase.co';
-  const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
-  if (!SUPABASE_KEY) return [];
+  const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+  const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || SUPABASE_ANON_KEY;
+  if (!SUPABASE_ANON_KEY) return [];
 
   const catFilter = categories.length > 0
     ? `&or=(${categories.map(c => `category.eq.${c}`).join(',')})`
@@ -50,7 +52,7 @@ async function fetchAllTechniques(categories, bodyRegions) {
 
   try {
     const res = await fetch(url, {
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
     });
     if (!res.ok) return [];
     const data = await res.json();
@@ -66,16 +68,17 @@ async function fetchAllTechniques(categories, bodyRegions) {
 async function fetchTechniquePairSimilarities(techniqueIds) {
   if (techniqueIds.length === 0) return [];
   const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gnusyjnviugpofvaicbv.supabase.co';
-  const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
-  if (!SUPABASE_KEY) return [];
+  const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+  const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || SUPABASE_ANON_KEY;
+  if (!SUPABASE_ANON_KEY) return [];
 
-  // technique_embeddings 테이블에서 해당 기법들의 임베딩 조회
-  const idList = techniqueIds.map(id => `id.eq.${id}`).join(',');
+  // technique_embeddings 테이블에서 해당 기법들의 임베딩 조회 (RLS 우회)
+  const idList = techniqueIds.map(id => `technique_id.eq.${id}`).join(',');
   const url = `${SUPABASE_URL}/rest/v1/technique_embeddings?or=(${idList})&select=technique_id,embedding`;
 
   try {
     const res = await fetch(url, {
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
     });
     if (!res.ok) return [];
     const data = await res.json();
