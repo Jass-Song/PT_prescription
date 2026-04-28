@@ -642,8 +642,8 @@ function renderGraph(data) {
 
   if (techniques.length === 0) return;
 
-  // Nodes — 점수가 있는 기법만, 너무 많으면 상위 40개
-  const nodes = techniques.slice(0, 60).map(t => ({
+  // Nodes — 전체 기법 표시 (최대 200개)
+  const nodes = techniques.slice(0, 200).map(t => ({
     id: t.id,
     name: t.name_ko,
     abbr: t.abbreviation,
@@ -684,12 +684,12 @@ function renderGraph(data) {
     }
   });
 
-  // Force simulation
+  // Force simulation — 200노드 최적화 (노드 수 증가 시 반발력 축소·충돌반경 축소)
   simulation = d3.forceSimulation(nodes)
-    .force('link', d3.forceLink(edges).id(d => d.id).distance(d => d.type === 'semantic' ? 60 : 90).strength(d => d.type === 'semantic' ? 0.6 : 0.2))
-    .force('charge', d3.forceManyBody().strength(-120))
+    .force('link', d3.forceLink(edges).id(d => d.id).distance(d => d.type === 'semantic' ? 45 : 65).strength(d => d.type === 'semantic' ? 0.5 : 0.15))
+    .force('charge', d3.forceManyBody().strength(-80).distanceMax(300))
     .force('center', d3.forceCenter(width / 2, height / 2))
-    .force('collision', d3.forceCollide().radius(24));
+    .force('collision', d3.forceCollide().radius(18));
 
   // Edges
   const link = g.append('g').selectAll('line')
