@@ -425,7 +425,7 @@ async function fetchActiveTechniques(categories, bodyRegions = [], userToken = n
   if (!SUPABASE_KEY || categories.length === 0) return [];
 
   const catFilter = categories.map(c => `category.eq.${c}`).join(',');
-  const selectFields = `abbreviation,name_ko,category,body_region,patient_position,therapist_position,contact_point,direction,technique_steps,target_tags`;
+  const selectFields = `id,abbreviation,name_ko,category,body_region,patient_position,therapist_position,contact_point,direction,technique_steps,target_tags`;
   // RLS는 auth.uid() 기반 — 사용자 JWT가 있으면 사용, 없으면 anon key fallback
   const authToken = userToken || SUPABASE_KEY;
   const headers = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${authToken}` };
