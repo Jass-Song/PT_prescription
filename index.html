@@ -306,6 +306,12 @@
       gap: 6px;
     }
     .rec-block-title .icon { font-size: 16px; }
+    .rec-block-related { border-left: 3px solid #e0e7ff; background: #fafbff; }
+    .rec-block-related .rec-block-title { color: #6366f1; }
+    .rec-block-sub {
+      margin-left: auto; font-size: 0.72rem; font-weight: 400;
+      color: #9ca3af; white-space: nowrap;
+    }
 
     .mt-group-section { margin-bottom: 10px; }
     .mt-group-section:last-child { margin-bottom: 0; }
@@ -1575,8 +1581,12 @@
   ];
 
   const REGIONS   = [
-    { id: 'cervical', label: '경추', sub: '목' },
-    { id: 'lumbar',   label: '요추', sub: '허리' },
+    { id: 'cervical',   label: '경추',  sub: '목' },
+    { id: 'lumbar',     label: '요추',  sub: '허리' },
+    { id: 'shoulder',   label: '어깨 관절', sub: '어깨' },
+    { id: 'knee',       label: '무릎 관절', sub: '무릎' },
+    { id: 'hip',        label: '엉덩 관절', sub: '엉덩이' },
+    { id: 'ankle_foot', label: '발목 관절', sub: '발목' },
   ];
   const STAGES    = [
     { id: 'acute',    label: '급성',  sub: '< 6주' },
@@ -1589,7 +1599,10 @@
     { id: 'radicular',label: '방사통',          sub: '' },
   ];
 
-  const REGION_LABEL   = { cervical: '경추', lumbar: '요추' };
+  const REGION_LABEL   = {
+    cervical: '경추', lumbar: '요추',
+    shoulder: '어깨 관절', knee: '무릎 관절', hip: '엉덩 관절', ankle_foot: '발목 관절',
+  };
   const STAGE_LABEL    = { acute: '급성', subacute: '아급성', chronic: '만성' };
   const SYMPTOM_LABEL  = { movement: '움직임 시 통증', rest: '안정 시 통증', radicular: '방사통' };
 
@@ -2207,9 +2220,10 @@
 
       // 카테고리별 결과 병합
       const merged = {
-        manualTherapy:     results.flatMap(r => r.manualTherapy || []),
-        exercise:          results.flatMap(r => r.exercise || []),
-        clinicalNote:      results.map(r => r.clinicalNote).filter(Boolean).join(' | '),
+        manualTherapy:        results.flatMap(r => r.manualTherapy || []),
+        exercise:             results.flatMap(r => r.exercise || []),
+        relatedManualTherapy: results.flatMap(r => r.relatedManualTherapy || []),
+        clinicalNote:         results.map(r => r.clinicalNote).filter(Boolean).join(' | '),
         selectedCategories,
       };
 
@@ -2287,6 +2301,22 @@
       }
       area.appendChild(section);
     });
+
+    // 연관 부위 기법 섹션 (secondary body_region 기법)
+    const relatedMT = result.relatedManualTherapy || [];
+    if (relatedMT.length > 0) {
+      const relSec = document.createElement('div');
+      relSec.className = 'rec-block rec-block-related';
+      relSec.innerHTML = `
+        <div class="rec-block-title">
+          <span class="icon">🔗</span>연관 부위 기법
+          <span class="rec-block-sub">운동사슬 상 관련 부위</span>
+        </div>
+        <div class="cat-card-list"></div>`;
+      const relCardList = relSec.querySelector('.cat-card-list');
+      relatedMT.forEach((item, idx) => renderTechniqueCard(item, idx, false, relCardList));
+      area.appendChild(relSec);
+    }
   }
 
   function renderTechniqueCard(item, idx, isEX, container) {
@@ -2359,6 +2389,10 @@
       </div>
 
       <div class="card-detail-section">
+        <div class="card-section" style="padding-bottom:14px">
+          <div class="card-section-title">🔍 환자 반응 확인 — 잘 되고 있는 건가요?</div>
+          ${renderFeedback(item.patientFeedback)}
+        </div>
         <div class="card-section">
           <div class="card-section-title">${secTitle1}</div>
           ${renderMovement(item.movement)}
@@ -2366,10 +2400,6 @@
         <div class="card-section">
           <div class="card-section-title">${secTitle2}</div>
           ${renderMuscles(item.targetMuscles)}
-        </div>
-        <div class="card-section" style="padding-bottom:14px">
-          <div class="card-section-title">🔍 환자 반응 확인 — 잘 되고 있는 건가요?</div>
-          ${renderFeedback(item.patientFeedback)}
         </div>
         <div class="feedback-btn-wrap">
           <button class="btn-feedback" id="${fbId}"
