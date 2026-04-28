@@ -2134,7 +2134,7 @@
         btn.className = 'cat-chip' + (isSelected ? ' selected' : '') + (isDimmed ? ' dimmed' : '');
         btn.disabled = isDimmed;
         const freq = categoryFrequency[catKey] || 0;
-        btn.innerHTML = `${meta.icon} ${meta.label}${freq > 0 ? `<span class="cat-freq">${freq}</span>` : ''}`;
+        btn.innerHTML = `${meta.icon} ${meta.label}${freq > 0 ? `<span class="cat-freq">최근 ${freq}회</span>` : ''}`;
         btn.addEventListener('click', () => toggleCategory(catKey));
         chipsRow.appendChild(btn);
       });
