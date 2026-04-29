@@ -11,8 +11,9 @@
 -- 실행: https://supabase.com/dashboard/project/gnusyjnviugpofvaicbv/sql
 -- ============================================================
 
--- 1. anon 읽기 정책 추가
-CREATE POLICY IF NOT EXISTS "Anon can read embeddings"
+-- 1. anon 읽기 정책 추가 (IF NOT EXISTS 미지원 → DROP/CREATE 패턴)
+DROP POLICY IF EXISTS "Anon can read embeddings" ON technique_embeddings;
+CREATE POLICY "Anon can read embeddings"
   ON technique_embeddings
   FOR SELECT
   TO anon
@@ -20,10 +21,11 @@ CREATE POLICY IF NOT EXISTS "Anon can read embeddings"
 
 -- 2. match_techniques 함수 SECURITY DEFINER로 재생성
 --    (함수 소유자 권한으로 실행 → anon 호출에도 RLS 우회)
+--    voyage-3-lite 실제 차원 = 512 (025b에서 1024→512 변경됨)
 CREATE OR REPLACE FUNCTION match_techniques(
-  query_embedding vector(1024),
+  query_embedding vector(512),
   match_threshold float DEFAULT 0.3,
-  match_count int DEFAULT 10
+  match_count int DEFAULT 20
 )
 RETURNS TABLE (
   id UUID,
