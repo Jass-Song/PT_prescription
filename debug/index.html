@@ -280,8 +280,9 @@
   }
 
   .link {
-    stroke: #444;
-    stroke-opacity: 0.6;
+    /* stroke/stroke-opacity는 JS에서 inline style로 설정 — CSS에서 지정 금지 */
+    fill: none;
+    pointer-events: none;
   }
 
   /* ─── Tooltip ─── */
@@ -691,14 +692,15 @@ function renderGraph(data) {
     .force('center', d3.forceCenter(width / 2, height / 2))
     .force('collision', d3.forceCollide().radius(18));
 
-  // Edges
+  // Edges — CSS presentation attribute 덮어쓰기 방지: style 속성으로 직접 설정
   const link = g.append('g').selectAll('line')
     .data(edges)
     .join('line')
     .attr('class', 'link')
-    .attr('stroke-width', d => d.type === 'semantic' ? Math.max(1, d.sim * 3) : 0.5)
-    .attr('stroke', d => d.type === 'semantic' ? '#6b6b9a' : '#333')
-    .attr('stroke-dasharray', d => d.type === 'category' ? '3,3' : null);
+    .attr('stroke-dasharray', d => d.type === 'category' ? '4,4' : null)
+    .style('stroke', d => d.type === 'semantic' ? '#8b7fe8' : '#555')
+    .style('stroke-opacity', d => d.type === 'semantic' ? Math.max(0.4, d.sim * 0.9) : 0.35)
+    .style('stroke-width', d => d.type === 'semantic' ? Math.max(1.5, d.sim * 4) : 1.2);
 
   // Nodes
   const node = g.append('g').selectAll('g')
