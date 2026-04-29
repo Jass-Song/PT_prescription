@@ -48,7 +48,7 @@ async function fetchAllTechniques(categories, bodyRegions) {
   const catFilter = categories.length > 0
     ? `&or=(${categories.map(c => `category.eq.${c}`).join(',')})`
     : '';
-  const url = `${SUPABASE_URL}/rest/v1/techniques?is_active=eq.true${catFilter}&select=id,abbreviation,name_ko,category,body_region,target_tags&limit=200`;
+  const url = `${SUPABASE_URL}/rest/v1/techniques?is_active=eq.true${catFilter}&select=id,abbreviation,name_ko,category,body_region,body_regions,target_tags&limit=200`;
 
   try {
     const res = await fetch(url, {
@@ -58,7 +58,11 @@ async function fetchAllTechniques(categories, bodyRegions) {
     const data = await res.json();
     let all = (data || []).filter(t => t.name_ko);
     if (bodyRegions.length > 0) {
-      all = all.filter(t => !t.body_region || bodyRegions.includes(t.body_region));
+      all = all.filter(t => {
+        if (!t.body_region) return true;
+        const regions = t.body_regions?.length > 0 ? t.body_regions : [t.body_region];
+        return regions.some(r => bodyRegions.includes(r));
+      });
     }
     return all;
   } catch { return []; }
@@ -72,9 +76,10 @@ async function fetchTechniquePairSimilarities(techniqueIds) {
   const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || SUPABASE_ANON_KEY;
   if (!SUPABASE_ANON_KEY) return [];
 
-  // technique_embeddings 테이블에서 해당 기법들의 임베딩 조회 (RLS 우회)
-  const idList = techniqueIds.map(id => `technique_id.eq.${id}`).join(',');
-  const url = `${SUPABASE_URL}/rest/v1/technique_embeddings?or=(${idList})&select=technique_id,embedding`;
+  // technique_embeddings PK는 'id' (techniques.id와 동일)
+  // Migration 040 실행 후 anon 읽기 정책 추가됨
+  const idList = techniqueIds.map(id => `id.eq.${id}`).join(',');
+  const url = `${SUPABASE_URL}/rest/v1/technique_embeddings?or=(${idList})&select=id,embedding`;
 
   try {
     const res = await fetch(url, {
@@ -179,7 +184,7 @@ export default async function handler(req, res) {
 
   // 임베딩 벡터로 기법 간 cosine similarity 계산
   const embMap = {};
-  embedRows.forEach(row => { embMap[row.technique_id] = row.embedding; });
+  embedRows.forEach(row => { embMap[row.id] = row.embedding; });
 
   function cosine(a, b) {
     if (!a || !b || a.length !== b.length) return 0;
@@ -208,6 +213,7 @@ export default async function handler(req, res) {
   const stats = {
     queryText,
     hasEmbedding: !!queryEmbedding,
+    voyageKeySet: !!process.env.VOYAGE_API_KEY,
     totalTechniques: techniques.length,
     techniquesWithVector: scoredTechniques.filter(t => t.hasVector).length,
     techniquesPassingTagFilter: scoredTechniques.filter(t => t.passesTagFilter).length,

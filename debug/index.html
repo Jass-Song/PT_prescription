@@ -880,8 +880,12 @@ function renderStats(stats) {
     return `<span style="color:${color}">${label}:${n}</span>`;
   }).join(' ');
 
+  const embLabel = stats.hasEmbedding
+    ? '<span style="color:var(--green)">✓</span>'
+    : `<span style="color:var(--red)">✗${stats.voyageKeySet === false ? ' (VOYAGE_API_KEY 미설정)' : ''}</span>`;
+
   bar.innerHTML = `
-    임베딩: <span style="color:${stats.hasEmbedding ? 'var(--green)' : 'var(--red)'}">${stats.hasEmbedding ? '✓' : '✗'}</span> &nbsp;|&nbsp;
+    임베딩: ${embLabel} &nbsp;|&nbsp;
     기법: <span>${stats.totalTechniques}개</span> (${catBreakdown}) &nbsp;|&nbsp;
     벡터: <span style="color:${stats.techniquesWithVector > 0 ? 'var(--orange)' : 'var(--red)'}">
       ${stats.techniquesWithVector}/${stats.totalTechniques}</span> &nbsp;|&nbsp;
