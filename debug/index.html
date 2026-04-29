@@ -685,23 +685,35 @@ function renderGraph(data) {
     }
   });
 
-  // Force simulation — 200노드 최적화 (노드 수 증가 시 반발력 축소·충돌반경 축소)
-  simulation = d3.forceSimulation(nodes)
-    .force('link', d3.forceLink(edges).id(d => d.id).distance(d => d.type === 'semantic' ? 45 : 65).strength(d => d.type === 'semantic' ? 0.5 : 0.15))
-    .force('charge', d3.forceManyBody().strength(-80).distanceMax(300))
-    .force('center', d3.forceCenter(width / 2, height / 2))
-    .force('collision', d3.forceCollide().radius(18));
+  // nodeMap: ID → node 객체 (D3 forceLink 우회용)
+  const nodeMap = new Map(nodes.map(n => [n.id, n]));
 
-  // Edges — path(곡선)으로 렌더링해서 노드 원에 가려지지 않도록
-  // 노드 뒤에 먼저 렌더링하되, 곡선 경로로 노드 경계 밖에서 보이도록 처리
+  // Force simulation — forceLink 제거, 카테고리 인력은 커스텀 force로 적용
+  simulation = d3.forceSimulation(nodes)
+    .force('charge', d3.forceManyBody().strength(-90).distanceMax(320))
+    .force('center', d3.forceCenter(width / 2, height / 2))
+    .force('collision', d3.forceCollide().radius(20))
+    .force('category', () => {
+      // 같은 카테고리 노드끼리 서로 당기는 인력 (forceLink 대체)
+      nodes.forEach(n => {
+        nodes.forEach(m => {
+          if (n === m || n.category !== m.category) return;
+          const dx = m.x - n.x, dy = m.y - n.y;
+          n.vx += dx * 0.008;
+          n.vy += dy * 0.008;
+        });
+      });
+    });
+
+  // Edges — path 렌더링 (nodeMap으로 직접 좌표 조회 — forceLink ID 해석 불필요)
   const link = g.append('g').selectAll('path')
     .data(edges)
     .join('path')
     .attr('class', 'link')
     .attr('stroke-dasharray', d => d.type === 'category' ? '5,4' : null)
     .style('stroke', d => d.type === 'semantic' ? '#a78bfa' : '#6b7280')
-    .style('stroke-opacity', d => d.type === 'semantic' ? Math.max(0.55, d.sim) : 0.5)
-    .style('stroke-width', d => d.type === 'semantic' ? Math.max(2, d.sim * 4) : 1.5);
+    .style('stroke-opacity', d => d.type === 'semantic' ? Math.max(0.6, d.sim) : 0.55)
+    .style('stroke-width', d => d.type === 'semantic' ? Math.max(2, d.sim * 4) : 1.8);
 
   // Nodes
   const node = g.append('g').selectAll('g')
@@ -733,13 +745,15 @@ function renderGraph(data) {
     .attr('dy', d => 14 + d.finalScore * 14)
     .style('font-size', '9px');
 
-  // tick: 곡선 path — 두 노드 중점을 기준으로 약간 휘어진 2차 베지어 곡선
-  function edgePath(d) {
-    const sx = d.source.x, sy = d.source.y;
-    const tx = d.target.x, ty = d.target.y;
-    const mx = (sx + tx) / 2;
-    const my = (sy + ty) / 2;
-    // 수직 방향으로 곡률 추가 — 노드 원 밖으로 호가 나오도록
+  // tick: nodeMap으로 좌표 직접 조회 → D3 forceLink ID 해석 실패 완전 우회
+  function edgePathDirect(d) {
+    // source/target이 이미 객체면 그대로, 문자열이면 nodeMap에서 조회
+    const src = (typeof d.source === 'object') ? d.source : nodeMap.get(d.source);
+    const tgt = (typeof d.target === 'object') ? d.target : nodeMap.get(d.target);
+    if (!src || !tgt) return '';
+    const sx = src.x, sy = src.y, tx = tgt.x, ty = tgt.y;
+    if (!isFinite(sx) || !isFinite(sy) || !isFinite(tx) || !isFinite(ty)) return '';
+    const mx = (sx + tx) / 2, my = (sy + ty) / 2;
     const dx = tx - sx, dy = ty - sy;
     const len = Math.sqrt(dx * dx + dy * dy) || 1;
     const curve = Math.min(30, len * 0.25);
@@ -749,9 +763,17 @@ function renderGraph(data) {
   }
 
   simulation.on('tick', () => {
-    link.attr('d', edgePath);
+    link.attr('d', edgePathDirect);
     node.attr('transform', d => `translate(${d.x},${d.y})`);
   });
+
+  // stats 바에 edge 수 표시 (진단용)
+  const statEl = document.getElementById('stats-bar');
+  if (statEl) {
+    const sem = edges.filter(e => e.type === 'semantic').length;
+    const cat = edges.filter(e => e.type === 'category').length;
+    statEl.innerHTML += ` &nbsp;|&nbsp; 연결선: <span style="color:var(--accent)">의미${sem} + 카테고리${cat}</span>`;
+  }
 
   // Store for highlight
   window._graphNodes = node;
