@@ -711,7 +711,7 @@ function renderGraph(data) {
     .join('path')
     .attr('class', 'link')
     .attr('stroke-dasharray', d => d.type === 'category' ? '5,4' : null)
-    .style('stroke', d => d.type === 'semantic' ? '#a78bfa' : '#6b7280')
+    .style('stroke', d => d.type === 'semantic' ? '#fb923c' : '#6b7280')
     .style('stroke-opacity', d => d.type === 'semantic' ? Math.max(0.6, d.sim) : 0.55)
     .style('stroke-width', d => d.type === 'semantic' ? Math.max(2, d.sim * 4) : 1.8);
 
