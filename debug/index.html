@@ -280,8 +280,9 @@
   }
 
   .link {
-    stroke: #444;
-    stroke-opacity: 0.6;
+    /* stroke/stroke-opacity는 JS에서 inline style로 설정 — CSS에서 지정 금지 */
+    fill: none;
+    pointer-events: none;
   }
 
   /* ─── Tooltip ─── */
@@ -691,14 +692,16 @@ function renderGraph(data) {
     .force('center', d3.forceCenter(width / 2, height / 2))
     .force('collision', d3.forceCollide().radius(18));
 
-  // Edges
-  const link = g.append('g').selectAll('line')
+  // Edges — path(곡선)으로 렌더링해서 노드 원에 가려지지 않도록
+  // 노드 뒤에 먼저 렌더링하되, 곡선 경로로 노드 경계 밖에서 보이도록 처리
+  const link = g.append('g').selectAll('path')
     .data(edges)
-    .join('line')
+    .join('path')
     .attr('class', 'link')
-    .attr('stroke-width', d => d.type === 'semantic' ? Math.max(1, d.sim * 3) : 0.5)
-    .attr('stroke', d => d.type === 'semantic' ? '#6b6b9a' : '#333')
-    .attr('stroke-dasharray', d => d.type === 'category' ? '3,3' : null);
+    .attr('stroke-dasharray', d => d.type === 'category' ? '5,4' : null)
+    .style('stroke', d => d.type === 'semantic' ? '#a78bfa' : '#6b7280')
+    .style('stroke-opacity', d => d.type === 'semantic' ? Math.max(0.55, d.sim) : 0.5)
+    .style('stroke-width', d => d.type === 'semantic' ? Math.max(2, d.sim * 4) : 1.5);
 
   // Nodes
   const node = g.append('g').selectAll('g')
@@ -730,12 +733,23 @@ function renderGraph(data) {
     .attr('dy', d => 14 + d.finalScore * 14)
     .style('font-size', '9px');
 
+  // tick: 곡선 path — 두 노드 중점을 기준으로 약간 휘어진 2차 베지어 곡선
+  function edgePath(d) {
+    const sx = d.source.x, sy = d.source.y;
+    const tx = d.target.x, ty = d.target.y;
+    const mx = (sx + tx) / 2;
+    const my = (sy + ty) / 2;
+    // 수직 방향으로 곡률 추가 — 노드 원 밖으로 호가 나오도록
+    const dx = tx - sx, dy = ty - sy;
+    const len = Math.sqrt(dx * dx + dy * dy) || 1;
+    const curve = Math.min(30, len * 0.25);
+    const cx = mx - (dy / len) * curve;
+    const cy = my + (dx / len) * curve;
+    return `M${sx},${sy} Q${cx},${cy} ${tx},${ty}`;
+  }
+
   simulation.on('tick', () => {
-    link
-      .attr('x1', d => d.source.x)
-      .attr('y1', d => d.source.y)
-      .attr('x2', d => d.target.x)
-      .attr('y2', d => d.target.y);
+    link.attr('d', edgePath);
     node.attr('transform', d => `translate(${d.x},${d.y})`);
   });
 
