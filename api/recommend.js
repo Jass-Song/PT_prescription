@@ -425,7 +425,7 @@ async function fetchActiveTechniques(categories, bodyRegions = [], userToken = n
   if (!SUPABASE_KEY || categories.length === 0) return [];
 
   const catFilter = categories.map(c => `category.eq.${c}`).join(',');
-  const selectFields = `id,abbreviation,name_ko,category,body_region,patient_position,therapist_position,contact_point,direction,technique_steps,target_tags`;
+  const selectFields = `id,abbreviation,name_ko,category,body_region,body_regions,patient_position,therapist_position,contact_point,direction,technique_steps,target_tags`;
   // RLS는 auth.uid() 기반 — 사용자 JWT가 있으면 사용, 없으면 anon key fallback
   const authToken = userToken || SUPABASE_KEY;
   const headers = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${authToken}` };
@@ -436,9 +436,13 @@ async function fetchActiveTechniques(categories, bodyRegions = [], userToken = n
     if (!res.ok) return null; // DB 실제 오류 (RLS 차단 등) — null로 구분
     const data = await res.json();
     const all = (data || []).filter(t => t.name_ko);
-    // 서버에서 body_region 필터링: NULL(범용) 또는 대상 부위와 일치하는 기법만 포함
+    // body_regions(배열) 우선, 없으면 body_region(단일) fallback — NULL은 범용 기법으로 통과
     if (bodyRegions.length > 0) {
-      return all.filter(t => !t.body_region || bodyRegions.includes(t.body_region));
+      return all.filter(t => {
+        if (!t.body_region) return true;
+        const regions = t.body_regions?.length > 0 ? t.body_regions : [t.body_region];
+        return regions.some(r => bodyRegions.includes(r));
+      });
     }
     return all;
   } catch {
@@ -938,7 +942,8 @@ techniqueId는 [MT-XXX] 또는 [EX-XXX] ID를 그대로 복사.`;
       // techniqueId를 DB abbreviation으로 교체 (프론트에서 excludedTechniqueIds로 사용)
       if (t?.abbreviation) item.techniqueId = t.abbreviation;
       // Option B: 환부(primary) vs 연관 부위(secondary) 구분
-      item.isPrimary = !t?.body_region || primaryRegions.includes(t.body_region);
+      const tRegions = t?.body_regions?.length > 0 ? t.body_regions : (t?.body_region ? [t.body_region] : []);
+      item.isPrimary = tRegions.length === 0 || tRegions.some(r => primaryRegions.includes(r));
     });
 
     // exercise categoryInfo + abbreviation 부착 (EX 인덱스 ID로 lookup)
