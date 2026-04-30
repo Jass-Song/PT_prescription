@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PT 처방 도우미 — 에러 로그 & 응답 시간</title>
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --surface: #1a1a1a;
+    --surface2: #242424;
+    --border: #333;
+    --text: #e8e8e8;
+    --text-muted: #888;
+    --accent: #7c6cfc;
+    --green: #4ade80;
+    --yellow: #facc15;
+    --orange: #fb923c;
+    --red: #f87171;
+    --blue: #60a5fa;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 60px;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  header h1 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+  header nav {
+    display: flex;
+    gap: 12px;
+    margin-left: auto;
+    font-size: 12px;
+  }
+  header nav a {
+    color: var(--text-muted);
+    text-decoration: none;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+  }
+  header nav a:hover, header nav a.active {
+    color: var(--text);
+    border-color: var(--border);
+  }
+
+  .toolbar {
+    padding: 12px 20px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+  }
+  select, button, input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+    font-weight: 600;
+    padding: 5px 16px;
+  }
+  button.primary:hover { opacity: 0.85; }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    padding: 16px 20px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .stat-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+  .stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .stat-unit {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 400;
+    margin-left: 3px;
+  }
+  .stat-good   { color: var(--green); }
+  .stat-warn   { color: var(--yellow); }
+  .stat-bad    { color: var(--red); }
+
+  .section {
+    padding: 0 20px;
+    margin-top: 8px;
+  }
+  .section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin: 16px 0 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .section-title .count {
+    color: var(--text);
+    font-weight: 700;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    font-size: 12px;
+  }
+  th, td {
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th {
+    background: var(--surface2);
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(124,108,252,0.05); }
+
+  .badge {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .badge-client { background: rgba(96,165,250,0.15); color: var(--blue); }
+  .badge-server { background: rgba(251,146,60,0.15); color: var(--orange); }
+
+  .msg {
+    color: var(--text);
+    word-break: break-word;
+    max-width: 480px;
+  }
+  .stack-toggle {
+    color: var(--accent);
+    font-size: 10px;
+    cursor: pointer;
+    text-decoration: underline;
+    user-select: none;
+  }
+  .stack-pre {
+    margin-top: 6px;
+    padding: 8px 10px;
+    background: var(--bg);
+    border-radius: 6px;
+    font-family: 'Menlo', 'Consolas', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 240px;
+    overflow-y: auto;
+    display: none;
+  }
+  .stack-pre.open { display: block; }
+
+  .ts {
+    color: var(--text-muted);
+    font-size: 10px;
+    white-space: nowrap;
+  }
+  .uid {
+    color: var(--text-muted);
+    font-family: 'Menlo', monospace;
+    font-size: 10px;
+  }
+  .url-cell {
+    color: var(--text-muted);
+    font-size: 10px;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .empty-state {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  .latency-bar-wrap {
+    height: 8px;
+    background: var(--surface2);
+    border-radius: 4px;
+    overflow: hidden;
+    width: 120px;
+  }
+  .latency-bar-fill {
+    height: 100%;
+    background: var(--orange);
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📡 에러 로그 & 응답 시간</h1>
+  <nav>
+    <a href="/debug/">← 벡터 점수</a>
+    <a href="/debug/errors.html" class="active">에러 / 텔레메트리</a>
+  </nav>
+</header>
+
+<div class="toolbar">
+  <select id="sel-source">
+    <option value="">전체 (client + server)</option>
+    <option value="client">client</option>
+    <option value="server">server</option>
+  </select>
+  <select id="sel-limit">
+    <option value="50">최근 50건</option>
+    <option value="100" selected>최근 100건</option>
+    <option value="200">최근 200건</option>
+    <option value="500">최근 500건</option>
+  </select>
+  <input type="text" id="filter-msg" placeholder="메시지 검색..." style="flex:1;max-width:300px">
+  <button class="primary" id="btn-reload">↻ 새로고침</button>
+  <span id="updated-at" style="font-size:10px;color:var(--text-muted)"></span>
+</div>
+
+<div class="stats-grid" id="stats-grid">
+  <div class="stat-card">
+    <div class="stat-label">최근 1시간 추천</div>
+    <div class="stat-value" id="stat-count1h">—</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">최근 24시간 추천</div>
+    <div class="stat-value" id="stat-count24h">—</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">P50 응답시간</div>
+    <div class="stat-value" id="stat-p50">—<span class="stat-unit">ms</span></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">P95 응답시간</div>
+    <div class="stat-value" id="stat-p95">—<span class="stat-unit">ms</span></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">평균 응답시간</div>
+    <div class="stat-value" id="stat-avg">—<span class="stat-unit">ms</span></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">최대 응답시간</div>
+    <div class="stat-value" id="stat-max">—<span class="stat-unit">ms</span></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">
+    <span>🚨 에러 로그</span>
+    <span class="count" id="errors-count">0건</span>
+  </div>
+  <div id="errors-table-wrap">
+    <div class="empty-state">로딩 중...</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">
+    <span>⏱ 최근 추천 응답 시간</span>
+    <span class="count" id="latency-count">0건</span>
+  </div>
+  <div id="latency-table-wrap">
+    <div class="empty-state">로딩 중...</div>
+  </div>
+</div>
+
+<script>
+const API_BASE = window.location.origin;
+
+function fmtTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const now = new Date();
+  const sameDay = d.toDateString() === now.toDateString();
+  if (sameDay) return d.toLocaleTimeString('ko-KR', { hour12: false });
+  return d.toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function shortUid(uid) {
+  if (!uid) return '';
+  return uid.slice(0, 8);
+}
+
+function setStat(id, value, unit) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (value == null) {
+    el.innerHTML = '—' + (unit ? `<span class="stat-unit">${unit}</span>` : '');
+    el.classList.remove('stat-good', 'stat-warn', 'stat-bad');
+    return;
+  }
+  el.innerHTML = String(value) + (unit ? `<span class="stat-unit">${unit}</span>` : '');
+}
+
+function colorLatency(id, ms) {
+  const el = document.getElementById(id);
+  if (!el || ms == null) return;
+  el.classList.remove('stat-good', 'stat-warn', 'stat-bad');
+  if (ms < 4000)      el.classList.add('stat-good');
+  else if (ms < 8000) el.classList.add('stat-warn');
+  else                el.classList.add('stat-bad');
+}
+
+let state = { errors: [], latency: null };
+
+function renderStats(latency) {
+  if (!latency) return;
+  setStat('stat-count1h',  latency.count1h);
+  setStat('stat-count24h', latency.count24h);
+  setStat('stat-p50', latency.p50, 'ms'); colorLatency('stat-p50', latency.p50);
+  setStat('stat-p95', latency.p95, 'ms'); colorLatency('stat-p95', latency.p95);
+  setStat('stat-avg', latency.avg, 'ms'); colorLatency('stat-avg', latency.avg);
+  setStat('stat-max', latency.max, 'ms'); colorLatency('stat-max', latency.max);
+}
+
+function renderErrors(errors) {
+  const wrap = document.getElementById('errors-table-wrap');
+  document.getElementById('errors-count').textContent = `${errors.length}건`;
+
+  const filterText = document.getElementById('filter-msg').value.trim().toLowerCase();
+  const filtered = filterText
+    ? errors.filter(e => (e.message || '').toLowerCase().includes(filterText))
+    : errors;
+
+  if (filtered.length === 0) {
+    wrap.innerHTML = '<div class="empty-state">에러 없음 ✓</div>';
+    return;
+  }
+
+  const rows = filtered.map((e, i) => {
+    const sourceBadge = e.source === 'client'
+      ? '<span class="badge badge-client">client</span>'
+      : '<span class="badge badge-server">server</span>';
+    const stackId = `stack-${i}`;
+    const hasStack = e.stack && e.stack.length > 0;
+    return `
+      <tr>
+        <td class="ts">${fmtTime(e.created_at)}</td>
+        <td>${sourceBadge}</td>
+        <td class="msg">
+          <div>${escapeHtml(e.message)}</div>
+          ${hasStack ? `<span class="stack-toggle" onclick="toggleStack('${stackId}')">stack 보기 ▾</span><pre class="stack-pre" id="${stackId}">${escapeHtml(e.stack)}</pre>` : ''}
+        </td>
+        <td class="url-cell" title="${escapeHtml(e.url || '')}">${escapeHtml(e.url || '')}</td>
+        <td class="uid">${shortUid(e.user_id)}</td>
+      </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <table>
+      <thead>
+        <tr><th>시간</th><th>source</th><th>메시지</th><th>URL</th><th>user</th></tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function toggleStack(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.toggle('open');
+  const t = el.previousElementSibling;
+  if (t && t.classList.contains('stack-toggle')) {
+    t.textContent = el.classList.contains('open') ? 'stack 숨기기 ▴' : 'stack 보기 ▾';
+  }
+}
+window.toggleStack = toggleStack;
+
+function renderLatency(latency) {
+  const wrap = document.getElementById('latency-table-wrap');
+  const rows = (latency && latency.recent) || [];
+  document.getElementById('latency-count').textContent = `${rows.length}건 (14일내 총 ${latency?.count || 0}건)`;
+
+  if (rows.length === 0) {
+    wrap.innerHTML = '<div class="empty-state">데이터 없음</div>';
+    return;
+  }
+
+  const max = Math.max(...rows.map(r => r.latency_ms || 0), 1);
+
+  const trs = rows.map(r => {
+    const ms = r.latency_ms;
+    const pct = Math.min(100, (ms / max) * 100);
+    const color = ms < 4000 ? 'var(--green)' : ms < 8000 ? 'var(--yellow)' : 'var(--red)';
+    return `
+      <tr>
+        <td class="ts">${fmtTime(r.created_at)}</td>
+        <td style="color:${color};font-weight:600">${ms} ms</td>
+        <td>
+          <div class="latency-bar-wrap">
+            <div class="latency-bar-fill" style="width:${pct}%;background:${color}"></div>
+          </div>
+        </td>
+        <td>${escapeHtml(r.region || '')}</td>
+        <td>${escapeHtml(r.acuity || '')}</td>
+        <td>${escapeHtml(r.symptom || '')}</td>
+      </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <table>
+      <thead>
+        <tr><th>시간</th><th>응답시간</th><th></th><th>부위</th><th>급성도</th><th>증상</th></tr>
+      </thead>
+      <tbody>${trs}</tbody>
+    </table>`;
+}
+
+async function load() {
+  const source = document.getElementById('sel-source').value;
+  const limit  = document.getElementById('sel-limit').value;
+
+  const params = new URLSearchParams();
+  if (source) params.set('source', source);
+  if (limit)  params.set('limit', limit);
+
+  document.getElementById('errors-table-wrap').innerHTML = '<div class="empty-state">로딩 중...</div>';
+  document.getElementById('latency-table-wrap').innerHTML = '<div class="empty-state">로딩 중...</div>';
+
+  try {
+    const res = await fetch(`${API_BASE}/api/debug-errors?${params.toString()}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    state = data;
+    renderStats(data.latency);
+    renderErrors(data.errors || []);
+    renderLatency(data.latency);
+    document.getElementById('updated-at').textContent = '업데이트: ' + new Date().toLocaleTimeString('ko-KR', { hour12: false });
+  } catch (err) {
+    document.getElementById('errors-table-wrap').innerHTML =
+      '<div class="empty-state" style="color:var(--red)">로드 실패: ' + escapeHtml(err.message) + '</div>';
+    document.getElementById('latency-table-wrap').innerHTML =
+      '<div class="empty-state" style="color:var(--red)">로드 실패</div>';
+  }
+}
+
+document.getElementById('btn-reload').addEventListener('click', load);
+document.getElementById('sel-source').addEventListener('change', load);
+document.getElementById('sel-limit').addEventListener('change', load);
+document.getElementById('filter-msg').addEventListener('input', () => renderErrors(state.errors || []));
+
+load();
+</script>
+</body>
+</html>
