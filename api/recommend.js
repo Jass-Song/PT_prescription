@@ -5,6 +5,33 @@
 import { verifyToken } from './_auth.js';
 import { logServerError } from './_logger.js';
 
+// ── 세션 단위 usage 로깅 (session_logs 테이블, fire-and-forget) ──
+// 추천 요청마다 부위·acuity·증상·카테고리·결과 수·응답시간 자동 저장
+// 오류가 추천 응답을 막지 않도록 catch 필수
+async function logSessionUsage({ userId, region, acuity, symptom, categories, resultCount, responseMs }) {
+  const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gnusyjnviugpofvaicbv.supabase.co';
+  const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+  if (!SUPABASE_URL || !SUPABASE_KEY) return;
+  await fetch(`${SUPABASE_URL}/rest/v1/session_logs`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal',
+    },
+    body: JSON.stringify({
+      user_id: userId || null,
+      region,
+      acuity,
+      symptom,
+      categories,
+      result_count: resultCount,
+      response_ms: responseMs,
+    }),
+  });
+}
+
 // ── Voyage AI 임베딩 헬퍼 ──
 // 사용자 입력 텍스트를 voyage-3-lite(512차원)로 임베딩
 // VOYAGE_API_KEY 없거나 오류 시 null 반환 (graceful fallback)
@@ -655,6 +682,7 @@ function formatTechniqueForPrompt(t, groupLabel) {
 
 export default async function handler(req, res) {
   const t0 = Date.now();
+  const startTime = t0; // usage 로깅용 응답시간 측정 시작점
 
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -769,6 +797,17 @@ export default async function handler(req, res) {
       region, acuity, symptom, selectedCategories: ['category_anatomy_trains'], result: atResponse,
       latencyMs: Date.now() - t0,
     }).catch(e => console.error('[logging AT]', e.message));
+
+    // fire-and-forget: 세션 단위 usage 로깅
+    logSessionUsage({
+      userId: user?.id || null,
+      region,
+      acuity,
+      symptom,
+      categories: ['category_anatomy_trains'],
+      resultCount: atItems.length,
+      responseMs: Date.now() - startTime,
+    }).catch(err => console.warn('[usage] 로그 실패:', err.message));
 
     return res.status(200).json(atResponse);
   }
@@ -1033,6 +1072,17 @@ techniqueId는 [MT-XXX] 또는 [EX-XXX] ID를 그대로 복사.`;
       region, acuity, symptom, selectedCategories, result,
       latencyMs: Date.now() - t0,
     }).catch(e => console.error('[logging]', e.message));
+
+    // fire-and-forget: 세션 단위 usage 로깅
+    logSessionUsage({
+      userId: user?.id || null,
+      region,
+      acuity,
+      symptom,
+      categories: selectedCategories,
+      resultCount: (result.manualTherapy?.length || 0) + (result.exercise?.length || 0),
+      responseMs: Date.now() - startTime,
+    }).catch(err => console.warn('[usage] 로그 실패:', err.message));
 
     return res.status(200).json(result);
 
