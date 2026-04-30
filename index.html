@@ -1268,6 +1268,49 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
+<!-- ── 텔레메트리: 클라이언트 에러 수집 (절대 첫 스크립트로 두기) ── -->
+<script>
+(function(){
+  if (window.__telemetryInstalled) return;
+  window.__telemetryInstalled = true;
+  var sent = new Set();
+  function send(p){
+    try {
+      var key = (p.message || '') + '|' + (p.url || '') + '|' + (p.lineno || '');
+      if (sent.has(key) || sent.size > 50) return;
+      sent.add(key);
+      if (window.__telemetryDisabled) return;
+      fetch('/api/log-error', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(p),
+        keepalive: true,
+      }).catch(function(){});
+    } catch (_) { /* fail-silent */ }
+  }
+  window.addEventListener('error', function(e){
+    send({
+      source: 'client',
+      message: (e && e.message) || 'error',
+      stack: (e && e.error && e.error.stack) || null,
+      url: location.href,
+      user_agent: navigator.userAgent,
+      lineno: e && e.lineno,
+    });
+  });
+  window.addEventListener('unhandledrejection', function(e){
+    var r = e && e.reason;
+    send({
+      source: 'client',
+      message: String((r && r.message) || r || 'unhandledrejection'),
+      stack: (r && r.stack) || null,
+      url: location.href,
+      user_agent: navigator.userAgent,
+      context: { kind: 'unhandledrejection' },
+    });
+  });
+})();
+</script>
 <!-- ── 일반 피드백 모달 ── -->
 <div class="gfb-modal-overlay" id="gfbModalOverlay" onclick="closeGeneralFeedback(event)">
   <div class="gfb-modal">

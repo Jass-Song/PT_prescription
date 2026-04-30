@@ -586,7 +586,7 @@ function selectTopTechniquesGlobally(activeMT, acuity, symptom, maxTotal = 6, ma
 }
 
 // 추천 세션 로깅 (recommendation_logs 테이블, fire-and-forget)
-async function logRecommendationSession(userId, userToken, { region, acuity, symptom, selectedCategories, result }) {
+async function logRecommendationSession(userId, userToken, { region, acuity, symptom, selectedCategories, result, latencyMs }) {
   const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gnusyjnviugpofvaicbv.supabase.co';
   const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
   if (!SUPABASE_KEY || !userId) return;
@@ -611,6 +611,7 @@ async function logRecommendationSession(userId, userToken, { region, acuity, sym
       symptom,
       selected_categories: selectedCategories,
       recommended_techniques: recommended,
+      latency_ms: Number.isFinite(latencyMs) ? latencyMs : null,
     }),
   });
 }
@@ -635,6 +636,8 @@ function formatTechniqueForPrompt(t, groupLabel) {
 }
 
 export default async function handler(req, res) {
+  const t0 = Date.now();
+
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -723,6 +726,7 @@ export default async function handler(req, res) {
 
     logRecommendationSession(user.id, userToken, {
       region, acuity, symptom, selectedCategories: ['category_anatomy_trains'], result: atResponse,
+      latencyMs: Date.now() - t0,
     }).catch(e => console.error('[logging AT]', e.message));
 
     return res.status(200).json(atResponse);
@@ -979,6 +983,7 @@ techniqueId는 [MT-XXX] 또는 [EX-XXX] ID를 그대로 복사.`;
 
     logRecommendationSession(user.id, userToken, {
       region, acuity, symptom, selectedCategories, result,
+      latencyMs: Date.now() - t0,
     }).catch(e => console.error('[logging]', e.message));
 
     return res.status(200).json(result);
