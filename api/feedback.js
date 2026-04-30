@@ -8,6 +8,7 @@
 //   3) ratings 인서트 (user JWT 사용 → RLS auth.uid() = user_id 충족)
 
 import { verifyToken } from './_auth.js';
+import { logServerError } from './_logError.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gnusyjnviugpofvaicbv.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
@@ -79,6 +80,14 @@ export default async function handler(req, res) {
   if (!response.ok) {
     const errText = await response.text();
     console.error('Supabase INSERT 오류:', errText);
+    logServerError({
+      message: `feedback insert 실패 (HTTP ${response.status})`,
+      stack: errText,
+      requestPath: '/api/feedback',
+      httpStatus: response.status,
+      userId: user.id,
+      context: { payload, supabaseStatus: response.status },
+    });
     return res.status(502).json({ error: '저장 실패' });
   }
 
