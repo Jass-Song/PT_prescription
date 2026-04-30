@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PT 처방 도우미 — 어드민 대시보드</title>
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --surface: #1a1a1a;
+    --surface2: #242424;
+    --border: #333;
+    --text: #e8e8e8;
+    --text-muted: #888;
+    --accent: #7c6cfc;
+    --green: #4ade80;
+    --yellow: #facc15;
+    --orange: #fb923c;
+    --red: #f87171;
+    --blue: #60a5fa;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 60px;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  header h1 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+  header nav {
+    display: flex;
+    gap: 12px;
+    margin-left: auto;
+    font-size: 12px;
+  }
+  header nav a {
+    color: var(--text-muted);
+    text-decoration: none;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+  }
+  header nav a:hover { color: var(--text); border-color: var(--border); }
+  header nav a.active { color: var(--text); border-color: var(--border); }
+
+  .main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .card-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .card-header .sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+  .card-body { padding: 16px; }
+
+  /* Stat grid */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .stat-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .stat-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+  .stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .stat-unit {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 400;
+    margin-left: 3px;
+  }
+  .stat-good { color: var(--green); }
+  .stat-warn { color: var(--yellow); }
+  .stat-bad  { color: var(--red); }
+
+  /* Bar chart */
+  .bar-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    height: 80px;
+    margin-bottom: 6px;
+  }
+  .bar-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    height: 100%;
+    justify-content: flex-end;
+  }
+  .bar-fill {
+    width: 100%;
+    background: var(--accent);
+    border-radius: 3px 3px 0 0;
+    min-height: 2px;
+    transition: height 0.3s ease;
+    opacity: 0.85;
+  }
+  .bar-label {
+    font-size: 9px;
+    color: var(--text-muted);
+    text-align: center;
+    white-space: nowrap;
+  }
+  .bar-count {
+    font-size: 9px;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+  }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  th, td {
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th {
+    background: var(--surface2);
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(124,108,252,0.05); }
+
+  .ts {
+    color: var(--text-muted);
+    font-size: 10px;
+    white-space: nowrap;
+  }
+
+  /* Stars */
+  .stars {
+    font-size: 13px;
+    letter-spacing: 1px;
+  }
+  .stars-5 { color: var(--green); }
+  .stars-4 { color: var(--green); }
+  .stars-3 { color: var(--yellow); }
+  .stars-2 { color: var(--orange); }
+  .stars-1 { color: var(--red); }
+
+  /* Badges */
+  .badge {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .badge-client  { background: rgba(96,165,250,0.15); color: var(--blue); }
+  .badge-server  { background: rgba(251,146,60,0.15); color: var(--orange); }
+  .badge-region  { background: rgba(124,108,252,0.15); color: var(--accent); }
+
+  /* Feedback cards */
+  .feedback-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .feedback-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .feedback-type {
+    font-size: 10px;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .feedback-note {
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .feedback-date {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+
+  /* Error list */
+  .error-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .error-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 7px 10px;
+    background: var(--surface2);
+    border-radius: 6px;
+    font-size: 11px;
+  }
+  .error-msg {
+    color: var(--text);
+    flex: 1;
+    word-break: break-word;
+  }
+  .error-status {
+    font-size: 10px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* Region table */
+  .region-table-wrap { margin-top: 14px; }
+  .region-table-wrap table { font-size: 12px; }
+  .region-bar-bg {
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    width: 100px;
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 6px;
+  }
+  .region-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+    opacity: 0.8;
+  }
+
+  /* Auth / error states */
+  .gate {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    gap: 12px;
+    text-align: center;
+  }
+  .gate-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .gate-sub {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .gate a {
+    color: var(--accent);
+    font-size: 13px;
+  }
+
+  .empty-state {
+    padding: 32px 16px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🛠 어드민 대시보드</h1>
+  <nav>
+    <a href="/debug/errors.html">에러 로그</a>
+    <a href="/debug/admin.html" class="active">어드민</a>
+    <a href="/">앱으로</a>
+  </nav>
+</header>
+
+<div id="gate-wrap" class="main" style="display:none">
+  <div class="gate">
+    <div class="gate-title" id="gate-title">인증 확인 중...</div>
+    <div class="gate-sub" id="gate-sub"></div>
+    <div id="gate-link"></div>
+  </div>
+</div>
+
+<div id="dashboard" class="main" style="display:none">
+
+  <!-- Section 1: 사용 통계 -->
+  <div class="card">
+    <div class="card-header">
+      <span>📊 사용 통계 (7일)</span>
+      <span class="sub" id="updated-at"></span>
+    </div>
+    <div class="card-body">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">총 추천수</div>
+          <div class="stat-value" id="stat-total">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">유니크 유저</div>
+          <div class="stat-value" id="stat-users">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">평균 응답시간</div>
+          <div class="stat-value" id="stat-latency">—<span class="stat-unit">ms</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">에러 (24h)</div>
+          <div class="stat-value" id="stat-errors">—</div>
+        </div>
+      </div>
+
+      <div id="bar-chart-wrap"></div>
+
+      <div class="region-table-wrap">
+        <div id="region-table-wrap"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: 기법 평가 -->
+  <div class="card">
+    <div class="card-header">
+      <span>⭐ 기법 평가</span>
+      <span class="sub" id="ratings-count"></span>
+    </div>
+    <div class="card-body" style="padding:0">
+      <div id="ratings-wrap">
+        <div class="empty-state">로딩 중...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 3: 앱 피드백 -->
+  <div class="card">
+    <div class="card-header">
+      <span>💬 앱 피드백</span>
+      <span class="sub" id="feedback-count"></span>
+    </div>
+    <div class="card-body">
+      <div id="feedback-wrap">
+        <div class="empty-state">로딩 중...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 4: 최근 에러 -->
+  <div class="card">
+    <div class="card-header">
+      <span>🔴 최근 에러 (24h)</span>
+      <span class="sub" id="errors-count"></span>
+    </div>
+    <div class="card-body">
+      <div id="errors-wrap">
+        <div class="empty-state">로딩 중...</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API_BASE = window.location.origin;
+
+// ── 유틸 ──────────────────────────────────────────────────────────────────
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' });
+}
+
+function fmtDateTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const now = new Date();
+  const sameDay = d.toDateString() === now.toDateString();
+  if (sameDay) return d.toLocaleTimeString('ko-KR', { hour12: false });
+  return d.toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+function starsHtml(n) {
+  const count = Math.max(1, Math.min(5, Math.round(n)));
+  const filled = '★'.repeat(count);
+  const empty  = '☆'.repeat(5 - count);
+  return `<span class="stars stars-${count}">${filled}</span><span style="color:var(--border)">${empty}</span>`;
+}
+
+// ── 렌더링 ────────────────────────────────────────────────────────────────
+
+function renderStats(usageStats, errorCount) {
+  const s = usageStats;
+  document.getElementById('stat-total').textContent   = s.totalRecs ?? '—';
+  document.getElementById('stat-users').textContent   = s.uniqueUsers ?? '—';
+
+  const latEl = document.getElementById('stat-latency');
+  if (s.avgLatency != null) {
+    latEl.innerHTML = `${s.avgLatency}<span class="stat-unit">ms</span>`;
+    latEl.classList.remove('stat-good', 'stat-warn', 'stat-bad');
+    if      (s.avgLatency < 4000) latEl.classList.add('stat-good');
+    else if (s.avgLatency < 8000) latEl.classList.add('stat-warn');
+    else                          latEl.classList.add('stat-bad');
+  } else {
+    latEl.innerHTML = '—<span class="stat-unit">ms</span>';
+  }
+
+  const errEl = document.getElementById('stat-errors');
+  errEl.textContent = errorCount;
+  errEl.classList.remove('stat-good', 'stat-warn', 'stat-bad');
+  if      (errorCount === 0)  errEl.classList.add('stat-good');
+  else if (errorCount <= 5)   errEl.classList.add('stat-warn');
+  else                        errEl.classList.add('stat-bad');
+}
+
+function renderBarChart(dailyCounts) {
+  const wrap = document.getElementById('bar-chart-wrap');
+  if (!dailyCounts || dailyCounts.length === 0) {
+    wrap.innerHTML = '';
+    return;
+  }
+
+  const max = Math.max(...dailyCounts.map(d => d.count), 1);
+
+  const cols = dailyCounts.map(({ date, count }) => {
+    const heightPct = Math.max(2, (count / max) * 100);
+    const label = date.slice(5); // MM-DD
+    return `
+      <div class="bar-col">
+        <div class="bar-count">${count > 0 ? count : ''}</div>
+        <div class="bar-fill" style="height:${heightPct}%"></div>
+        <div class="bar-label">${escapeHtml(label)}</div>
+      </div>`;
+  }).join('');
+
+  wrap.innerHTML = `<div class="bar-chart">${cols}</div>`;
+}
+
+function renderRegionTable(regionCounts) {
+  const wrap = document.getElementById('region-table-wrap');
+  const entries = Object.entries(regionCounts).sort((a, b) => b[1] - a[1]);
+  if (entries.length === 0) {
+    wrap.innerHTML = '';
+    return;
+  }
+
+  const total = entries.reduce((s, [, c]) => s + c, 0);
+  const maxCount = entries[0][1];
+
+  const rows = entries.map(([region, count]) => {
+    const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+    const barPct = Math.round((count / maxCount) * 100);
+    return `
+      <tr>
+        <td><span class="badge badge-region">${escapeHtml(region)}</span></td>
+        <td>${count}</td>
+        <td>${pct}%
+          <span class="region-bar-bg">
+            <span class="region-bar-fill" style="width:${barPct}%"></span>
+          </span>
+        </td>
+      </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <table>
+      <thead><tr><th>부위</th><th>건수</th><th>비율</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function renderRatings(ratings) {
+  const wrap = document.getElementById('ratings-wrap');
+  document.getElementById('ratings-count').textContent = `${ratings.length}건`;
+
+  if (ratings.length === 0) {
+    wrap.innerHTML = '<div class="empty-state">평가 없음</div>';
+    return;
+  }
+
+  const rows = ratings.map(r => `
+    <tr>
+      <td class="ts">${fmtDateTime(r.created_at)}</td>
+      <td>${escapeHtml(r.technique_label || '—')}</td>
+      <td style="color:var(--text-muted);font-size:11px">${escapeHtml(r.category_key || '')}</td>
+      <td>${escapeHtml(r.region || '')}</td>
+      <td>${r.star_rating != null ? starsHtml(r.star_rating) : '—'}</td>
+      <td style="font-size:11px;color:var(--text-muted);max-width:200px">${escapeHtml(r.notes || '')}</td>
+    </tr>`).join('');
+
+  wrap.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>날짜</th><th>기법명</th><th>카테고리</th><th>부위</th><th>별점</th><th>메모</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function renderFeedback(generalFeedback) {
+  const wrap = document.getElementById('feedback-wrap');
+  document.getElementById('feedback-count').textContent = `${generalFeedback.length}건`;
+
+  if (generalFeedback.length === 0) {
+    wrap.innerHTML = '<div class="empty-state" style="padding:0">피드백 없음</div>';
+    return;
+  }
+
+  const cards = generalFeedback.map(f => `
+    <div class="feedback-card">
+      <div class="feedback-type">${escapeHtml(f.technique_label || 'general')}</div>
+      <div class="feedback-note">${escapeHtml(f.notes || '(내용 없음)')}</div>
+      <div class="feedback-date">${fmtDate(f.created_at)}</div>
+    </div>`).join('');
+
+  wrap.innerHTML = `<div class="feedback-list">${cards}</div>`;
+}
+
+function renderErrors(recentErrors) {
+  const wrap = document.getElementById('errors-wrap');
+  document.getElementById('errors-count').textContent = `${recentErrors.length}건`;
+
+  if (recentErrors.length === 0) {
+    wrap.innerHTML = '<div class="empty-state" style="padding:0">에러 없음 ✓</div>';
+    return;
+  }
+
+  const items = recentErrors.map(e => {
+    const badge = e.source === 'client'
+      ? '<span class="badge badge-client">client</span>'
+      : '<span class="badge badge-server">server</span>';
+    const status = e.http_status ? `HTTP ${e.http_status}` : '';
+    return `
+      <div class="error-row">
+        ${badge}
+        <span class="error-msg">${escapeHtml(e.message || '')}</span>
+        <span class="error-status">${escapeHtml(status)}</span>
+        <span class="ts">${fmtDateTime(e.created_at)}</span>
+      </div>`;
+  }).join('');
+
+  wrap.innerHTML = `<div class="error-list">${items}</div>`;
+}
+
+// ── 인증 + 로드 ───────────────────────────────────────────────────────────
+
+function showGate(title, sub, linkHtml) {
+  document.getElementById('gate-wrap').style.display = '';
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('gate-title').textContent = title;
+  document.getElementById('gate-sub').textContent = sub;
+  document.getElementById('gate-link').innerHTML = linkHtml || '';
+}
+
+function showDashboard() {
+  document.getElementById('gate-wrap').style.display = 'none';
+  document.getElementById('dashboard').style.display = '';
+}
+
+async function init() {
+  // 세션에서 토큰 추출
+  const raw = localStorage.getItem('supabase_session');
+  let token = null;
+  if (raw) {
+    try {
+      const session = JSON.parse(raw);
+      token = session?.access_token || session?.session?.access_token || null;
+    } catch (_) {}
+  }
+
+  if (!token) {
+    showGate(
+      '로그인이 필요합니다',
+      '어드민 대시보드는 인증된 관리자만 접근할 수 있습니다.',
+      '<a href="/">앱으로 이동하여 로그인하기 →</a>'
+    );
+    return;
+  }
+
+  showGate('데이터 로딩 중...', '', '');
+
+  try {
+    const res = await fetch(`${API_BASE}/api/admin`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (res.status === 403) {
+      showGate(
+        '관리자 전용 페이지입니다',
+        '접근 권한이 없습니다.',
+        '<a href="/">앱으로 돌아가기</a>'
+      );
+      return;
+    }
+
+    if (res.status === 401) {
+      showGate(
+        '인증이 만료되었습니다',
+        '다시 로그인해 주세요.',
+        '<a href="/">앱으로 이동하여 로그인하기 →</a>'
+      );
+      return;
+    }
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      showGate(
+        '로드 실패',
+        err.error || `HTTP ${res.status}`,
+        '<a href="javascript:location.reload()">다시 시도</a>'
+      );
+      return;
+    }
+
+    const data = await res.json();
+    showDashboard();
+
+    const { ratings = [], generalFeedback = [], usageStats = {}, recentErrors = [] } = data;
+
+    renderStats(usageStats, recentErrors.length);
+    renderBarChart(usageStats.dailyCounts || []);
+    renderRegionTable(usageStats.regionCounts || {});
+    renderRatings(ratings);
+    renderFeedback(generalFeedback);
+    renderErrors(recentErrors);
+
+    document.getElementById('updated-at').textContent =
+      '업데이트: ' + new Date().toLocaleTimeString('ko-KR', { hour12: false });
+
+  } catch (err) {
+    showGate(
+      '네트워크 오류',
+      err.message,
+      '<a href="javascript:location.reload()">다시 시도</a>'
+    );
+  }
+}
+
+init();
+</script>
+</body>
+</html>

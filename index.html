@@ -2264,8 +2264,11 @@
       const results = await Promise.all(responses.map(async res => {
         if (!res.ok) {
           let detail = '';
+          let status = res.status;
           try { const j = await res.json(); detail = j.error || ''; } catch {}
-          throw new Error(`HTTP ${res.status}${detail ? ' — ' + detail : ''}`);
+          const err = new Error(detail || `HTTP ${status}`);
+          err.status = status;
+          throw err;
         }
         const data = await res.json();
         if (data.error) throw new Error(data.error);
@@ -2285,7 +2288,11 @@
       renderAIResult(merged);
     } catch (err) {
       setRecLoading(false);
-      showRecError();
+      if (err.status === 429) {
+        showToast(err.message || '오늘의 추천 한도에 도달했습니다. 내일 다시 이용해주세요.');
+      } else {
+        showRecError();
+      }
       console.error('AI 추천 오류:', err);
     }
   }
@@ -2485,7 +2492,11 @@
         }),
       });
       const result = await res.json();
-      if (!res.ok || result.error) throw new Error(result.error || `HTTP ${res.status}`);
+      if (!res.ok || result.error) {
+        const err = new Error(result.error || `HTTP ${res.status}`);
+        err.status = res.status;
+        throw err;
+      }
 
       const cardList = btn.closest('.rec-block').querySelector('.cat-card-list');
       cardList.innerHTML = '';
@@ -2504,7 +2515,9 @@
       console.error('카테고리 새로고침 오류:', err);
       btn.textContent = orig;
       btn.disabled = false;
-      showToast('새로고침에 실패했습니다. 다시 시도해주세요.');
+      showToast(err.status === 429
+        ? (err.message || '오늘의 추천 한도에 도달했습니다.')
+        : '새로고침에 실패했습니다. 다시 시도해주세요.');
     }
   }
 

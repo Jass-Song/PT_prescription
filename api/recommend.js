@@ -3,6 +3,7 @@
 // Output: { manualTherapy[], exercise[], clinicalNote, selectedCategories, sessionSummary }
 
 import { verifyToken } from './_auth.js';
+import { logServerError } from './_logger.js';
 
 // ── Voyage AI 임베딩 헬퍼 ──
 // 사용자 입력 텍스트를 voyage-3-lite(512차원)로 임베딩
@@ -470,6 +471,10 @@ async function callLLMAndParse(systemPrompt, userPrompt, apiKey, retryCount = 0)
     if (!response.ok) {
       const errText = await response.text();
       console.error('Anthropic API 오류:', response.status, errText);
+      await logServerError('recommend', `Anthropic API ${response.status}: ${errText.slice(0, 500)}`, {
+        http_status: response.status,
+        request_path: '/api/recommend',
+      });
       return { error: `AI 서비스 오류 (${response.status}): ${errText.slice(0, 300)}`, status: 502 };
     }
     const data = await response.json();
@@ -485,6 +490,10 @@ async function callLLMAndParse(systemPrompt, userPrompt, apiKey, retryCount = 0)
         console.log('[retry] JSON 추출 실패 → 1회 재시도');
         return callLLMAndParse(systemPrompt, userPrompt, apiKey, retryCount + 1);
       }
+      await logServerError('recommend', 'LLM JSON 추출 실패 (재시도 소진)', {
+        request_path: '/api/recommend',
+        context: { rawTextPreview: rawText.slice(0, 200) },
+      });
       return { error: 'AI 응답 파싱 오류', status: 502 };
     }
     try {
@@ -495,10 +504,19 @@ async function callLLMAndParse(systemPrompt, userPrompt, apiKey, retryCount = 0)
         console.log('[retry] JSON.parse 실패 → 1회 재시도');
         return callLLMAndParse(systemPrompt, userPrompt, apiKey, retryCount + 1);
       }
+      await logServerError('recommend', `LLM JSON.parse 실패: ${parseErr.message}`, {
+        stack: parseErr.stack,
+        request_path: '/api/recommend',
+        context: { rawTextPreview: rawText.slice(0, 400) },
+      });
       return { error: 'AI 응답 파싱 오류', status: 502 };
     }
   } catch (err) {
     console.error('LLM 호출 오류:', err.message);
+    await logServerError('recommend', `LLM 호출 오류: ${err.message}`, {
+      stack: err.stack,
+      request_path: '/api/recommend',
+    });
     return { error: '서버 오류: ' + err.message, status: 500 };
   }
 }
@@ -655,6 +673,29 @@ export default async function handler(req, res) {
   }
   const userToken = (req.headers['authorization'] || '').split(' ')[1] || null;
 
+  // ── 일일 추천 한도 체크 (베타: 하루 20회) ──
+  const SUPABASE_URL_RL = process.env.SUPABASE_URL || 'https://gnusyjnviugpofvaicbv.supabase.co';
+  const SUPABASE_KEY_RL = process.env.SUPABASE_ANON_KEY;
+  const DAILY_LIMIT = 20;
+  try {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const rlRes = await fetch(
+      `${SUPABASE_URL_RL}/rest/v1/recommendation_logs?user_id=eq.${user.id}&created_at=gte.${todayStart.toISOString()}&select=id`,
+      { headers: { apikey: SUPABASE_KEY_RL, Authorization: `Bearer ${userToken || SUPABASE_KEY_RL}` } }
+    );
+    if (rlRes.ok) {
+      const rows = await rlRes.json();
+      if (Array.isArray(rows) && rows.length >= DAILY_LIMIT) {
+        return res.status(429).json({
+          error: `오늘의 추천 한도(${DAILY_LIMIT}회)에 도달했습니다. 내일 다시 이용해주세요.`,
+          dailyLimit: DAILY_LIMIT,
+          usedToday: rows.length,
+        });
+      }
+    }
+  } catch (_) { /* rate-limit 확인 실패 시 추천은 정상 진행 */ }
+
   const {
     region,
     acuity,
@@ -787,6 +828,12 @@ export default async function handler(req, res) {
     }
   } catch (e) {
     console.error('[DEBUG] Supabase fetch error:', e);
+    await logServerError('recommend', `Supabase fetch error: ${e.message}`, {
+      stack: e.stack,
+      request_path: '/api/recommend',
+      user_id: user?.id ?? null,
+      context: { region, acuity, symptom, mtCategories, exCategories },
+    });
   }
 
   // 빈 결과는 오류가 아님 — LLM이 "해당 조건 없음" 안내를 생성하도록 흘려보냄
@@ -991,6 +1038,12 @@ techniqueId는 [MT-XXX] 또는 [EX-XXX] ID를 그대로 복사.`;
 
   } catch (err) {
     console.error('후처리 오류:', err);
+    await logServerError('recommend', `후처리 오류: ${err.message}`, {
+      stack: err.stack,
+      request_path: '/api/recommend',
+      user_id: user?.id ?? null,
+      context: { region, acuity, symptom },
+    });
     return res.status(500).json({ error: '서버 오류: ' + err.message });
   }
 }
