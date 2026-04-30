@@ -1480,6 +1480,7 @@
     <div style="display:flex;gap:8px;align-items:center;">
       <button class="btn-header-feedback" id="btnGeneralFeedback" style="display:none" onclick="openGeneralFeedback()">💬 피드백</button>
       <button class="btn-settings" id="btnGoSettings" style="display:none" onclick="goSettings()">설정 변경</button>
+      <button id="btnChangePwdNav" style="display:none;font-size:13px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer;color:var(--text-secondary);" onclick="goScreen('screenPwd')">비밀번호 변경</button>
       <button class="btn-logout" id="btnLogout" style="display:none;" onclick="doLogout()">로그아웃</button>
     </div>
   </header>
@@ -1532,6 +1533,24 @@
       </div>
       <div id="signupError" class="auth-error" style="display:none;"></div>
       <button class="btn-primary" id="btnSignup" onclick="doSignup()" style="margin-top:16px;">회원가입 신청</button>
+    </div>
+  </div>
+
+  <!-- 비밀번호 변경 화면 -->
+  <div class="screen" id="screenPwd">
+    <div class="section" style="max-width:400px;margin:0 auto;padding-top:32px;">
+      <div class="section-title">비밀번호 변경</div>
+      <div style="margin-bottom:16px;">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;">새 비밀번호</label>
+        <input type="password" id="pwdNew" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;" placeholder="8자 이상" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'" />
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;">새 비밀번호 확인</label>
+        <input type="password" id="pwdConfirm" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;" placeholder="동일하게 입력" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'" onkeydown="if(event.key==='Enter')doChangePwd()" />
+      </div>
+      <div id="pwdError" style="display:none;color:#ef4444;font-size:13px;margin-bottom:12px;"></div>
+      <button class="btn-primary" id="btnChangePwd" onclick="doChangePwd()">변경 완료</button>
+      <button class="btn-secondary" style="margin-top:8px;" onclick="goScreen('screen1')">취소</button>
     </div>
   </div>
 
@@ -1822,6 +1841,8 @@
       if (event === 'SIGNED_OUT') {
         currentAccessToken = null;
         document.getElementById('btnLogout').style.display = 'none';
+        const _cpn = document.getElementById('btnChangePwdNav');
+        if (_cpn) _cpn.style.display = 'none';
         const _gfb = document.getElementById('btnGeneralFeedback');
         if (_gfb) _gfb.style.display = 'none';
         goScreen('screen0');
@@ -1995,6 +2016,43 @@
     currentAccessToken = null;
     document.getElementById('btnLogout').style.display = 'none';
     goScreen('screen0');
+  }
+
+  async function doChangePwd() {
+    const newPwd = document.getElementById('pwdNew').value;
+    const confirmPwd = document.getElementById('pwdConfirm').value;
+    const errEl = document.getElementById('pwdError');
+    const btn = document.getElementById('btnChangePwd');
+
+    errEl.style.display = 'none';
+
+    if (newPwd.length < 8) {
+      errEl.textContent = '비밀번호는 8자 이상이어야 합니다.';
+      errEl.style.display = 'block';
+      return;
+    }
+    if (newPwd !== confirmPwd) {
+      errEl.textContent = '비밀번호가 일치하지 않습니다.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = '변경 중...';
+
+    const { error } = await supabaseClient.auth.updateUser({ password: newPwd });
+
+    btn.disabled = false;
+    btn.textContent = '변경 완료';
+
+    if (error) {
+      errEl.textContent = '변경 실패: ' + error.message;
+      errEl.style.display = 'block';
+      return;
+    }
+
+    showToast('비밀번호가 변경되었습니다.');
+    goScreen('screen1');
   }
 
   function switchAuthTab(tab) {
@@ -3072,6 +3130,8 @@
     if (settingsBtn) settingsBtn.style.display = ['screen2', 'screen3', 'screenCat'].includes(screenId) ? 'block' : 'none';
     const logoutBtn = document.getElementById('btnLogout');
     if (logoutBtn) logoutBtn.style.display = showNav ? '' : 'none';
+    const changePwdNavBtn = document.getElementById('btnChangePwdNav');
+    if (changePwdNavBtn) changePwdNavBtn.style.display = showNav ? '' : 'none';
     const feedbackBtn = document.getElementById('btnGeneralFeedback');
     if (feedbackBtn) feedbackBtn.style.display = showNav ? '' : 'none';
 
