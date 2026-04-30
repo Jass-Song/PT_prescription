@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PT 임상 의사결정 도우미</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #1a6fc4;
+      --primary-light: #e8f1fb;
+      --primary-border: #1a6fc4;
+      --text: #1a202c;
+      --text-secondary: #4a5568;
+      --border: #d1d9e0;
+      --bg: #f7f9fc;
+      --card-bg: #ffffff;
+      --danger: #e53e3e;
+      --success: #2f855a;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow: 0 1px 4px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Gothic Neo',
+                   'Noto Sans KR', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* ── Layout ── */
+    .app-wrap {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 0 0 60px;
+    }
+
+    /* ── Header ── */
+    .app-header {
+      background: #ffffff;
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .app-header .logo {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: -0.3px;
+    }
+    .app-header .logo span {
+      font-weight: 400;
+      color: var(--text-secondary);
+      font-size: 13px;
+      margin-left: 6px;
+    }
+    .btn-settings {
+      font-size: 13px;
+      color: var(--primary);
+      background: none;
+      border: 1px solid var(--primary);
+      border-radius: 6px;
+      padding: 5px 12px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.15s;
+    }
+    .btn-settings:hover { background: var(--primary-light); }
+
+    /* ── Screen ── */
+    .screen { display: none; padding: 24px 16px 0; }
+    .screen.active { display: block; }
+
+    /* ── Section card ── */
+    .section-card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      margin-bottom: 14px;
+    }
+    .section-title .badge {
+      display: inline-block;
+      background: var(--primary-light);
+      color: var(--primary);
+      border-radius: 20px;
+      padding: 1px 9px;
+      font-size: 11px;
+      margin-left: 8px;
+      font-weight: 600;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    .limit-hint {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+    .limit-hint.warn { color: var(--danger); font-weight: 600; }
+
+    /* ── Choice cards (grid) ── */
+    .choice-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .choice-card {
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 11px 13px;
+      cursor: pointer;
+      user-select: none;
+      transition: border-color 0.15s, background 0.15s, opacity 0.15s;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+      background: var(--card-bg);
+      text-align: left;
+      line-height: 1.4;
+    }
+    .choice-card:hover:not(.disabled) {
+      border-color: #93bce8;
+      background: #f0f7ff;
+    }
+    .choice-card.selected {
+      border-color: var(--primary-border);
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+    .choice-card.disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .choice-card .sub {
+      font-size: 11px;
+      color: var(--text-secondary);
+      font-weight: 400;
+      margin-top: 2px;
+    }
+    .choice-card.selected .sub { color: #4a7fb5; }
+
+    /* ── Single-row options (3 cols for symptoms) ── */
+    .choice-grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+
+    /* ── Step indicator ── */
+    .step-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 20px;
+    }
+    .step-dot {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      background: var(--border);
+      color: var(--text-secondary);
+      flex-shrink: 0;
+      transition: background 0.2s, color 0.2s;
+    }
+    .step-dot.active { background: var(--primary); color: #fff; }
+    .step-dot.done { background: #48bb78; color: #fff; }
+    .step-line {
+      flex: 1;
+      height: 2px;
+      background: var(--border);
+    }
+    .step-line.done { background: #48bb78; }
+
+    /* ── Buttons ── */
+    .btn-primary {
+      width: 100%;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.15s, transform 0.1s;
+      letter-spacing: -0.2px;
+    }
+    .btn-primary:hover { background: #155fa0; }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-primary:disabled {
+      background: #b0bec5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .btn-secondary {
+      width: 100%;
+      background: #fff;
+      color: var(--primary);
+      border: 2px solid var(--primary);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.15s;
+    }
+    .btn-secondary:hover { background: var(--primary-light); }
+
+    /* ── Screen 1 intro ── */
+    .screen-intro {
+      text-align: center;
+      padding: 28px 20px 20px;
+    }
+    .screen-intro .icon {
+      font-size: 40px;
+      margin-bottom: 10px;
+    }
+    .screen-intro h1 {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 6px;
+      letter-spacing: -0.5px;
+    }
+    .screen-intro p {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* ── Screen 2 heading ── */
+    .patient-heading {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.5px;
+      margin-bottom: 4px;
+    }
+    .patient-subhead {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+    }
+
+    /* ── Recommendation output ── */
+    .rec-header {
+      text-align: center;
+      padding: 8px 0 20px;
+    }
+    .rec-header .label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .rec-header .combo {
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: -0.4px;
+    }
+
+    .rec-block {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px 20px;
+      margin-bottom: 14px;
+    }
+    .rec-block-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .rec-block-title .icon { font-size: 16px; }
+
+    .rec-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid #edf2f7;
+    }
+    .rec-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .rec-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--primary-light);
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .rec-content {}
+    .rec-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 2px;
+    }
+    .rec-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .no-rec {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 13.5px;
+      padding: 10px 0 4px;
+    }
+
+    /* ── Empty state for rec ── */
+    .rec-empty {
+      background: #fffbea;
+      border: 1px solid #f6e05e;
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      font-size: 13px;
+      color: #744210;
+      margin-bottom: 14px;
+    }
+
+    /* ── Divider ── */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 8px 0 16px;
+    }
+
+    /* ── Loading spinner ── */
+    .loading-state {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 20px;
+      gap: 16px;
+    }
+    .loading-state.visible { display: flex; }
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid var(--primary-light);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text {
+      font-size: 14px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    /* ── Error state ── */
+    .error-state {
+      display: none;
+      background: #fff5f5;
+      border: 1px solid #fc8181;
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      font-size: 13.5px;
+      color: var(--danger);
+      margin-bottom: 14px;
+      text-align: center;
+    }
+    .error-state.visible { display: block; }
+
+    /* ── Clinical note ── */
+    .clinical-note-block {
+      background: #f0fdf4;
+      border: 1px solid #9ae6b4;
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      font-size: 13px;
+      color: #22543d;
+      line-height: 1.6;
+      margin-bottom: 14px;
+    }
+    .clinical-note-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #276749;
+      margin-bottom: 6px;
+    }
+
+    /* ── Rec content hidden when loading ── */
+    .rec-content-area { display: block; }
+    .rec-content-area.hidden { display: none; }
+
+    /* ── Rec cards (detailed) ── */
+    .rec-card {
+      background: white;
+      border: 1px solid #e0e8f0;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .rec-card h4 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1a6fc4;
+      margin-bottom: 10px;
+    }
+    .rec-detail {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: #333;
+    }
+    .rec-detail .label {
+      font-weight: 600;
+      color: #666;
+      white-space: nowrap;
+      min-width: 80px;
+    }
+    .rec-detail.warning {
+      background: #fff8e1;
+      border-radius: 6px;
+      padding: 6px 8px;
+    }
+    .rec-detail.highlight {
+      background: #e8f4fd;
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-style: italic;
+    }
+    .clinical-note-block {
+      background: #f0f9f0;
+      border-left: 3px solid #2ecc71;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-top: 16px;
+      font-size: 13px;
+      color: #2d6a4f;
+    }
+
+    /* ── Mobile tweaks ── */
+    @media (max-width: 380px) {
+      .choice-grid { grid-template-columns: 1fr; }
+      .choice-grid-3 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="app-wrap">
+
+  <!-- ── Sticky header ── -->
+  <header class="app-header">
+    <div class="logo">PT 처방 도우미 <span>임상 의사결정 지원</span></div>
+    <button class="btn-settings" id="btnGoSettings" style="display:none" onclick="goSettings()">설정 변경</button>
+  </header>
+
+  <!-- ══════════════════════════════
+       1단계 — 설정
+  ══════════════════════════════ -->
+  <div class="screen active" id="screen1">
+    <div class="screen-intro">
+      <div class="icon">⚕️</div>
+      <h1>사용 기법 설정</h1>
+      <p>본인이 임상에서 사용하는 기법을 선택해 주세요.<br>각 카테고리에서 최대 <strong>3개</strong>까지 선택 가능합니다.</p>
+    </div>
+
+    <!-- Manual Therapy -->
+    <div class="section-card">
+      <div class="section-title">
+        Manual Therapy
+        <span class="badge" id="mt-count">0 / 3</span>
+      </div>
+      <div class="limit-hint" id="mt-hint">최대 3개 선택</div>
+      <div class="choice-grid" id="mt-grid"></div>
+    </div>
+
+    <!-- Exercise -->
+    <div class="section-card">
+      <div class="section-title">
+        Exercise
+        <span class="badge" id="ex-count">0 / 3</span>
+      </div>
+      <div class="limit-hint" id="ex-hint">최대 3개 선택</div>
+      <div class="choice-grid" id="ex-grid"></div>
+    </div>
+
+    <div style="padding: 0 0 8px;">
+      <button class="btn-primary" id="btn-save" onclick="saveSettings()" disabled>저장 후 시작</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════
+       2단계 — 환자 입력
+  ══════════════════════════════ -->
+  <div class="screen" id="screen2">
+    <div class="patient-heading">환자 정보 입력</div>
+    <div class="patient-subhead">아래 3가지를 순서대로 선택하세요</div>
+
+    <div class="step-indicator">
+      <div class="step-dot active" id="sdot1">1</div>
+      <div class="step-line" id="sline1"></div>
+      <div class="step-dot" id="sdot2">2</div>
+      <div class="step-line" id="sline2"></div>
+      <div class="step-dot" id="sdot3">3</div>
+    </div>
+
+    <!-- 부위 -->
+    <div class="section-card">
+      <div class="section-title">부위</div>
+      <div class="choice-grid" id="region-grid"></div>
+    </div>
+
+    <!-- 시기 -->
+    <div class="section-card">
+      <div class="section-title">시기</div>
+      <div class="choice-grid" id="stage-grid"></div>
+    </div>
+
+    <!-- 증상 패턴 -->
+    <div class="section-card">
+      <div class="section-title">증상 패턴</div>
+      <div class="choice-grid-3" id="symptom-grid"></div>
+    </div>
+
+    <div style="padding: 0 0 8px;">
+      <button class="btn-primary" id="btn-recommend" onclick="showRecommendation()" disabled>추천 보기</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════
+       3단계 — 추천 결과
+  ══════════════════════════════ -->
+  <div class="screen" id="screen3">
+    <div class="rec-header">
+      <div class="label">선택 조합</div>
+      <div class="combo" id="combo-label"></div>
+    </div>
+
+    <!-- Loading state -->
+    <div class="loading-state" id="rec-loading">
+      <div class="spinner"></div>
+      <div class="loading-text">AI가 추천을 생성하고 있습니다...</div>
+    </div>
+
+    <!-- Error state -->
+    <div class="error-state" id="rec-error">
+      추천 생성에 실패했습니다. 다시 시도해주세요.
+    </div>
+
+    <!-- Recommendation content (hidden while loading) -->
+    <div class="rec-content-area" id="rec-content-area">
+      <div class="rec-block" id="mt-rec-block">
+        <div class="rec-block-title"><span class="icon">🔧</span> Manual Therapy 추천</div>
+        <div id="mt-rec-list"></div>
+      </div>
+
+      <div class="rec-block" id="ex-rec-block">
+        <div class="rec-block-title"><span class="icon">🏃</span> Exercise 추천</div>
+        <div id="ex-rec-list"></div>
+      </div>
+
+      <div id="clinical-note-wrap"></div>
+    </div>
+
+    <div style="padding: 0 0 8px;">
+      <button class="btn-primary" id="btn-retry" style="display:none" onclick="showRecommendation()">다시 시도</button>
+      <button class="btn-secondary" onclick="goScreen2()">다시 입력</button>
+    </div>
+  </div>
+
+</div><!-- /app-wrap -->
+
+<script>
+  /* ══════════════════════════════════════
+     DATA
+  ══════════════════════════════════════ */
+  const MT_OPTIONS = [
+    { id: 'mt_maitland',  label: '관절가동술', sub: 'Maitland / Kaltenborn' },
+    { id: 'mt_hvla',      label: '관절교정술', sub: 'HVLA' },
+    { id: 'mt_soft',      label: '연부조직 가동술', sub: '' },
+    { id: 'mt_neuro',     label: '신경가동술', sub: '' },
+    { id: 'mt_mckenzie',  label: 'McKenzie', sub: '' },
+    { id: 'mt_mulligan',  label: 'Mulligan', sub: '' },
+  ];
+
+  const EX_OPTIONS = [
+    { id: 'ex_stab',    label: '안정화 운동', sub: '' },
+    { id: 'ex_prog',    label: '점진적 부하 운동', sub: '' },
+    { id: 'ex_strength',label: '근력 강화', sub: '' },
+    { id: 'ex_rom',     label: '관절가동범위 운동', sub: '' },
+    { id: 'ex_stretch', label: '스트레칭', sub: '' },
+    { id: 'ex_self',    label: '자가도수 / 자기관리', sub: '' },
+    { id: 'ex_wbear',   label: '체중부하 운동', sub: '' },
+    { id: 'ex_rehab',   label: '재활 운동', sub: '' },
+  ];
+
+  const REGIONS   = [
+    { id: 'cervical', label: '경추', sub: '목' },
+    { id: 'lumbar',   label: '요추', sub: '허리' },
+  ];
+  const STAGES    = [
+    { id: 'acute',   label: '급성', sub: '< 6주' },
+    { id: 'chronic', label: '만성', sub: '> 6주' },
+  ];
+  const SYMPTOMS  = [
+    { id: 'movement', label: '움직임 시\n통증', sub: '' },
+    { id: 'rest',     label: '안정 시\n통증',   sub: '' },
+    { id: 'radicular',label: '방사통',          sub: '' },
+  ];
+
+  const REGION_LABEL   = { cervical: '경추', lumbar: '요추' };
+  const STAGE_LABEL    = { acute: '급성', chronic: '만성' };
+  const SYMPTOM_LABEL  = { movement: '움직임 시 통증', rest: '안정 시 통증', radicular: '방사통' };
+
+  /* ══════════════════════════════════════
+     SESSION HISTORY (localStorage)
+  ══════════════════════════════════════ */
+  function getSessionHistory() {
+    try {
+      return JSON.parse(localStorage.getItem('pt_session_history') || '[]');
+    } catch { return []; }
+  }
+
+  function saveSessionHistory(summary) {
+    const history = getSessionHistory();
+    history.unshift(summary); // 최신 순으로
+    if (history.length > 5) history.pop(); // 최대 5개 유지
+    localStorage.setItem('pt_session_history', JSON.stringify(history));
+  }
+
+  /* ══════════════════════════════════════
+     STATE
+  ══════════════════════════════════════ */
+  let selectedMT = new Set();
+  let selectedEX = new Set();
+  let selectedRegion  = null;
+  let selectedStage   = null;
+  let selectedSymptom = null;
+
+  /* ══════════════════════════════════════
+     INIT
+  ══════════════════════════════════════ */
+  document.addEventListener('DOMContentLoaded', () => {
+    renderSettingsGrid();
+    renderPatientGrids();
+
+    const saved = loadSettings();
+    if (saved && saved.mt.length > 0 && saved.ex.length > 0) {
+      // restore selections
+      saved.mt.forEach(id => selectedMT.add(id));
+      saved.ex.forEach(id => selectedEX.add(id));
+      refreshMTGrid();
+      refreshEXGrid();
+      goScreen2();
+    }
+  });
+
+  /* ══════════════════════════════════════
+     SETTINGS GRID
+  ══════════════════════════════════════ */
+  function renderSettingsGrid() {
+    const mtGrid = document.getElementById('mt-grid');
+    const exGrid = document.getElementById('ex-grid');
+
+    MT_OPTIONS.forEach(opt => {
+      const card = makeCard(opt, () => toggleMT(opt.id));
+      card.id = 'card-' + opt.id;
+      mtGrid.appendChild(card);
+    });
+
+    EX_OPTIONS.forEach(opt => {
+      const card = makeCard(opt, () => toggleEX(opt.id));
+      card.id = 'card-' + opt.id;
+      exGrid.appendChild(card);
+    });
+  }
+
+  function makeCard(opt, handler) {
+    const div = document.createElement('div');
+    div.className = 'choice-card';
+    div.innerHTML = `<div>${opt.label}</div>${opt.sub ? `<div class="sub">${opt.sub}</div>` : ''}`;
+    div.addEventListener('click', handler);
+    return div;
+  }
+
+  function toggleMT(id) {
+    if (selectedMT.has(id)) {
+      selectedMT.delete(id);
+    } else {
+      if (selectedMT.size >= 3) return; // hard block
+      selectedMT.add(id);
+    }
+    refreshMTGrid();
+    checkSaveBtn();
+  }
+
+  function toggleEX(id) {
+    if (selectedEX.has(id)) {
+      selectedEX.delete(id);
+    } else {
+      if (selectedEX.size >= 3) return;
+      selectedEX.add(id);
+    }
+    refreshEXGrid();
+    checkSaveBtn();
+  }
+
+  function refreshMTGrid() {
+    const atMax = selectedMT.size >= 3;
+    document.getElementById('mt-count').textContent = selectedMT.size + ' / 3';
+    const hint = document.getElementById('mt-hint');
+    hint.textContent = atMax ? '최대 선택 완료' : '최대 3개 선택';
+    hint.className = 'limit-hint' + (atMax ? ' warn' : '');
+
+    MT_OPTIONS.forEach(opt => {
+      const card = document.getElementById('card-' + opt.id);
+      const isSel = selectedMT.has(opt.id);
+      card.className = 'choice-card' + (isSel ? ' selected' : '') + (!isSel && atMax ? ' disabled' : '');
+    });
+  }
+
+  function refreshEXGrid() {
+    const atMax = selectedEX.size >= 3;
+    document.getElementById('ex-count').textContent = selectedEX.size + ' / 3';
+    const hint = document.getElementById('ex-hint');
+    hint.textContent = atMax ? '최대 선택 완료' : '최대 3개 선택';
+    hint.className = 'limit-hint' + (atMax ? ' warn' : '');
+
+    EX_OPTIONS.forEach(opt => {
+      const card = document.getElementById('card-' + opt.id);
+      const isSel = selectedEX.has(opt.id);
+      card.className = 'choice-card' + (isSel ? ' selected' : '') + (!isSel && atMax ? ' disabled' : '');
+    });
+  }
+
+  function checkSaveBtn() {
+    document.getElementById('btn-save').disabled = (selectedMT.size === 0 || selectedEX.size === 0);
+  }
+
+  function saveSettings() {
+    const data = { mt: [...selectedMT], ex: [...selectedEX] };
+    localStorage.setItem('pt_settings', JSON.stringify(data));
+    goScreen2();
+  }
+
+  function loadSettings() {
+    try {
+      const raw = localStorage.getItem('pt_settings');
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch { return null; }
+  }
+
+  /* ══════════════════════════════════════
+     PATIENT GRIDS
+  ══════════════════════════════════════ */
+  function renderPatientGrids() {
+    const regionGrid  = document.getElementById('region-grid');
+    const stageGrid   = document.getElementById('stage-grid');
+    const symptomGrid = document.getElementById('symptom-grid');
+
+    REGIONS.forEach(opt => {
+      const card = makeCard(opt, () => selectRegion(opt.id));
+      card.id = 'p-' + opt.id;
+      regionGrid.appendChild(card);
+    });
+
+    STAGES.forEach(opt => {
+      const card = makeCard(opt, () => selectStage(opt.id));
+      card.id = 'p-' + opt.id;
+      stageGrid.appendChild(card);
+    });
+
+    SYMPTOMS.forEach(opt => {
+      // handle newline in label
+      const div = document.createElement('div');
+      div.className = 'choice-card';
+      div.id = 'p-' + opt.id;
+      div.style.textAlign = 'center';
+      div.style.whiteSpace = 'pre-line';
+      div.innerHTML = `<div style="font-size:13.5px">${opt.label}</div>`;
+      div.addEventListener('click', () => selectSymptom(opt.id));
+      symptomGrid.appendChild(div);
+    });
+  }
+
+  function selectRegion(id) {
+    selectedRegion = id;
+    REGIONS.forEach(o => {
+      const c = document.getElementById('p-' + o.id);
+      c.className = 'choice-card' + (o.id === id ? ' selected' : '');
+    });
+    updateStepDots();
+    checkRecommendBtn();
+  }
+
+  function selectStage(id) {
+    selectedStage = id;
+    STAGES.forEach(o => {
+      const c = document.getElementById('p-' + o.id);
+      c.className = 'choice-card' + (o.id === id ? ' selected' : '');
+    });
+    updateStepDots();
+    checkRecommendBtn();
+  }
+
+  function selectSymptom(id) {
+    selectedSymptom = id;
+    SYMPTOMS.forEach(o => {
+      const c = document.getElementById('p-' + o.id);
+      c.className = 'choice-card' + (o.id === id ? ' selected' : '') + (c.style.textAlign ? '' : '');
+      c.style.textAlign = 'center';
+      c.style.whiteSpace = 'pre-line';
+    });
+    updateStepDots();
+    checkRecommendBtn();
+  }
+
+  function updateStepDots() {
+    const s1 = document.getElementById('sdot1');
+    const s2 = document.getElementById('sdot2');
+    const s3 = document.getElementById('sdot3');
+    const l1 = document.getElementById('sline1');
+    const l2 = document.getElementById('sline2');
+
+    if (selectedRegion) { s1.className = 'step-dot done'; l1.className = 'step-line done'; }
+    else { s1.className = 'step-dot active'; l1.className = 'step-line'; }
+
+    if (selectedStage)  { s2.className = 'step-dot done'; l2.className = 'step-line done'; }
+    else if (selectedRegion) { s2.className = 'step-dot active'; l2.className = 'step-line'; }
+    else { s2.className = 'step-dot'; l2.className = 'step-line'; }
+
+    if (selectedSymptom) { s3.className = 'step-dot done'; }
+    else if (selectedStage)  { s3.className = 'step-dot active'; }
+    else { s3.className = 'step-dot'; }
+  }
+
+  function checkRecommendBtn() {
+    document.getElementById('btn-recommend').disabled =
+      !(selectedRegion && selectedStage && selectedSymptom);
+  }
+
+  /* ══════════════════════════════════════
+     RECOMMENDATION LOGIC (AI)
+  ══════════════════════════════════════ */
+  async function showRecommendation() {
+    // Combo label
+    document.getElementById('combo-label').textContent =
+      `${REGION_LABEL[selectedRegion]} · ${STAGE_LABEL[selectedStage]} · ${SYMPTOM_LABEL[selectedSymptom]}`;
+
+    // Show screen 3 in loading state
+    goScreen3();
+    setRecLoading(true);
+
+    // Build human-readable label lists for the API
+    const settings = loadSettings();
+    const userMTIds = settings ? settings.mt : [...selectedMT];
+    const userEXIds = settings ? settings.ex : [...selectedEX];
+    const preferredMT = userMTIds.map(id => getLabel(id));
+    const preferredEX = userEXIds.map(id => getLabel(id));
+
+    const payload = {
+      region:      REGION_LABEL[selectedRegion],
+      acuity:      STAGE_LABEL[selectedStage],
+      symptom:     SYMPTOM_LABEL[selectedSymptom],
+      preferredMT,
+      preferredEX,
+      sessionHistory: getSessionHistory(),
+    };
+
+    try {
+      const response = await fetch('/api/recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (result.error) throw new Error(result.error);
+
+      setRecLoading(false);
+      renderAIResult(result);
+    } catch (err) {
+      setRecLoading(false);
+      showRecError();
+      console.error('AI 추천 오류:', err);
+    }
+  }
+
+  function setRecLoading(on) {
+    document.getElementById('rec-loading').classList.toggle('visible', on);
+    document.getElementById('rec-content-area').classList.toggle('hidden', on);
+    document.getElementById('rec-error').classList.remove('visible');
+    document.getElementById('btn-retry').style.display = 'none';
+  }
+
+  function showRecError() {
+    document.getElementById('rec-content-area').classList.add('hidden');
+    document.getElementById('rec-error').classList.add('visible');
+    document.getElementById('btn-retry').style.display = 'block';
+  }
+
+  function renderAIResult(result) {
+    // Save session history if summary provided
+    if (result.sessionSummary) {
+      saveSessionHistory(result.sessionSummary);
+    }
+
+    // Render MT
+    const mtList = document.getElementById('mt-rec-list');
+    mtList.innerHTML = '';
+    const mtItems = result.manualTherapy || [];
+    if (mtItems.length === 0) {
+      mtList.innerHTML = `<div class="no-rec">해당 조합에 맞는 Manual Therapy 추천이 없습니다.</div>`;
+    } else {
+      mtItems.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'rec-card';
+        card.innerHTML = `
+          <h4>🔧 ${item.technique}</h4>
+          <div class="rec-detail"><span class="label">환자 자세</span> ${item.patientPosition}</div>
+          <div class="rec-detail"><span class="label">손 위치</span> ${item.therapistHands}</div>
+          <div class="rec-detail"><span class="label">동작</span> ${item.movement}</div>
+          <div class="rec-detail"><span class="label">목표 근육</span> ${(item.targetMuscles || []).join(', ')}</div>
+          <div class="rec-detail warning"><span class="label">환자 피드백</span> ${item.patientFeedback}</div>`;
+        mtList.appendChild(card);
+      });
+    }
+
+    // Render EX
+    const exList = document.getElementById('ex-rec-list');
+    exList.innerHTML = '';
+    const exItems = result.exercise || [];
+    if (exItems.length === 0) {
+      exList.innerHTML = `<div class="no-rec">해당 조합에 맞는 Exercise 추천이 없습니다.</div>`;
+    } else {
+      exItems.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'rec-card';
+        card.innerHTML = `
+          <h4>🏃 ${item.name}</h4>
+          <div class="rec-detail"><span class="label">시작 자세</span> ${item.startPosition}</div>
+          <div class="rec-detail"><span class="label">치료사 가이드</span> ${item.therapistGuide}</div>
+          <div class="rec-detail"><span class="label">동작</span> ${item.movement}</div>
+          <div class="rec-detail"><span class="label">처방</span> ${item.sets}</div>
+          <div class="rec-detail"><span class="label">목표 근육</span> ${(item.targetMuscles || []).join(', ')}</div>
+          <div class="rec-detail highlight"><span class="label">큐잉</span> "${item.cue}"</div>`;
+        exList.appendChild(card);
+      });
+    }
+
+    // Render clinical note
+    const noteWrap = document.getElementById('clinical-note-wrap');
+    noteWrap.innerHTML = '';
+    if (result.clinicalNote) {
+      noteWrap.innerHTML = `
+        <div class="clinical-note-block">
+          <div class="clinical-note-label">임상 메모</div>
+          ${result.clinicalNote}
+        </div>`;
+    }
+  }
+
+  function getLabel(id) {
+    const all = [...MT_OPTIONS, ...EX_OPTIONS];
+    const found = all.find(o => o.id === id);
+    if (!found) return id;
+    return found.sub ? `${found.label} (${found.sub})` : found.label;
+  }
+
+  /* ══════════════════════════════════════
+     SCREEN NAVIGATION
+  ══════════════════════════════════════ */
+  function goScreen(n) {
+    document.querySelectorAll('.screen').forEach((s, i) => {
+      s.classList.toggle('active', i === n - 1);
+    });
+    document.getElementById('btnGoSettings').style.display = (n === 2 || n === 3) ? 'block' : 'none';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function goScreen2() {
+    // Reset patient selections
+    selectedRegion = null;
+    selectedStage  = null;
+    selectedSymptom = null;
+    // Clear visual state of patient cards
+    [...REGIONS, ...STAGES, ...SYMPTOMS].forEach(o => {
+      const c = document.getElementById('p-' + o.id);
+      if (c) c.className = 'choice-card';
+    });
+    updateStepDots();
+    checkRecommendBtn();
+    goScreen(2);
+  }
+
+  function goScreen3() { goScreen(3); }
+
+  function goSettings() {
+    // Restore current settings to UI
+    const settings = loadSettings();
+    if (settings) {
+      selectedMT = new Set(settings.mt);
+      selectedEX = new Set(settings.ex);
+      refreshMTGrid();
+      refreshEXGrid();
+      checkSaveBtn();
+    }
+    goScreen(1);
+  }
+</script>
+</body>
+</html>

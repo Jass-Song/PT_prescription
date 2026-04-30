@@ -1,0 +1,1855 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KMO 도수치료 테크닉 추천 시스템</title>
+  <link rel="icon" href="data:,">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
+      background: #f4f6fb;
+      color: #1a1a2e;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+      color: #fff;
+      padding: 28px 24px 24px;
+      text-align: center;
+    }
+    .header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.3px; }
+    .header p  { font-size: 0.85rem; opacity: 0.82; margin-top: 6px; }
+    .header .db-badge {
+      display: inline-block;
+      margin-top: 10px;
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 20px;
+      padding: 3px 12px;
+      font-size: 0.75rem;
+    }
+    .header .db-badge.live {
+      background: rgba(34,197,94,0.25);
+      border-color: rgba(34,197,94,0.5);
+    }
+    .header .db-badge.error {
+      background: rgba(239,68,68,0.25);
+      border-color: rgba(239,68,68,0.5);
+    }
+
+    /* ── Layout ── */
+    .container { max-width: 860px; margin: 0 auto; padding: 24px 16px 48px; }
+
+    /* ── Form Card ── */
+    .form-card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      padding: 28px 24px;
+      margin-bottom: 24px;
+    }
+    .form-card h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1e3a8a;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .form-card h2::before {
+      content: '';
+      display: block;
+      width: 4px;
+      height: 18px;
+      background: #2563eb;
+      border-radius: 2px;
+    }
+
+    /* ── Form Groups ── */
+    .form-group { margin-bottom: 22px; }
+    .form-group label.group-label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+
+    /* ── Select ── */
+    select {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      color: #1a1a2e;
+      background: #f8fafc;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394a3b8' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    select:focus { outline: none; border-color: #2563eb; background-color: #fff; }
+
+    /* ── Toggle Button Group ── */
+    .toggle-btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+    .toggle-btn {
+      padding: 10px 20px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      background: #fff;
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .toggle-btn:hover { border-color: #2563eb; background: #eff6ff; }
+    .toggle-btn.selected { border-color: #2563eb; background: #eff6ff; color: #1e40af; }
+
+    /* ── Submit Button ── */
+    .btn-recommend {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      letter-spacing: 0.3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-recommend:hover  { opacity: 0.92; }
+    .btn-recommend:active { transform: scale(0.98); }
+    .btn-recommend:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2.5px solid rgba(255,255,255,0.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Results Section ── */
+    #results { margin-top: 8px; }
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .results-header h2 { font-size: 1rem; font-weight: 700; color: #1e3a8a; }
+    .results-count {
+      font-size: 0.8rem;
+      color: #64748b;
+      background: #f1f5f9;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+    .results-source {
+      font-size: 0.72rem;
+      color: #22c55e;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+
+    /* ── Result Card ── */
+    .result-card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+      margin-bottom: 16px;
+      overflow: hidden;
+      border: 1.5px solid #e2e8f0;
+      transition: box-shadow 0.2s;
+    }
+    .result-card:hover { box-shadow: 0 4px 20px rgba(37,99,235,0.12); border-color: #bfdbfe; }
+
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 18px 20px 14px;
+      gap: 12px;
+    }
+    .card-rank {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 32px;
+      height: 32px;
+      background: #1e3a8a;
+      color: #fff;
+      border-radius: 50%;
+      font-size: 0.85rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .card-rank.rank-1 { background: #f59e0b; }
+    .card-rank.rank-2 { background: #94a3b8; }
+    .card-rank.rank-3 { background: #b45309; }
+
+    .card-title-group { flex: 1; }
+    .card-name-ko { font-size: 1rem; font-weight: 700; color: #1a1a2e; line-height: 1.3; }
+    .card-name-en { font-size: 0.76rem; color: #94a3b8; margin-top: 2px; }
+    .card-meta { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+    .badge {
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+    .badge-cat-a  { background: #dbeafe; color: #1e40af; }
+    .badge-cat-b  { background: #d1fae5; color: #065f46; }
+    .badge-body   { background: #f3e8ff; color: #6b21a8; }
+    .badge-evidence-high   { background: #dcfce7; color: #166534; }
+    .badge-evidence-medium { background: #fef9c3; color: #854d0e; }
+    .badge-evidence-low    { background: #fee2e2; color: #991b1b; }
+    .badge-type-a { background: #dbeafe; color: #1e40af; }
+    .badge-type-b { background: #d1fae5; color: #065f46; }
+
+    .card-score-group { text-align: right; flex-shrink: 0; }
+    .score-value { font-size: 1.3rem; font-weight: 800; color: #2563eb; }
+    .score-label { font-size: 0.7rem; color: #94a3b8; }
+
+    /* ── Match Bar ── */
+    .match-bar-wrap { padding: 0 20px 14px; }
+    .match-bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-bottom: 5px;
+    }
+    .match-bar-bg {
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .match-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #2563eb, #60a5fa);
+      border-radius: 3px;
+      transition: width 0.6s ease;
+    }
+
+    /* ── Position Box ── */
+    .position-box {
+      margin: 0 20px 0;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .position-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 16px;
+    }
+    .position-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+    .position-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 3px;
+    }
+    .position-value { font-size: 0.87rem; color: #334155; line-height: 1.5; }
+    .position-divider { height: 1px; background: #e2e8f0; margin: 0 16px; }
+
+    /* ── Expand / Collapse ── */
+    .card-expand-btn-wrap {
+      padding: 12px 20px;
+      border-top: 1px solid #f1f5f9;
+    }
+    .btn-expand-card {
+      width: 100%;
+      padding: 8px;
+      font-size: 0.83rem;
+      font-weight: 600;
+      color: #2563eb;
+      background: none;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-expand-card:hover { background: #eff6ff; border-color: #2563eb; }
+    .card-detail-section { display: none; border-top: 1px solid #f1f5f9; }
+    .extra-row { padding: 7px 20px; border-top: 1px solid #f8fafc; }
+    .extra-row-label { font-size: 0.72rem; font-weight: 600; color: #94a3b8; margin-bottom: 3px; }
+    .extra-row-value { font-size: 0.85rem; color: #475569; line-height: 1.5; }
+    .contraindication-list { color: #dc2626; font-size: 0.83rem; }
+
+    /* ── Grade Chips ── */
+    .grade-chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+    .grade-chip {
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      background: #f1f5f9;
+      border-radius: 4px;
+      color: #334155;
+      font-weight: 600;
+    }
+
+    /* ── Empty / Error / Loading States ── */
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: #94a3b8;
+    }
+    .empty-state .icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .empty-state p { font-size: 0.9rem; }
+
+    .loading-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: #64748b;
+    }
+    .loading-state .spinner-lg {
+      width: 36px;
+      height: 36px;
+      border: 3px solid #e2e8f0;
+      border-top-color: #2563eb;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    .loading-state p { font-size: 0.9rem; }
+
+    .error-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: #dc2626;
+    }
+    .error-state .icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .error-state p { font-size: 0.9rem; }
+
+    /* ── Coming Soon Badge ── */
+    .coming-soon-badge {
+      background: #f1f5f9;
+      color: #94a3b8;
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    /* ── Disabled Section (Coming Soon) ── */
+    .disabled-section {
+      opacity: 0.55;
+      pointer-events: none;
+      user-select: none;
+      background: #f8fafc;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 22px;
+    }
+    .disabled-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .disabled-section-title {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .disabled-section-note {
+      font-size: 0.78rem;
+      color: #94a3b8;
+      margin-top: 10px;
+    }
+    .exercise-option-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 8px;
+    }
+    .exercise-option-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 9px;
+      font-size: 0.85rem;
+      color: #94a3b8;
+      background: #fff;
+    }
+    .exercise-check-icon {
+      width: 16px;
+      height: 16px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 4px;
+      flex-shrink: 0;
+      background: #f8fafc;
+    }
+
+    /* ── Page 1: Setup ── */
+    .setup-card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      padding: 28px 24px;
+      margin-bottom: 24px;
+    }
+    .setup-card h2 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #1e3a8a;
+      margin-bottom: 4px;
+    }
+    .setup-card .setup-subtitle {
+      font-size: 0.85rem;
+      color: #64748b;
+      margin-bottom: 28px;
+    }
+
+    /* ── Category Button Group ── */
+    .category-btn-group {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+    .category-btn {
+      padding: 32px 40px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      border: 2px solid #e2e8f0;
+      border-radius: 14px;
+      background: #fff;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+      user-select: none;
+      min-width: 200px;
+      min-height: 100px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      position: relative;
+    }
+    .category-btn:hover { border-color: #2563eb; background: #f0f7ff; }
+    .category-btn.selected {
+      border-color: #2563eb;
+      background: #eff6ff;
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+      color: #1e40af;
+    }
+    .category-btn.selected::after {
+      content: '✓';
+      position: absolute;
+      top: 10px;
+      right: 14px;
+      font-size: 1rem;
+      color: #2563eb;
+      font-weight: 700;
+    }
+    .category-btn.disabled-cat {
+      opacity: 0.55;
+      pointer-events: none;
+      cursor: default;
+      background: #f8fafc;
+      color: #94a3b8;
+      border-color: #e2e8f0;
+    }
+    .category-btn-sub {
+      font-size: 0.78rem;
+      font-weight: 400;
+      color: #94a3b8;
+    }
+    .category-btn.selected .category-btn-sub { color: #3b82f6; }
+
+    /* ── Save Button ── */
+    .btn-save {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 24px;
+      transition: opacity 0.2s;
+    }
+    .btn-save:hover { opacity: 0.92; }
+    .btn-save:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* ── Preference Summary Bar ── */
+    .pref-summary-bar {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 10px 16px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .pref-summary-bar .pref-label {
+      font-size: 0.85rem;
+      color: #1e40af;
+      font-weight: 500;
+    }
+    .pref-summary-bar .pref-label strong {
+      font-weight: 700;
+    }
+    .btn-edit-pref {
+      background: #fff;
+      border: 1.5px solid #bfdbfe;
+      border-radius: 7px;
+      padding: 5px 14px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #2563eb;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    .btn-edit-pref:hover { background: #dbeafe; }
+
+    /* ── Exercise Prescription Placeholder ── */
+    .exercise-prescription-placeholder {
+      background: #f8fafc;
+      border: 1.5px dashed #cbd5e1;
+      border-radius: 14px;
+      padding: 24px;
+      margin-top: 8px;
+      opacity: 0.65;
+    }
+    .exercise-placeholder-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .exercise-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #475569;
+    }
+    .exercise-placeholder-desc {
+      font-size: 0.82rem;
+      color: #94a3b8;
+      margin-bottom: 14px;
+    }
+    .exercise-placeholder-items {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .exercise-item-placeholder {
+      padding: 8px 16px;
+      background: #e2e8f0;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      color: #94a3b8;
+    }
+
+    /* ── Results Nav Bar (Page 3) ── */
+    .results-nav-bar {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+      padding: 14px 0 10px;
+    }
+    .btn-back {
+      padding: 8px 18px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      background: #fff;
+      cursor: pointer;
+      color: #2563eb;
+      transition: all 0.15s;
+    }
+    .btn-back:hover { background: #eff6ff; border-color: #2563eb; }
+    .results-nav-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #1e3a8a;
+    }
+
+    /* ── Card Sections (new layout) ── */
+    .card-section { padding: 12px 20px; border-top: 1px solid #f1f5f9; }
+    .card-section-title { font-size: 0.8rem; font-weight: 700; color: #64748b; margin-bottom: 8px; }
+    .card-section-body { font-size: 0.87rem; color: #334155; line-height: 1.6; }
+    .card-section-body.good { color: #166534; }
+    .card-section-body.warn { color: #b45309; }
+    .card-position-desc { font-size: 0.87rem; color: #475569; margin-bottom: 8px; line-height: 1.5; }
+    .technique-steps { padding-left: 20px; margin: 0; }
+    .technique-steps li { font-size: 0.87rem; color: #334155; line-height: 1.7; padding: 2px 0; }
+
+    .bullet-list {
+      padding-left: 18px;
+      margin: 0;
+    }
+    .bullet-list li {
+      font-size: 0.87rem;
+      line-height: 1.7;
+      padding: 1px 0;
+    }
+    .bullet-list.good li { color: #166534; }
+    .bullet-list.warn li { color: #b45309; }
+
+    /* ── Principles Card ── */
+    .principles-card {
+      background: linear-gradient(135deg, #f0f7ff 0%, #eff6ff 100%);
+      border: 1.5px solid #bfdbfe;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 8px;
+    }
+    .principles-header { margin-bottom: 18px; }
+    .principles-title {
+      font-size: 1rem;
+      font-weight: 800;
+      color: #1e3a8a;
+    }
+    .principles-subtitle {
+      font-size: 0.78rem;
+      color: #64748b;
+      margin-top: 3px;
+    }
+    .principles-list { display: flex; flex-direction: column; gap: 14px; }
+    .principle-item { display: flex; gap: 14px; align-items: flex-start; }
+    .principle-icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 1px; }
+    .principle-content { flex: 1; }
+    .principle-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #1e40af;
+      margin-bottom: 3px;
+    }
+    .principle-desc {
+      font-size: 0.83rem;
+      color: #475569;
+      line-height: 1.6;
+    }
+
+    /* ── Section Divider ── */
+    .section-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0 16px;
+    }
+    .section-divider::before,
+    .section-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #e2e8f0;
+    }
+    .section-divider-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      white-space: nowrap;
+    }
+
+    /* ── Approach Wrapper Card ── */
+    .approach-wrapper-card {
+      background: #fff;
+      border: 1.5px solid #bfdbfe;
+      border-radius: 18px;
+      box-shadow: 0 4px 16px rgba(37,99,235,0.08);
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .wrapper-card-header {
+      background: linear-gradient(135deg, #f0f7ff 0%, #eff6ff 100%);
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid #e0effe;
+    }
+    .wrapper-card-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #1e3a8a;
+    }
+    .wrapper-card-subtitle {
+      font-size: 0.78rem;
+      color: #64748b;
+      margin-top: 2px;
+    }
+    .wrapper-principles-btn-wrap {
+      padding: 12px 24px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .btn-principles-toggle {
+      font-size: 0.83rem;
+      font-weight: 600;
+      color: #2563eb;
+      background: none;
+      border: 1.5px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 7px 16px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-principles-toggle:hover { background: #eff6ff; }
+    .wrapper-principles-body {
+      padding: 16px 24px;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .wrapper-section-divider {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px 10px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .wrapper-divider-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+    .wrapper-inner-cards {
+      padding: 12px 16px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .wrapper-inner-cards .result-card {
+      margin-bottom: 0;
+      border-color: #e2e8f0;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 560px) {
+      .card-header { flex-wrap: wrap; }
+      .card-score-group { order: -1; width: 100%; text-align: left; }
+      #technique-select-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <h1>KMO 도수치료 테크닉 추천 시스템</h1>
+  <p>K-Movement Optimism — 근거기반 관절가동술 AI 추천 프로토타입</p>
+  <span class="db-badge" id="db-badge">Supabase 연결 중...</span>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!--  PAGE 1 — 치료사 설정                      -->
+<!-- ══════════════════════════════════════════ -->
+<div id="page-setup" style="display:none">
+  <div class="container">
+    <div class="setup-card">
+      <h2>선호하는 치료 접근법을 선택하세요</h2>
+      <p class="setup-subtitle">선택한 접근법 기반으로 테크닉을 추천합니다. 향후 옵션이 추가될 예정입니다.</p>
+
+      <div class="category-btn-group">
+        <!-- 관절가동술 -->
+        <button
+          class="category-btn"
+          data-category="joint_mobilization"
+          onclick="toggleCategoryBtn(this)"
+        >
+          관절가동술
+          <span class="category-btn-sub">Joint Mobilization</span>
+        </button>
+
+        <!-- 연부조직 기법 -->
+        <button class="category-btn" data-category="soft_tissue" onclick="toggleCategoryBtn(this)">
+          연부조직 기법
+          <span class="category-btn-sub">MFR · IASTM</span>
+        </button>
+
+        <!-- Coming Soon -->
+        <button class="category-btn disabled-cat" disabled>
+          더 많은 접근법 준비 중
+          <span class="category-btn-sub">Coming Soon</span>
+        </button>
+      </div>
+
+      <div class="form-group" style="margin-top: 28px;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+          <label class="group-label" style="margin-bottom:0">운동 처방 옵션</label>
+          <span class="coming-soon-badge" style="font-size:0.75rem;padding:3px 10px">Coming Soon</span>
+        </div>
+        <p style="font-size:0.8rem;color:#94a3b8;margin-bottom:12px;">도수치료와 함께 제공할 운동 처방 유형을 선택하세요. Phase 2에서 활성화됩니다.</p>
+        <div class="toggle-btn-group" style="opacity:0.4; pointer-events:none; user-select:none;">
+          <div class="toggle-btn">ROM 운동</div>
+          <div class="toggle-btn">근력 강화</div>
+          <div class="toggle-btn">신경가동술</div>
+          <div class="toggle-btn">Self-SNAG</div>
+        </div>
+      </div>
+
+      <button class="btn-save" id="btn-save" onclick="savePreferences()" disabled>저장하고 시작하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!--  PAGE 2 — 추천 화면                        -->
+<!-- ══════════════════════════════════════════ -->
+<div id="page-main" style="display:none">
+  <div class="container">
+
+    <!-- 선호 테크닉 요약 바 -->
+    <div class="pref-summary-bar" id="pref-summary-bar">
+      <span class="pref-label" id="pref-summary-text">내 선호 테크닉: —</span>
+      <button class="btn-edit-pref" onclick="editPreferences()">수정</button>
+    </div>
+
+    <!-- Input Form -->
+    <div class="form-card">
+      <h2>환자 정보 입력</h2>
+
+      <!-- 부위 선택 -->
+      <div class="form-group">
+        <label class="group-label" for="body-select">치료 부위</label>
+        <select id="body-select">
+          <option value="">-- 부위 선택 (전체) --</option>
+          <option value="cervical">경추 (목)</option>
+          <option value="lumbar">요추 (허리)</option>
+        </select>
+        <p style="font-size:12px; color:#888; margin-top:4px;">
+          MVP v0.1 — 현재 경추·요추 테크닉만 지원합니다.
+        </p>
+      </div>
+
+      <!-- 치료 목적 -->
+      <div class="form-group">
+        <label class="group-label">치료 목적 <span style="font-size:0.78rem;font-weight:400;color:#94a3b8">(복수 선택)</span></label>
+        <div class="toggle-btn-group" id="purpose-btn-group">
+          <div class="toggle-btn" data-value="pain_relief" onclick="toggleBtn(this)">통증 감소</div>
+          <div class="toggle-btn" data-value="rom_improvement" onclick="toggleBtn(this)">ROM 개선</div>
+          <div class="toggle-btn" data-value="neurodynamics" onclick="toggleBtn(this)">신경증상</div>
+          <div class="toggle-btn" data-value="stabilization" onclick="toggleBtn(this)">안정화</div>
+        </div>
+      </div>
+
+      <!-- 환자 상태 -->
+      <div class="form-group">
+        <label class="group-label">환자 상태 <span style="font-size:0.78rem;font-weight:400;color:#94a3b8">(복수 선택)</span></label>
+        <div class="toggle-btn-group" id="target-btn-group">
+          <div class="toggle-btn" data-value="acute" onclick="toggleBtn(this)">급성</div>
+          <div class="toggle-btn" data-value="chronic" onclick="toggleBtn(this)">만성</div>
+        </div>
+      </div>
+
+      <!-- 증상 유형 -->
+      <div class="form-group">
+        <label class="group-label">증상 유형 <span style="font-size:0.78rem;font-weight:400;color:#94a3b8">(복수 선택)</span></label>
+        <div class="toggle-btn-group" id="symptom-btn-group">
+          <div class="toggle-btn" data-value="movement_pain" onclick="toggleBtn(this)">움직일 때 통증</div>
+          <div class="toggle-btn" data-value="rest_pain" onclick="toggleBtn(this)">가만히 있을 때 통증</div>
+          <div class="toggle-btn" data-value="radicular_pain" onclick="toggleBtn(this)">방사통 / 퍼지는 통증</div>
+        </div>
+      </div>
+
+      <button class="btn-recommend" id="btn-recommend" onclick="runRecommend()">
+        추천받기 →
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!--  PAGE 3 — 결과 화면                        -->
+<!-- ══════════════════════════════════════════ -->
+<div id="page-results" style="display:none">
+  <div class="container">
+    <!-- 상단 뒤로가기 바 -->
+    <div class="results-nav-bar">
+      <button class="btn-back" onclick="showPage('main')">← 조건 수정</button>
+      <span class="results-nav-title">추천 결과</span>
+    </div>
+    <!-- 결과 카드들이 렌더링될 영역 -->
+    <div id="results-container"></div>
+  </div>
+</div>
+
+<script>
+// ── 로컬 폴백 카테고리 원칙 데이터 (Supabase 연결 실패 시 사용) ──
+const LOCAL_TECHNIQUE_CATEGORIES = [
+  {
+    category_key: 'category_a_joint_mobilization',
+    db_category_value: 'category_a_joint_mobilization',
+    name_ko: '관절가동술',
+    subtitle_ko: 'Maitland Concept 기반 접근법',
+    basic_principles: [
+      { icon: '🎯', title_ko: '치료 전 평가가 먼저', desc_ko: '시술 전 반드시 관절 가동 범위(ROM)와 통증 위치를 확인하세요. 치료 후 변화를 비교해야 효과를 판단할 수 있습니다.' },
+      { icon: '🖐️', title_ko: '저항 감지가 핵심 (R1 / R2)', desc_ko: 'R1은 처음 조직 저항이 느껴지는 지점, R2는 최대 저항 지점입니다. Grade I-II는 R1 이전, Grade III-IV는 R1-R2 사이에서 시행합니다.' },
+      { icon: '📊', title_ko: 'Grade 선택 기준', desc_ko: 'Grade I-II: 통증이 주 증상일 때 (부드럽게). Grade III-IV: 관절 굳음이 주 증상일 때 (더 깊게). 처음에는 낮은 Grade로 시작해 반응을 봅니다.' },
+      { icon: '🔄', title_ko: '시술 후 즉각 재평가', desc_ko: '3-5회 시행 후 ROM 변화와 통증 변화를 반드시 확인하세요. 변화가 없으면 방향, 분절, 또는 Grade를 조정합니다.' },
+      { icon: '⚠️', title_ko: '절대 금기 확인', desc_ko: '골절, 종양, 심한 골다공증, 척수 압박 증상(양하지 저림·대소변 장애)이 있으면 시행하지 마세요.' }
+    ]
+  },
+  {
+    category_key: 'category_b_mulligan',
+    db_category_value: 'category_b_mulligan',
+    name_ko: 'Mulligan Concept',
+    subtitle_ko: 'MWM / SNAG / NAG 기반 접근법',
+    basic_principles: [
+      { icon: '🚫', title_ko: 'No Pain Rule (절대 원칙)', desc_ko: '시술 중 통증이 발생하면 즉시 방향을 수정하거나 중단하세요. Mulligan의 핵심 원칙 — 통증 없는 범위에서만 시행합니다.' },
+      { icon: '✅', title_ko: 'PILL 반응 확인', desc_ko: 'Pain-free(통증 없음), Instant(즉각), Long-lasting(지속) — 세 가지가 모두 나타나야 올바른 방향과 분절을 선택한 것입니다.' },
+      { icon: '🤝', title_ko: '수동 활주 + 능동 운동 결합', desc_ko: '치료사가 활주(glide)를 유지하는 동안 환자가 스스로 움직입니다. 수동 치료와 능동 운동의 결합이 핵심입니다.' },
+      { icon: '🔍', title_ko: '방향 재탐색', desc_ko: 'PILL 반응이 없으면 활주 방향(전상방/내측/외측), 분절 레벨, 활주 크기를 순서대로 조정하세요.' },
+      { icon: '📏', title_ko: '즉각 ROM 확인', desc_ko: '1세트(6-10회) 후 즉각적인 ROM 증가가 없으면 파라미터를 변경합니다. 효과는 첫 세션에서 즉시 나타나야 합니다.' }
+    ]
+  },
+  {
+    category_key: 'category_e_soft_tissue',
+    db_category_value: 'category_e_soft_tissue',
+    name_ko: '연부조직 기법',
+    subtitle_ko: 'MFR (근막이완법) · IASTM (도구 연부조직 가동술)',
+    basic_principles: [
+      { icon: '🖐️', title_ko: '부드러운 지속 압력', desc_ko: '빠른 힘이 아닌 충분한 시간과 가벼운 압력이 핵심. 조직이 "수락"하는 느낌을 기다린다.' },
+      { icon: '⏱️', title_ko: '충분한 시간 투자', desc_ko: '한 부위에 최소 90초 이상 투자. 2~3개 부위를 깊게 하는 것이 전체를 얕게 하는 것보다 효과적.' },
+      { icon: '👐', title_ko: '직접 vs 간접 MFR', desc_ko: '만성/저가동성 → 직접 MFR(저항 방향). 급성/예민한 환자 → 간접 MFR(편한 방향).' },
+      { icon: '📐', title_ko: 'IASTM 도구 각도', desc_ko: '스캐닝 30~45도, 일반 스트로크 45~60도, 깊은 작업 60~75도. 처음에는 45도로 시작.' },
+      { icon: '🔴', title_ko: '즉시 중단 신호', desc_ko: '날카로운 통증, 팔다리 저림/무감각 신규 발생, 어지럼증·구역감, 환자 경직 시 즉시 중단 후 재평가.' },
+      { icon: '💧', title_ko: 'IASTM 오일 사용', desc_ko: '도구 사용 전 오일을 얇게 발라 피부 찰과상 방지. 너무 많으면 조직 감각 저하.' },
+    ]
+  },
+];
+
+// ── 카테고리 데이터 캐시 ──
+let categoryCache = null;
+
+// ── Supabase에서 카테고리 원칙 로드 ──
+async function loadCategoryPrinciples() {
+  if (categoryCache) return categoryCache;
+  try {
+    const { data, error } = await supabaseClient
+      .from('technique_categories')
+      .select('category_key, name_ko, subtitle_ko, basic_principles')
+      .eq('is_active', true)
+      .order('sort_order');
+    if (error) throw error;
+    if (data && data.length > 0) {
+      categoryCache = data;
+      return data;
+    }
+  } catch (err) {
+    console.warn('카테고리 로드 실패, 로컬 데이터 사용:', err.message);
+  }
+  categoryCache = LOCAL_TECHNIQUE_CATEGORIES;
+  return LOCAL_TECHNIQUE_CATEGORIES;
+}
+
+// ── 카테고리 키 → 원칙 데이터 조회 ──
+function getCategoryPrinciples(categoryKey, categories) {
+  return (categories || LOCAL_TECHNIQUE_CATEGORIES).find(
+    c => c.category_key === categoryKey || c.db_category_value === categoryKey
+  ) || null;
+}
+
+// ── 용어 평이화 ──
+function simplifyTerms(text) {
+  if (!text) return text;
+  const map = {
+    // 자세
+    '복와위': '엎드린 자세',
+    '앙와위': '바로 누운 자세',
+    '측와위': '옆으로 누운 자세',
+    '좌위': '앉은 자세',
+    // 방향
+    '동측': '같은 쪽',
+    '대측': '반대쪽',
+    '두측': '머리 방향',
+    '미측': '발 방향',
+    '내측': '안쪽',
+    '외측': '바깥쪽',
+    '전방': '앞쪽',
+    '후방': '뒤쪽',
+    '상방': '위쪽',
+    '하방': '아래쪽',
+    // 해부학 용어
+    '극돌기': '척추 돌기(척추 뒤쪽으로 튀어나온 뼈)',
+    '두상골': '손목 아래 완두콩 모양의 작은 뼈',
+    'pisiform fat pad': '손목 아래 완두콩 뼈 패드',
+    'pisiform': '손목 아래 완두콩 뼈',
+    'articular pillar': '척추 관절 기둥(척추 옆면의 관절 부위)',
+    '관절기둥': '척추 관절 기둥(척추 옆면의 관절 부위)',
+    'facet': '척추 관절면',
+    '횡돌기': '척추 옆으로 돌출된 뼈',
+    '후두골': '뒷머리뼈',
+    '관절돌기': '척추 관절 돌기',
+    // 장비/도구
+    '헤드피스': '치료대의 머리 받침대(얼굴이 들어가는 구멍이 있는 부분)',
+    '치료대 헤드피스': '얼굴이 편히 들어가도록 구멍이 뚫린 치료대 머리 받침대',
+    // 임상 약어
+    'CPA': '중앙 뒤앞 가동술(Central PA — 척추 중앙에서 뒤에서 앞으로 압력을 주는 기법)',
+    'UPA': '편측 뒤앞 가동술(Unilateral PA — 척추 한쪽에서 뒤에서 앞으로 압력을 주는 기법)',
+    'PA': '뒤에서 앞으로(Posterior-Anterior)',
+    'SNAG': '유지 자연 관절 활주(Sustained Natural Apophyseal Glide — 치료사가 관절을 잡은 상태에서 환자가 스스로 움직이는 기법)',
+    'NAG': '자연 관절 활주(Natural Apophyseal Glide)',
+    'MWM': '움직임을 동반한 가동술(Mobilisation With Movement)',
+    'ROM': '관절 가동 범위',
+    'VAS': '통증 수치(0~10점)',
+    'VBI': '척추동맥 혈액순환 장애',
+    'oscillation': '부드러운 진동 운동',
+    'reinforcement': '보조 손(반대 손으로 힘을 보조)',
+    'No Pain Rule': '통증이 없는 범위에서만 시행해야 함',
+    'PILL': '즉각적·통증 없는·오래 지속되는 반응(Pain-free, Instant, Long-lasting)',
+    // 증상 설명
+    '편측성 증상': '한쪽에만 나타나는 증상(통증이나 저림이 목의 한쪽에만 있는 경우)',
+    '편측성': '한쪽에만 나타나는',
+    '방사통': '팔이나 다리로 뻗어 내려가는 통증',
+    '신경근병증': '척추에서 나오는 신경이 눌려 팔·다리로 저림이나 통증이 생기는 상태',
+    '경추성 두통': '목의 문제로 인해 발생하는 두통',
+    'hypomobile': '관절 움직임이 제한된 상태',
+    '마미총 증후군': '허리 신경 다발이 눌려 대소변 장애·양다리 저림이 생기는 응급 상태',
+    // 기타
+    'Grade I': '그레이드 1(매우 가볍게, 저항 없는 범위)',
+    'Grade II': '그레이드 2(가볍게, 저항 시작 전)',
+    'Grade III': '그레이드 3(깊게, 저항 범위 안)',
+    'Grade IV': '그레이드 4(조직 끝까지)',
+  };
+  let result = text;
+  for (const [term, simple] of Object.entries(map)) {
+    result = result.replace(new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), simple);
+  }
+  return result;
+}
+
+// ── 좋은 반응 → 불릿 포인트 변환 ──
+function toBullets(text) {
+  if (!text) return '';
+  const items = text
+    .split(/[,，.。\n]/)
+    .map(s => s.trim())
+    .filter(s => s.length > 3);
+  if (items.length <= 1) {
+    return `<ul class="bullet-list good"><li>${simplifyTerms(text)}</li></ul>`;
+  }
+  return `<ul class="bullet-list good">${items.map(i => `<li>${simplifyTerms(i)}</li>`).join('')}</ul>`;
+}
+
+// ── 주의사항 → 불릿 포인트 변환 ──
+function toWarnBullets(text) {
+  if (!text) return '';
+  const items = text.split(/[→\n]/).map(s => s.trim()).filter(s => s.length > 2);
+  if (items.length <= 1) return `<p class="card-section-body warn">${simplifyTerms(text)}</p>`;
+  return `<ul class="bullet-list warn">${items.map(i => `<li>${simplifyTerms(i)}</li>`).join('')}</ul>`;
+}
+
+// ── 로컬 fallback 테크닉 데이터 ──
+const LOCAL_TECHNIQUES = [
+  {
+    id: 'tech-A-001', name_ko: '경추 Central PA 가동술', name_en: 'Cervical Central PA Mobilization',
+    category: 'category_a_joint_mobilization', body_region: 'cervical', is_active: true,
+    purpose_tags: ['pain_relief','rom_improvement','stiffness'],
+    target_tags: ['subacute','chronic','hypomobile'],
+    symptom_tags: ['movement_pain','rest_pain'],
+    evidence_level: 'level_1b', recommendation_weight: 0.88,
+    patient_position: '엎드린 자세로 이마를 치료대에 댑니다',
+    therapist_position: '환자 머리 쪽에 서서 양 엄지손가락 넓적한 면을 척추 돌기 중앙에 접촉합니다',
+    technique_steps: [
+      {step:1, instruction:'환자가 편안하게 엎드린 자세를 취하도록 합니다'},
+      {step:2, instruction:'양 엄지손가락 넓적한 면을 목표 척추 돌기 위에 겹쳐 올립니다'},
+      {step:3, instruction:'어깨를 엄지 바로 위에 위치시키고 체중을 앞으로 이동하여 수직 압력을 전달합니다'},
+      {step:4, instruction:'Grade에 따라 부드럽게 진동(I-II) 또는 조직 저항까지 밀어주기(III-IV)를 반복합니다'}
+    ],
+    clinical_notes: '어깨를 엄지 바로 위에 위치시키고 체중 이동으로 수직 압력 전달. 팔 힘 사용 금지.',
+    common_mistake: '엄지 끝으로 찌르듯 접촉하거나 팔 힘으로 미는 경우. 반드시 손바닥 넓적한 면으로 접촉하고 체중 이동으로 교정.',
+    good_response: '시술 부위의 가벼운 압박감, 시술 후 목 움직임 범위 증가, 두통 완화'
+  },
+  {
+    id: 'tech-A-002', name_ko: '경추 Unilateral PA 가동술', name_en: 'Cervical Unilateral PA Mobilization',
+    category: 'category_a_joint_mobilization', body_region: 'cervical', is_active: true,
+    purpose_tags: ['pain_relief','rom_improvement','stiffness'],
+    target_tags: ['subacute','chronic','hypomobile'],
+    symptom_tags: ['movement_pain','rest_pain'],
+    evidence_level: 'level_1b', recommendation_weight: 0.85,
+    patient_position: '엎드린 자세로 머리를 중립 또는 약간 돌린 상태를 유지합니다',
+    therapist_position: '환자 머리 쪽에 서서 엄지손가락 넓적한 면을 척추 기둥 바깥쪽에 접촉합니다',
+    technique_steps: [
+      {step:1, instruction:'환자가 엎드린 자세에서 머리를 중립 또는 5~10도 돌린 상태로 편안하게 위치시킵니다'},
+      {step:2, instruction:'엄지손가락 넓적한 면으로 목표 분절의 관절 기둥(척추 돌기 바깥쪽 1~1.5cm)을 촉진합니다'},
+      {step:3, instruction:'힘 방향을 약 15~20도 안쪽·머리 방향 벡터로 설정하고 체중 이동으로 압력을 전달합니다'},
+      {step:4, instruction:'반드시 양쪽을 비교 촉진하고 더 단단하게 느껴지는 쪽에 집중하여 치료합니다'}
+    ],
+    clinical_notes: '힘 방향은 약 15~20° 안쪽 + 머리 방향 벡터. 양측 비교 후 단단한 쪽 집중 치료.',
+    common_mistake: '척추 돌기 너무 가깝게 접촉하거나 한쪽만 치료하는 경우. 항상 양측 비교 후 치료.',
+    good_response: '시술 부위 가벼운 압박감, 치료 후 목 회전 범위 증가, 두통 완화'
+  },
+  {
+    id: 'tech-A-005', name_ko: '요추 Central PA 가동술', name_en: 'Lumbar Central PA Mobilization',
+    category: 'category_a_joint_mobilization', body_region: 'lumbar', is_active: true,
+    purpose_tags: ['pain_relief','rom_improvement','stiffness'],
+    target_tags: ['subacute','chronic','hypomobile'],
+    symptom_tags: ['movement_pain','rest_pain'],
+    evidence_level: 'level_1a', recommendation_weight: 0.92,
+    patient_position: '엎드린 자세로 팔을 몸 옆에 두고 발목 아래에 베개를 받칩니다',
+    therapist_position: '환자 옆에 서서 손바닥 아래 뼈 패드를 목표 척추 돌기에 접촉하고 반대 손으로 보조합니다',
+    technique_steps: [
+      {step:1, instruction:'환자가 편안하게 엎드리고 발목 아래에 베개를 받쳐 허리 긴장을 줄입니다'},
+      {step:2, instruction:'치료사의 손바닥 아래 작은 뼈 부분만 척추 돌기에 닿도록 손목을 충분히 펴줍니다'},
+      {step:3, instruction:'반대 손을 위에 얹어 보조하면서 몸을 앞으로 기울이는 느낌으로 체중을 전달합니다'},
+      {step:4, instruction:'Grade에 따라 부드러운 진동(I-II) 또는 조직 저항까지 밀기(III-IV)를 반복합니다'}
+    ],
+    clinical_notes: '손바닥 아래 작은 뼈만 척추 돌기에 닿도록. 파도처럼 앞으로 기울이는 느낌으로 체중 전달.',
+    common_mistake: '손가락이나 손바닥 전체로 접촉하거나 팔 힘으로 미는 경우. 반드시 손바닥 아래 작은 뼈만 접촉.',
+    good_response: '허리 부위 가벼운 압박감(다리로 뻗는 느낌 없어야 함), 치료 후 허리 앞·뒤 굽힘 범위 증가'
+  },
+  {
+    id: 'tech-A-006', name_ko: '요추 Unilateral PA + 측방굴곡 가동술', name_en: 'Lumbar Unilateral PA + Side-lying Rotation',
+    category: 'category_a_joint_mobilization', body_region: 'lumbar', is_active: true,
+    purpose_tags: ['pain_relief','rom_improvement'],
+    target_tags: ['chronic','hypomobile'],
+    symptom_tags: ['movement_pain'],
+    evidence_level: 'level_2b', recommendation_weight: 0.75,
+    patient_position: '증상이 있는 쪽을 위로 하여 옆으로 눕고 위쪽 다리는 엉덩이와 무릎을 90도로 구부립니다',
+    therapist_position: '환자 배 쪽에 서서 엄지 또는 손바닥 아래 뼈로 목표 허리 관절면 바깥쪽에 접촉합니다',
+    technique_steps: [
+      {step:1, instruction:'환자가 증상 있는 쪽을 위로 하여 옆으로 눕고 위쪽 다리를 구부려 편안한 자세를 만듭니다'},
+      {step:2, instruction:'치료하려는 허리 분절을 촉진하여 정확한 위치를 확인합니다'},
+      {step:3, instruction:'목표 분절에서 위아래를 잠근 상태로 관절면 방향으로 압력을 전달합니다'},
+      {step:4, instruction:'옆으로 누운 자세의 체중이 추가적인 벌어짐(gapping) 효과를 주므로 힘 조절에 주의합니다'}
+    ],
+    clinical_notes: '옆으로 누운 자세의 체중이 추가 관절 분리 효과 제공. 목표 분절 잠금 확인 필수.',
+    common_mistake: '목표 분절을 잠그지 않고 전체 허리를 돌리는 경우. 반드시 치료 분절만 움직이도록.',
+    good_response: '관절면 부위 가벼운 압박감, 치료 후 허리 옆굽힘·굴곡 범위 개선'
+  },
+  // Mulligan fallback
+  {
+    id: 'tech-B-001', name_ko: 'SNAG — 경추 회전', name_en: 'Cervical Rotation SNAG',
+    category: 'category_b_mulligan', body_region: 'cervical', is_active: true,
+    subcategory: 'Mulligan SNAG',
+    purpose_tags: ['pain_relief', 'rom_improvement'],
+    target_tags: ['subacute', 'chronic', 'hypomobile'],
+    symptom_tags: ['movement_pain'],
+    patient_position: '앉은 자세, 허리를 편 채로 앉기',
+    therapist_position: '환자 옆에 서서 엄지로 척추 관절돌기 접촉',
+    contact_point: '경추 관절돌기 (측면)',
+    direction: '두개골 방향으로 평행한 미끄러짐 (glide) 유지하며 능동 회전 유도',
+    technique_steps: [
+      {step:1, instruction:'환자를 앉히고 목 회전 시 통증 방향과 범위를 사전 평가한다.'},
+      {step:2, instruction:'치료사 엄지를 통증 쪽 관절돌기에 두개골 방향으로 가볍게 접촉한다.'},
+      {step:3, instruction:'Glide를 유지한 채 환자에게 천천히 목을 통증 방향으로 돌리도록 유도한다.'},
+      {step:4, instruction:'통증 없이 범위가 늘어나면 성공. 통증 있으면 즉시 중단.'},
+      {step:5, instruction:'3~5회 반복 후 glide 없이 범위 재평가한다.'}
+    ],
+    good_response: 'Glide 적용 시 통증 없이 회전 범위가 즉각적으로 증가, 시술 후 범위 유지',
+    common_mistake: 'Glide 방향이 두개골 방향이 아닌 경우 효과 없음. 통증 있으면 즉시 중단.',
+    absolute_contraindications: 'VBI 위험, 골절, 불안정성',
+    relative_contraindications: '심한 척추관협착증, 급성 신경증상',
+    evidence_level: 'level_2b',
+    clinical_notes: 'Mulligan의 핵심: 시술 중 통증이 없어야 함(Pain-free). 통증 있으면 방향·위치 조정.',
+    recommendation_weight: 0.75,
+  },
+  // MFR fallback
+  {
+    id: 'tech-E-001', name_ko: '목 뒤쪽 근막 이완', name_en: 'Cervical Posterior Chain MFR',
+    category: 'category_e_soft_tissue', body_region: 'cervical', is_active: true,
+    subcategory: 'MFR',
+    purpose_tags: ['pain_relief','rom_improvement'],
+    target_tags: ['subacute','chronic','hypomobile'],
+    symptom_tags: ['movement_pain'],
+    patient_position: '등 대고 누운 자세 (앙와위), 베개 없이 또는 얇은 수건 사용',
+    therapist_position: '환자 머리 쪽 의자에 앉거나 서서, 팔꿈치를 몸통에 붙여 안정적으로 지지',
+    contact_point: '양손 2~4번째 손가락 끝을 목 뒤 근육에 위치',
+    direction: '수직 압박 후 머리 쪽으로 가벼운 견인(당기기)',
+    technique_steps: [
+      {step:1, instruction:'환자를 등 대고 누운 자세로 눕히고 심호흡 1~2회 유도한다.'},
+      {step:2, instruction:'양손 손가락 끝을 목 뒤 근육에 부드럽게 댄다. 살짝 구부린 상태로 받치듯 위치시킨다.'},
+      {step:3, instruction:'손가락이 조직 속으로 서서히 가라앉도록 기다린다. 환자 머리 무게를 활용해 자연스럽게 압력이 생기게 한다.'},
+      {step:4, instruction:'90초~2분 유지 후 조금씩 이동하며 반복한다.'},
+      {step:5, instruction:'시술 전후 목 돌림 범위와 통증 강도를 비교한다.'}
+    ],
+    good_response: '환자가 "시원하다"고 표현, 목 돌림 범위가 5~10도 이상 개선, 손 아래 조직이 따뜻해지는 느낌',
+    common_mistake: '손가락으로 누르듯 강하게 압박 → 받치는 느낌으로 접근할 것. 90초 기다리지 않고 빨리 이동 → 최소 90초 유지 필수',
+    absolute_contraindications: 'VBI 위험(척추동맥 압박 의심), 골절, 종양',
+    relative_contraindications: '급성 경추 편타성 손상 초기 2주',
+    evidence_level: 'level_4',
+    clinical_notes: '손가락으로 누른다기보다 받친다는 느낌으로 접근. 경추는 VBI 스크리닝 필수.',
+    recommendation_weight: 0.65,
+  },
+  // IASTM fallback
+  {
+    id: 'tech-E-002', name_ko: '목 옆 근육 IASTM', name_en: 'IASTM Cervical Lateral Muscles',
+    category: 'category_e_soft_tissue', body_region: 'cervical', is_active: true,
+    subcategory: 'IASTM',
+    purpose_tags: ['pain_relief','rom_improvement'],
+    target_tags: ['subacute','chronic','hypomobile'],
+    symptom_tags: ['movement_pain'],
+    patient_position: '앉은 자세 또는 등 대고 누운 자세에서 고개를 반대쪽으로 살짝 돌림',
+    therapist_position: '환자 옆 또는 뒤에 위치, 시술 부위가 눈높이에 오도록 조절',
+    contact_point: '목빗근, 위등세모근, 머리반가시근 위 연부조직',
+    direction: '근육 결 방향으로 위아래, 저항 부위에서 가로 방향 추가',
+    technique_steps: [
+      {step:1, instruction:'시술 부위에 오일을 소량 바른다.'},
+      {step:2, instruction:'귀 뒤 유양돌기 아래에 도구를 30~45도 각도로 댄다.'},
+      {step:3, instruction:'빗장뼈 방향으로 스트로크 5~7회, 반대 방향으로 5~7회. 경동맥을 피해 목빗근 위에만 자극.'},
+      {step:4, instruction:'위등세모근: C7에서 어깨 봉우리 방향으로 5~7회.'},
+      {step:5, instruction:'시술 후 고개 돌리기·앞뒤 기울이기로 가동 범위 변화 확인.'}
+    ],
+    good_response: '고개 돌릴 때 이전보다 덜 뻑뻑함, 목 옆 압통 경감, 환자가 "목이 가벼워진 것 같다"고 표현',
+    common_mistake: '목 앞쪽(경동맥 방향)에 도구를 댐 → 목 앞쪽 절대 금지. 압력이 너무 강함 → 불편하지만 참을 만한 수준 유지',
+    absolute_contraindications: 'VBI 위험, 골절, 불안정성, 종양, 신경학적 결손',
+    relative_contraindications: '골다공증, 급성 염증, 어지럼증·이명 증상 있는 경우 시술 전 평가 필수',
+    evidence_level: 'level_2b',
+    clinical_notes: '목은 스트로크 방향의 정확성이 압력보다 중요. 첫 세션 1분 이내 시작.',
+    recommendation_weight: 0.60,
+  },
+  {
+    id: 'tech-E-003', name_ko: '요추 근막 이완', name_en: 'Lumbar Myofascial Release',
+    category: 'category_e_soft_tissue', body_region: 'lumbar', is_active: true,
+    subcategory: 'MFR',
+    purpose_tags: ['pain_relief','rom_improvement'],
+    target_tags: ['subacute','chronic','hypomobile'],
+    symptom_tags: ['movement_pain'],
+    patient_position: '엎드린 자세 (복와위), 배 아래 얇은 베개 가능',
+    therapist_position: '환자 옆에 서서, 양손을 요추 양쪽에 위치',
+    contact_point: '요추 척추기립근 및 흉요근막',
+    direction: '수직 압박 후 머리-발 방향으로 가벼운 신장',
+    technique_steps: [
+      {step:1, instruction:'환자를 엎드린 자세로 눕히고 복부 근육의 긴장을 뺀다.'},
+      {step:2, instruction:'양손을 요추 양쪽 척추기립근 위에 부드럽게 댄다.'},
+      {step:3, instruction:'수직으로 서서히 압박하여 조직이 수락하는 느낌을 기다린다.'},
+      {step:4, instruction:'크로스핸드 스트레치: 한 손은 머리 방향, 다른 손은 발 방향으로 당기며 90초~2분 유지.'},
+      {step:5, instruction:'시술 후 허리 굴곡·신전 범위와 통증 강도 비교.'}
+    ],
+    good_response: '허리가 따뜻해지는 느낌, 앞으로 구부릴 때 당기는 느낌 감소, 환자가 "허리가 풀린 것 같다"고 표현',
+    common_mistake: '허리뼈(가시돌기) 위에 직접 압박 → 척추 옆 근육에만 적용. 너무 강한 압력으로 환자 긴장 유발 → 조직이 수락하는 압력 수준 유지',
+    absolute_contraindications: '골절, 종양, 불안정성',
+    relative_contraindications: '골다공증, 급성 염증, 임신',
+    evidence_level: 'level_4',
+    clinical_notes: '흉요근막은 요통과 깊이 연관된 넓은 결합조직. 크로스핸드 스트레치가 특히 효과적.',
+    recommendation_weight: 0.65,
+  },
+];
+
+// ── 연관 부위 매핑 ──
+const RELATED_REGIONS = {
+  'cervical':   ['cervical', 'thoracic'],
+  'lumbar':     ['lumbar', 'sacroiliac', 'thoracic'],
+  'thoracic':   ['thoracic', 'cervical', 'lumbar'],
+  'shoulder':   ['shoulder', 'thoracic', 'cervical'],
+  'knee':       ['knee', 'hip', 'ankle_foot'],
+  'hip':        ['hip', 'lumbar', 'sacroiliac'],
+  'ankle_foot': ['ankle_foot', 'knee'],
+};
+
+// ── Supabase 연결 설정 ──
+const SUPABASE_URL     = 'https://gnusyjnviugpofvaicbv.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdudXN5am52aXVncG9mdmFpY2J2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwMzQxOTMsImV4cCI6MjA5MjYxMDE5M30.a52myh41qHEt9jnfxBh7009tQ35ZGNIm_C93HQa6x_g';
+
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ── localStorage 키 ──
+const PREF_KEY = 'kmo_therapist_prefs';
+
+// ── 카테고리 이름 매핑 ──
+const CATEGORY_LABELS = {
+  'joint_mobilization': '관절가동술',
+  'soft_tissue': '연부조직 기법',
+};
+
+// ── 앱 초기화 ──
+function initApp() {
+  const saved = localStorage.getItem(PREF_KEY);
+  if (saved) {
+    try {
+      const prefs = JSON.parse(saved);
+      if (prefs.categories && prefs.categories.length > 0) {
+        showPage('main');
+        updatePreferenceSummary();
+        return;
+      }
+    } catch (e) {}
+  }
+  showPage('setup');
+}
+
+function showPage(page) {
+  document.getElementById('page-setup').style.display   = page === 'setup'   ? 'block' : 'none';
+  document.getElementById('page-main').style.display    = page === 'main'    ? 'block' : 'none';
+  document.getElementById('page-results').style.display = page === 'results' ? 'block' : 'none';
+}
+
+// ── Page 2 선호 요약 업데이트 ──
+function updatePreferenceSummary() {
+  const prefs = JSON.parse(localStorage.getItem(PREF_KEY) || '{}');
+  const cats = prefs.categories || [];
+  const labels = cats.map(c => CATEGORY_LABELS[c] || c).join(', ');
+  const el = document.getElementById('pref-summary-text');
+  if (el) {
+    el.innerHTML = '치료 접근법: <strong>' + (labels || '—') + '</strong>';
+  }
+}
+
+// ── Page 1: 카테고리 버튼 토글 ──
+function toggleCategoryBtn(el) {
+  el.classList.toggle('selected');
+  updateSaveButton();
+}
+
+function updateSaveButton() {
+  const count = document.querySelectorAll('.category-btn.selected').length;
+  document.getElementById('btn-save').disabled = count === 0;
+}
+
+// ── Page 1: 저장 ──
+function savePreferences() {
+  const selected = [...document.querySelectorAll('.category-btn.selected')]
+    .map(el => el.dataset.category);
+  if (selected.length === 0) return;
+  localStorage.setItem(PREF_KEY, JSON.stringify({ categories: selected }));
+  updatePreferenceSummary();
+  showPage('main');
+}
+
+// ── Page 2: 수정 버튼 ──
+function editPreferences() {
+  const prefs = JSON.parse(localStorage.getItem(PREF_KEY) || '{}');
+  const savedCats = prefs.categories || [];
+  document.querySelectorAll('.category-btn[data-category]').forEach(btn => {
+    btn.classList.toggle('selected', savedCats.includes(btn.dataset.category));
+  });
+  updateSaveButton();
+  showPage('setup');
+}
+
+// ── DB 배지 초기화 — 연결 상태 확인 ──
+(async function initBadge() {
+  const badge = document.getElementById('db-badge');
+  try {
+    const { count, error } = await supabaseClient
+      .from('techniques')
+      .select('*', { count: 'exact', head: true });
+
+    if (error) throw error;
+
+    badge.textContent = 'Supabase Live — 테크닉 ' + (count ?? '?') + '개';
+    badge.classList.add('live');
+  } catch (err) {
+    console.warn('Supabase 연결 확인 실패:', err.message);
+    badge.textContent = 'Supabase 연결 오류 — 로컬 데이터 사용';
+    badge.classList.add('error');
+  }
+})();
+
+// ── Supabase 쿼리 + 클라이언트 필터링 ──
+async function fetchTechniques(query) {
+  const { body_part, purpose_tags = [], target_tags = [], symptom_tags = [] } = query;
+
+  // localStorage에서 선호 카테고리 읽기
+  const prefs = JSON.parse(localStorage.getItem(PREF_KEY) || '{}');
+  const cats = prefs.categories || [];
+
+  // 카테고리 → DB category 값 매핑
+  const CATEGORY_DB_MAP = {
+    'joint_mobilization': ['category_a_joint_mobilization', 'category_b_mulligan'],
+    'soft_tissue': ['category_e_soft_tissue'],
+  };
+
+  try {
+    let req = supabaseClient
+      .from('techniques')
+      .select('*')
+      .eq('is_active', true);
+
+    // body_region 필터 (연관 부위 포함)
+    if (body_part) {
+      const relatedRegions = RELATED_REGIONS[body_part] || [body_part];
+      req = req.in('body_region', relatedRegions);
+    }
+
+    // 카테고리 필터: 선택된 카테고리에 해당하는 DB 값으로 필터링
+    const dbCats = cats.flatMap(c => [].concat(CATEGORY_DB_MAP[c] || [])).filter(Boolean);
+    if (dbCats.length === 1) {
+      req = req.eq('category', dbCats[0]);
+    } else if (dbCats.length > 1) {
+      req = req.in('category', dbCats);
+    } else {
+      // 선택 없으면 기본값으로 joint_mobilization 조회
+      req = req.eq('category', 'category_a_joint_mobilization');
+    }
+
+    const { data, error } = await req;
+    if (error) throw error;
+
+    // 점수 계산 + 정렬
+    let scored = (data || [])
+      .map(t => ({ ...t, ...scoreAndMatch(t, query) }))
+      .sort((a, b) =>
+        b.score !== a.score
+          ? b.score - a.score
+          : (b.recommendation_weight || 0.7) - (a.recommendation_weight || 0.7)
+      );
+
+    // 3개 미만이면 body_region 필터 없이 같은 카테고리에서 보충
+    const preferred_category = cats[0] || null;
+    if (scored.length < 3) {
+      let req2 = supabaseClient.from('techniques').select('*').eq('is_active', true);
+      if (preferred_category) {
+        const prefCats = [].concat(CATEGORY_DB_MAP[preferred_category] || []);
+        if (prefCats.length === 1) req2 = req2.eq('category', prefCats[0]);
+        else if (prefCats.length > 1) req2 = req2.in('category', prefCats);
+      }
+      const { data: extra } = await req2.limit(20);
+      const extraFiltered = (extra || []).filter(t => !scored.find(s => s.id === t.id));
+      const extraScored = extraFiltered.map(t => ({ ...t, ...scoreAndMatch(t, query) }));
+      scored = [...scored, ...extraScored]
+        .sort((a, b) => b.score - a.score);
+    }
+
+    scored = scored.slice(0, 8);
+
+    // 최종 fallback — Supabase 연결 안 되거나 0건이면 로컬 데이터 사용
+    if (scored.length === 0) {
+      const localFiltered = LOCAL_TECHNIQUES.filter(t => {
+        // 카테고리 필터 (선택된 카테고리와 일치하는 것만)
+        if (dbCats.length > 0 && !dbCats.includes(t.category)) return false;
+        // 부위 필터
+        if (!body_part) return true;
+        const relatedRegions = RELATED_REGIONS[body_part] || [body_part];
+        return relatedRegions.includes(t.body_region);
+      });
+      scored = localFiltered
+        .map(t => ({ ...t, ...scoreAndMatch(t, query) }))
+        .sort((a, b) => b.score - a.score);
+    }
+
+    // ── 다중 카테고리 선택 시: DB에 없는 카테고리는 로컬로 보충 ──
+    if (dbCats.length > 1) {
+      const representedCats = new Set(scored.map(t => t.category));
+      const missingCats = dbCats.filter(c => !representedCats.has(c));
+
+      if (missingCats.length > 0) {
+        const localSupplements = LOCAL_TECHNIQUES.filter(t => {
+          if (!missingCats.includes(t.category)) return false;
+          if (!body_part) return true;
+          const relatedRegions = RELATED_REGIONS[body_part] || [body_part];
+          return relatedRegions.includes(t.body_region);
+        });
+        const supplementScored = localSupplements.map(t => ({ ...t, ...scoreAndMatch(t, query) }));
+        scored = [...scored, ...supplementScored].sort((a, b) => b.score - a.score);
+      }
+    }
+
+    return scored.slice(0, 8);
+
+  } catch (err) {
+    console.error('Supabase fetchTechniques 오류:', err);
+    // 네트워크/연결 오류 시 로컬 fallback (연관 부위 포함)
+    // catch 블록은 try 스코프 밖이므로 dbCats 재선언
+    const _prefs = JSON.parse(localStorage.getItem(PREF_KEY) || '{}');
+    const _cats = _prefs.categories || [];
+    const _CATEGORY_DB_MAP = {
+      'joint_mobilization': ['category_a_joint_mobilization', 'category_b_mulligan'],
+      'soft_tissue': ['category_e_soft_tissue'],
+    };
+    const _dbCats = _cats.flatMap(c => [].concat(_CATEGORY_DB_MAP[c] || [])).filter(Boolean);
+    const localFiltered = LOCAL_TECHNIQUES.filter(t => {
+      // 카테고리 필터
+      if (_dbCats.length > 0 && !_dbCats.includes(t.category)) return false;
+      // 부위 필터
+      if (!body_part) return true;
+      const relatedRegions = RELATED_REGIONS[body_part] || [body_part];
+      return relatedRegions.includes(t.body_region);
+    });
+    return localFiltered
+      .map(t => ({ ...t, ...scoreAndMatch(t, query) }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 8);
+  }
+}
+
+// ── 점수 + 매칭률 계산 ──
+function scoreAndMatch(t, query) {
+  const { purpose_tags = [], target_tags = [], symptom_tags = [] } = query;
+
+  let score = (t.recommendation_weight || 0.7) * 0.35;
+
+  const purposeMatch = purpose_tags.filter(p => (t.purpose_tags || []).includes(p)).length;
+  score += purpose_tags.length > 0
+    ? (purposeMatch / purpose_tags.length) * 0.25
+    : 0.125;
+
+  const targetMatch = target_tags.filter(tg => (t.target_tags || []).includes(tg)).length;
+  score += target_tags.length > 0
+    ? (targetMatch / target_tags.length) * 0.15
+    : 0.075;
+
+  const symptomMatch = symptom_tags.filter(s => (t.symptom_tags || []).includes(s)).length;
+  score += symptom_tags.length > 0
+    ? (symptomMatch / symptom_tags.length) * 0.15
+    : 0.07;
+
+  const evidenceBonus = resolveEvidenceBonus(t.evidence_level);
+  score += evidenceBonus;
+
+  const totalTags   = purpose_tags.length + target_tags.length + symptom_tags.length;
+  const matchedTags = purposeMatch + targetMatch + symptomMatch;
+  const match_pct   = totalTags > 0 ? Math.round((matchedTags / totalTags) * 100) : 50;
+
+  return { score: Math.round(score * 1000) / 1000, match_pct };
+}
+
+function resolveEvidenceBonus(level) {
+  if (!level) return 0;
+  const l = level.toLowerCase();
+  if (l === 'high'   || l === 'level_1a' || l === 'level_1b') return 0.10;
+  if (l === 'medium' || l === 'level_2'  || l === 'level_2b') return 0.05;
+  return 0.01;
+}
+
+function resolveEvidenceLabel(level) {
+  if (!level) return { label: '근거 미상', cls: 'badge-evidence-low' };
+  const l = level.toLowerCase();
+  if (l === 'high'   || l === 'level_1a' || l === 'level_1b') return { label: '근거 높음', cls: 'badge-evidence-high' };
+  if (l === 'medium' || l === 'level_2'  || l === 'level_2b') return { label: '근거 중간', cls: 'badge-evidence-medium' };
+  return { label: '근거 낮음', cls: 'badge-evidence-low' };
+}
+
+function resolveCategoryLabel(category) {
+  if (!category) return { short: '?', label: '미분류', cls: 'badge-cat-a' };
+  const c = category.toLowerCase();
+  if (c.includes('category_a') || c === 'a') return { short: 'A', label: '전통 관절가동술', cls: 'badge-cat-a' };
+  if (c.includes('category_b') || c === 'b') return { short: 'B', label: 'Mulligan Concept', cls: 'badge-cat-b' };
+  return { short: c.charAt(0).toUpperCase(), label: category, cls: 'badge-cat-a' };
+}
+
+function resolveTechTypeLabel(category) {
+  if (!category) return null;
+  const c = category.toLowerCase();
+  if (c.includes('category_a') || c === 'a') return { label: '일반 관절가동술', cls: 'badge-type-a' };
+  if (c.includes('category_b') || c === 'b') return { label: 'Mulligan', cls: 'badge-type-b' };
+  return null;
+}
+
+function resolveBodyLabel(body_region) {
+  const map = {
+    cervical:    '경추',
+    lumbar:      '요추',
+    thoracic:    '흉추',
+    shoulder:    '어깨',
+    elbow:       '팔꿈치',
+    wrist_hand:  '손목/손',
+    hip:         '고관절',
+    knee:        '무릎',
+    ankle_foot:  '발목/발',
+    sacroiliac:  '천장관절',
+  };
+  return map[body_region] || body_region || '미상';
+}
+
+// ── 토글 버튼 (복수 선택) ──
+function toggleBtn(el) {
+  el.classList.toggle('selected');
+}
+
+// ── 추천 실행 ──
+async function runRecommend() {
+  const body_part    = document.getElementById('body-select').value;
+  const purpose_tags  = [...document.querySelectorAll('#purpose-btn-group .toggle-btn.selected')].map(el => el.dataset.value);
+  const target_tags   = [...document.querySelectorAll('#target-btn-group .toggle-btn.selected')].map(el => el.dataset.value);
+  const symptom_tags  = [...document.querySelectorAll('#symptom-btn-group .toggle-btn.selected')].map(el => el.dataset.value);
+
+  const btn = document.getElementById('btn-recommend');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 분석 중...';
+
+  try {
+    const [results, categories] = await Promise.all([
+      fetchTechniques({ body_part, purpose_tags, target_tags, symptom_tags }),
+      loadCategoryPrinciples()
+    ]);
+    renderResults(results, { body_part, purpose_tags, target_tags, symptom_tags }, categories);
+    showPage('results');
+    window.scrollTo(0, 0);
+  } catch (err) {
+    alert('추천 중 오류가 발생했습니다. 다시 시도해주세요.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '추천받기 →';
+  }
+}
+
+// ── 개별 테크닉 카드 빌더 ──
+function buildTechniqueCard(t, idx) {
+  const rankClass = idx === 0 ? 'rank-1' : idx === 1 ? 'rank-2' : idx === 2 ? 'rank-3' : '';
+  const evidence  = resolveEvidenceLabel(t.evidence_level);
+  const techType  = resolveTechTypeLabel(t.category);
+  const bodyLabel = resolveBodyLabel(t.body_region);
+
+  const nameKo       = t.name_ko || t.name || '이름 없음';
+  const nameEn       = t.name_en || '';
+
+  const patientPos   = simplifyTerms(t.patient_position || t.patient_pos || '');
+  const therapistPos = simplifyTerms(t.therapist_position || t.therapist_contact || t.contact_point || '');
+
+  const steps = t.technique_steps || [];
+  const stepsHTML = steps.length > 0
+    ? `<ol class="technique-steps">${steps.map(s => `<li>${simplifyTerms(s.instruction || String(s))}</li>`).join('')}</ol>`
+    : '';
+
+  const goodResponse  = simplifyTerms(t.good_response   || t.clinical_notes || '');
+  const commonMistake = simplifyTerms(t.common_mistake  || '');
+
+  const absContra = t.absolute_contraindications || '';
+  const relContra = t.relative_contraindications || '';
+  const contraTagsArr = t.contraindication_tags || [];
+  const contraHTML = absContra
+    ? `<span>${absContra}</span>${relContra ? `<br><span style="color:#b45309">(상대) ${relContra}</span>` : ''}`
+    : contraTagsArr.map(c => `<span>• ${c}</span>`).join(' ') || '—';
+
+  const techTypeBadge = techType
+    ? `<span class="badge ${techType.cls}">${techType.label}</span>`
+    : '';
+
+  const positionBoxHTML = (patientPos || therapistPos) ? `
+    <div class="position-box">
+      ${patientPos ? `
+      <div class="position-row">
+        <span class="position-icon">🧑‍⚕️</span>
+        <div class="position-content">
+          <div class="position-label">환자 자세</div>
+          <div class="position-value">${patientPos}</div>
+        </div>
+      </div>` : ''}
+      ${patientPos && therapistPos ? '<div class="position-divider"></div>' : ''}
+      ${therapistPos ? `
+      <div class="position-row">
+        <span class="position-icon">👐</span>
+        <div class="position-content">
+          <div class="position-label">치료사 자세</div>
+          <div class="position-value">${therapistPos}</div>
+        </div>
+      </div>` : ''}
+    </div>` : '';
+
+  return `
+  <div class="result-card">
+    <div class="card-header">
+      <div class="card-rank ${rankClass}">${idx + 1}</div>
+      <div class="card-title-group">
+        <div class="card-name-ko">${nameKo}</div>
+        <div class="card-name-en">${nameEn}</div>
+        <div class="card-meta">
+          ${techTypeBadge}
+          <span class="badge badge-body">${bodyLabel}</span>
+          <span class="badge ${evidence.cls}">${evidence.label}</span>
+        </div>
+      </div>
+      <div class="card-score-group">
+        <div class="score-value">${t.score.toFixed(2)}</div>
+        <div class="score-label">Score</div>
+      </div>
+    </div>
+
+    <div class="match-bar-wrap">
+      <div class="match-bar-label">
+        <span>적응증 매칭률</span>
+        <span>${t.match_pct}%</span>
+      </div>
+      <div class="match-bar-bg">
+        <div class="match-bar-fill" style="width: ${t.match_pct}%"></div>
+      </div>
+    </div>
+
+    ${positionBoxHTML}
+
+    <div class="card-expand-btn-wrap">
+      <button class="btn-expand-card" onclick="toggleCardDetail(this)">자세히 보기 ▼</button>
+    </div>
+
+    <div class="card-detail-section">
+      ${stepsHTML ? `
+      <div class="card-section">
+        <div class="card-section-title">📋 시술 방법</div>
+        ${stepsHTML}
+      </div>` : ''}
+
+      ${goodResponse ? `
+      <div class="card-section">
+        <div class="card-section-title">✅ 좋은 반응</div>
+        ${toBullets(t.good_response || t.clinical_notes || '')}
+      </div>` : ''}
+
+      ${commonMistake ? `
+      <div class="card-section">
+        <div class="card-section-title">⚠️ 주의사항</div>
+        ${toWarnBullets(t.common_mistake || '')}
+      </div>` : ''}
+
+      <div class="extra-row">
+        <div class="extra-row-label">금기증 (절대)</div>
+        <div class="extra-row-value contraindication-list">${contraHTML}</div>
+      </div>
+      <div class="extra-row" style="padding-bottom:14px">
+        <div class="extra-row-label">적응증 태그</div>
+        <div class="extra-row-value">${(t.target_tags || []).join(', ') || '—'}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── 원칙 접기/펼치기 ──
+function togglePrinciples(btn) {
+  const body = btn.closest('.approach-wrapper-card').querySelector('.wrapper-principles-body');
+  const isOpen = body.style.display === 'block';
+  body.style.display = isOpen ? 'none' : 'block';
+  btn.textContent = isOpen ? '기본 원칙 보기 ▼' : '기본 원칙 접기 ▲';
+}
+
+// ── 렌더링 ──
+function renderResults(results, query, categories) {
+  const container = document.getElementById('results-container');
+  const prefs = JSON.parse(localStorage.getItem(PREF_KEY) || '{}');
+  const selectedCats = prefs.categories || ['joint_mobilization'];
+
+  // UI 카테고리 키 → DB category 값 배열 매핑
+  const CATEGORY_DB_MAP = {
+    'joint_mobilization': ['category_a_joint_mobilization', 'category_b_mulligan'],
+    'soft_tissue': ['category_e_soft_tissue'],
+  };
+
+  // UI 카테고리 키 → principles DB key 매핑 (원칙 표시용)
+  const PRINCIPLES_KEY_MAP = {
+    'joint_mobilization': 'category_a_joint_mobilization',
+    'soft_tissue': 'category_e_soft_tissue',
+  };
+
+  // 결과를 UI 카테고리별로 그룹핑
+  function groupByUiCat(results, uiCat) {
+    const dbCats = CATEGORY_DB_MAP[uiCat] || [uiCat];
+    return results.filter(t => dbCats.includes(t.category));
+  }
+
+  // 카테고리별 wrapper HTML 생성
+  function buildCategoryWrapper(uiCat, catResults, categories) {
+    const principlesKey = PRINCIPLES_KEY_MAP[uiCat] || uiCat;
+    const principlesData = getCategoryPrinciples(principlesKey, categories);
+
+    // 기본 원칙 HTML
+    let principlesCollapseHTML = '';
+    if (principlesData && (principlesData.basic_principles || []).length > 0) {
+      const items = principlesData.basic_principles.map(p => `
+        <div class="principle-item">
+          <div class="principle-icon">${p.icon}</div>
+          <div class="principle-content">
+            <div class="principle-title">${p.title_ko}</div>
+            <div class="principle-desc">${p.desc_ko}</div>
+          </div>
+        </div>`).join('');
+      principlesCollapseHTML = `
+        <div class="wrapper-principles-btn-wrap">
+          <button class="btn-principles-toggle" onclick="togglePrinciples(this)">기본 원칙 보기 ▼</button>
+        </div>
+        <div class="wrapper-principles-body" style="display:none">
+          <div class="principles-list">${items}</div>
+        </div>`;
+    }
+
+    // 테크닉 카드 HTML
+    const innerCardsHTML = catResults.length === 0
+      ? `<div class="empty-state"><div class="icon">🔍</div><p>선택한 조건에 맞는 테크닉이 없습니다.</p></div>`
+      : catResults.map((t, idx) => buildTechniqueCard(t, idx)).join('');
+
+    const title = principlesData ? principlesData.name_ko : CATEGORY_LABELS[uiCat] || '테크닉';
+    const subtitle = principlesData ? (principlesData.subtitle_ko || '') : '';
+
+    return `
+      <div class="approach-wrapper-card">
+        <div class="wrapper-card-header">
+          <div class="wrapper-card-title">${title}</div>
+          <div class="wrapper-card-subtitle">${subtitle}</div>
+        </div>
+        ${principlesCollapseHTML}
+        <div class="wrapper-section-divider">
+          <span class="wrapper-divider-label">추천 테크닉</span>
+          <span class="results-count">${catResults.length}개</span>
+        </div>
+        <div class="wrapper-inner-cards">${innerCardsHTML}</div>
+      </div>`;
+  }
+
+  // 운동처방 플레이스홀더
+  const exerciseHTML = `
+    <div class="exercise-prescription-placeholder">
+      <div class="exercise-placeholder-header">
+        <span class="exercise-title">운동 처방 제안</span>
+        <span class="coming-soon-badge">Coming Soon</span>
+      </div>
+      <p class="exercise-placeholder-desc">선택한 치료 접근법과 환자 상태에 맞는 운동 처방이 여기에 표시될 예정입니다.</p>
+      <div class="exercise-placeholder-items">
+        <div class="exercise-item-placeholder">ROM 운동 프로그램</div>
+        <div class="exercise-item-placeholder">근력 강화 운동</div>
+        <div class="exercise-item-placeholder">신경가동술 자가 운동</div>
+      </div>
+    </div>`;
+
+  // 카테고리별 wrapper 생성 후 조합
+  const wrappersHTML = selectedCats.map(uiCat => {
+    const catResults = groupByUiCat(results, uiCat);
+    return buildCategoryWrapper(uiCat, catResults, categories);
+  }).join('');
+
+  container.innerHTML = wrappersHTML + exerciseHTML;
+}
+
+function toggleCardDetail(btn) {
+  const section = btn.closest('.result-card').querySelector('.card-detail-section');
+  const isOpen = section.style.display === 'block';
+  section.style.display = isOpen ? 'none' : 'block';
+  btn.textContent = isOpen ? '자세히 보기 ▼' : '접기 ▲';
+}
+
+// ── 앱 시작 ──
+initApp();
+</script>
+</body>
+</html>
