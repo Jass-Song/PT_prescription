@@ -25,9 +25,12 @@ CREATE TABLE IF NOT EXISTS ratings (
 
 ALTER TABLE ratings ENABLE ROW LEVEL SECURITY;
 
+-- 정책은 CREATE 전 DROP IF EXISTS — 재실행 안전 (Postgres CREATE POLICY는 IF NOT EXISTS 미지원)
+DROP POLICY IF EXISTS "ratings_select_own" ON ratings;
 CREATE POLICY "ratings_select_own" ON ratings
   FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "ratings_insert_own" ON ratings;
 CREATE POLICY "ratings_insert_own" ON ratings
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
