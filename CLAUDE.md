@@ -32,9 +32,9 @@
 | sw-clinical-translator | `pt-prescription/docs/clinical-*.md` | `pt-prescription/` 전체 |
 | sw-ux-researcher | `pt-prescription/docs/ux/` | `pt-prescription/` 전체 |
 | sw-qa-tester | `pt-prescription/docs/qa/` | `pt-prescription/` 전체 |
-| sw-devops | `pt-prescription/vercel.json`, `pt-prescription/.vercel/` | `pt-prescription/` 전체 |
+| sw-devops | `pt-prescription/vercel.json`, `pt-prescription/.vercel/`, `pt-prescription/debug/` | `pt-prescription/` 전체 |
 | sw-auth-specialist | `pt-prescription/api/auth/` | `pt-prescription/api/`, `pt-prescription/saas/schema.sql` |
-| sw-db-architect | `pt-prescription/saas/schema.sql`, `pt-prescription/saas/migrations/` | `pt-prescription/saas/` 전체 |
+| sw-db-architect | `pt-prescription/saas/schema.sql`, `pt-prescription/saas/migrations/`, `pt-prescription/saas/docs/`, `pt-prescription/saas/scripts/` | `pt-prescription/saas/` 전체 |
 | sw-db-architect (추가 읽기) | — | `research/techniques_research/`(읽기 전용), `research/techniques/`(읽기 전용) |
 
 ---
@@ -44,22 +44,47 @@
 ```
 pt-prescription/
 ├── CLAUDE.md                    ← 이 파일 (sw팀 규칙)
-├── PRODUCT_SPEC.md              ← 제품 기획 명세서
-├── index.html                   ← 프론트엔드
-├── vercel.json                  ← Vercel 배포 설정
-├── api/
-│   └── recommend.js             ← Serverless API
-├── saas/                        ← DB, 스키마, 마이그레이션
-│   ├── schema.sql
-│   ├── schema_design.md
-│   ├── seed.sql
-│   ├── migrations/
-│   ├── scripts/
-│   └── [기타 saas 파일들 — techniques는 research/로 이동됨]
-└── docs/                        ← 기획 문서 (생성 시)
-    ├── specs/
-    ├── ux/
-    └── qa/
+├── index.html                   ← 프론트엔드 (sw-frontend-dev)
+├── vercel.json                  ← Vercel 배포 설정 (sw-devops)
+├── api/                         ← Serverless API (sw-backend-dev)
+│   ├── _auth.js                 ← JWT 인증 헬퍼
+│   ├── _logger.js               ← 서버 에러 로깅 헬퍼
+│   ├── recommend.js
+│   ├── feedback.js
+│   ├── history.js
+│   ├── settings.js
+│   ├── config.js
+│   ├── admin.js
+│   ├── log-error.js
+│   ├── debug-errors.js
+│   └── debug-scores.js
+├── debug/                       ← 디버그 대시보드 (sw-devops)
+│   ├── index.html
+│   ├── errors.html
+│   └── admin.html
+├── saas/                        ← DB (sw-db-architect)
+│   ├── schema.sql               ← 마스터 스키마
+│   ├── migrations/              ← 순번 마이그레이션 SQL
+│   ├── scripts/                 ← 유틸리티 스크립트
+│   └── docs/                   ← DB 문서 (가이드, 템플릿, 리포트)
+├── docs/                        ← 팀 공유 문서
+│   ├── specs/                   ← 제품 명세 (sw-product-manager)
+│   │   └── PRODUCT_SPEC.md
+│   ├── DEV-HANDOFF.md           ← 팀 전체 핸드오프 가이드
+│   ├── ux/                      ← UX 리서치 (sw-ux-researcher)
+│   └── qa/                      ← QA 문서 (sw-qa-tester)
+├── sw-lead/                     ← sw-lead 홈
+├── sw-backend-dev/              ← sw-backend-dev 홈
+├── sw-frontend-dev/             ← sw-frontend-dev 홈
+├── sw-db-architect/             ← sw-db-architect 홈
+├── sw-devops/                   ← sw-devops 홈
+├── sw-product-manager/          ← sw-product-manager 홈
+├── sw-auth-specialist/          ← sw-auth-specialist 홈
+├── sw-clinical-translator/      ← sw-clinical-translator 홈
+├── sw-ux-researcher/            ← sw-ux-researcher 홈
+├── sw-qa-tester/                ← sw-qa-tester 홈
+├── _archive/                    ← 히스토리 보관 (삭제 전 검토용)
+└── _to_delete/                  ← 삭제 확정 대기 (대표님 확인 후 삭제)
 ```
 
 ---
@@ -111,6 +136,37 @@ curl -s -X POST http://34.47.91.197:3131/api/activity \
 
 ✅ 올바른 순서: schema.sql 검색 → 중복 확인 → 쟈르스에게 보고 → 승인 후 진행
 ❌ 금지: 확인 없이 새 함수/테이블 생성
+
+---
+
+## ⚠️ 에이전트 홈 폴더 & LOG 기록 규칙 (절대 원칙)
+
+각 에이전트는 자신의 홈 폴더(`pt-prescription/<에이전트명>/`)에 월별 LOG 파일을 유지한다.
+
+**LOG 파일 경로**: `pt-prescription/<에이전트명>/LOG-YYYY-MM.md`
+
+**파일이 없으면 먼저 생성** (새 달 첫 작업인 경우):
+```markdown
+# [에이전트명] 월간 작업 로그 — YYYY-MM
+
+> 작업할 때마다 append 방식으로 기록합니다. 삭제 금지.
+
+---
+```
+
+**기록 형식** (파일 끝에 append, 보드 done 처리 전 반드시 수행):
+```markdown
+## YYYY-MM-DD | [TODO-ID] 작업명
+
+- **지시 받은 내용**: 한 줄 요약
+- **수행한 작업**: 구체적으로 무엇을 했는지
+- **결과물**: 파일 경로 또는 "없음"
+- **이슈/메모**: (있을 경우만)
+
+---
+```
+
+**🚨 LOG 미작성 시 해당 작업은 완료로 인정하지 않는다.**
 
 ---
 
