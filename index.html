@@ -1264,6 +1264,74 @@
       white-space: nowrap; margin-top: 2px; transition: background 0.15s;
     }
     .btn-hist-trigger:hover { background: #e2e8f0; }
+
+    /* ── Inline Feedback Star Rating ── */
+    .inline-feedback-section {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    .inline-feedback-prompt {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+    .inline-star-rating { display: flex; gap: 4px; margin-bottom: 8px; }
+    .inline-star-btn {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      color: #d1d5db;
+      cursor: pointer;
+      padding: 2px 1px;
+      transition: color 0.12s, transform 0.1s;
+      line-height: 1;
+    }
+    .inline-star-btn.hovered,
+    .inline-star-btn.selected { color: #f59e0b; }
+    .inline-star-btn:hover { transform: scale(1.1); }
+    .inline-feedback-notes {
+      width: 100%;
+      font-size: 0.78rem;
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      resize: none;
+      margin-bottom: 6px;
+      box-sizing: border-box;
+      font-family: inherit;
+      color: var(--text);
+    }
+    .inline-feedback-actions { display: flex; gap: 8px; }
+    .inline-btn-submit {
+      font-size: 0.78rem;
+      padding: 4px 14px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.15s;
+    }
+    .inline-btn-submit:hover { background: #155da8; }
+    .inline-btn-submit:disabled { opacity: 0.6; cursor: default; }
+    .inline-btn-skip {
+      font-size: 0.78rem;
+      padding: 4px 10px;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: background 0.15s;
+    }
+    .inline-btn-skip:hover { background: #f1f5f9; }
+    .inline-feedback-done {
+      font-size: 0.78rem;
+      color: #059669;
+      font-weight: 500;
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
@@ -2470,6 +2538,35 @@
         </div>
       </div>`;
     container.appendChild(card);
+
+    // ── 인라인 별점 피드백 섹션 삽입 ──
+    const feedbackSection = document.createElement('div');
+    feedbackSection.className = 'inline-feedback-section';
+    feedbackSection.innerHTML = `
+      <p class="inline-feedback-prompt">이 추천이 임상에서 도움이 됐나요?</p>
+      <div class="inline-star-rating" role="group" aria-label="별점 선택">
+        <button class="inline-star-btn" data-value="1" aria-label="1점">★</button>
+        <button class="inline-star-btn" data-value="2" aria-label="2점">★</button>
+        <button class="inline-star-btn" data-value="3" aria-label="3점">★</button>
+        <button class="inline-star-btn" data-value="4" aria-label="4점">★</button>
+        <button class="inline-star-btn" data-value="5" aria-label="5점">★</button>
+      </div>
+      <textarea class="inline-feedback-notes" placeholder="메모 (선택사항, 최대 200자)" maxlength="200" rows="2" style="display:none"></textarea>
+      <div class="inline-feedback-actions" style="display:none">
+        <button class="inline-btn-submit">저장</button>
+        <button class="inline-btn-skip">건너뛰기</button>
+      </div>
+      <p class="inline-feedback-done" style="display:none">✓ 피드백 감사합니다</p>`;
+    card.appendChild(feedbackSection);
+
+    // 이벤트 바인딩
+    initFeedbackSection(feedbackSection, {
+      technique: item.technique,
+      category:  catKey,
+      region:    currentSession.region  || null,
+      acuity:    currentSession.acuity  || null,
+      symptom:   currentSession.symptom || null,
+    });
   }
 
   async function refreshCategory(btn) {
@@ -3011,6 +3108,86 @@
       checkSaveBtn();
     }
     goScreen('screen1');
+  }
+
+  /* ══════════════════════════════════════
+     INLINE FEEDBACK STAR RATING
+  ══════════════════════════════════════ */
+  function initFeedbackSection(sectionEl, context) {
+    // context: { technique, category, region, acuity, symptom }
+    const stars   = sectionEl.querySelectorAll('.inline-star-btn');
+    const notes   = sectionEl.querySelector('.inline-feedback-notes');
+    const actions = sectionEl.querySelector('.inline-feedback-actions');
+    const doneMsg = sectionEl.querySelector('.inline-feedback-done');
+    let selectedRating = 0;
+
+    // 호버 효과
+    stars.forEach(btn => {
+      btn.addEventListener('mouseenter', () => {
+        const val = +btn.dataset.value;
+        stars.forEach(s => s.classList.toggle('hovered', +s.dataset.value <= val));
+      });
+      btn.addEventListener('mouseleave', () => {
+        stars.forEach(s => {
+          s.classList.remove('hovered');
+          s.classList.toggle('selected', +s.dataset.value <= selectedRating);
+        });
+      });
+      btn.addEventListener('click', () => {
+        selectedRating = +btn.dataset.value;
+        stars.forEach(s => s.classList.toggle('selected', +s.dataset.value <= selectedRating));
+        notes.style.display = 'block';
+        actions.style.display = 'flex';
+      });
+    });
+
+    sectionEl.querySelector('.inline-btn-skip').addEventListener('click', () => {
+      actions.style.display = 'none';
+      notes.style.display   = 'none';
+      selectedRating = 0;
+      stars.forEach(s => s.classList.remove('selected', 'hovered'));
+    });
+
+    const submitBtn = sectionEl.querySelector('.inline-btn-submit');
+    submitBtn.addEventListener('click', async () => {
+      if (!selectedRating) return;
+      submitBtn.disabled     = true;
+      submitBtn.textContent  = '저장 중...';
+      try {
+        const res = await fetch('/api/feedback', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentAccessToken}`,
+          },
+          body: JSON.stringify({
+            technique: context.technique,
+            category:  context.category,
+            region:    context.region  || null,
+            acuity:    context.acuity  || null,
+            symptom:   context.symptom || null,
+            rating:    selectedRating,
+            notes:     notes.value.trim() || null,
+          }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        notes.style.display   = 'none';
+        actions.style.display = 'none';
+        doneMsg.style.display = 'block';
+        // 기존 모달 피드백 버튼도 완료 표시
+        const fbBtnWrap = sectionEl.closest('.result-card')?.querySelector('.btn-feedback');
+        if (fbBtnWrap) {
+          fbBtnWrap.textContent = '✅ 평가 완료';
+          fbBtnWrap.classList.add('done');
+          fbBtnWrap.onclick = null;
+        }
+      } catch (err) {
+        console.error('인라인 피드백 저장 실패:', err);
+        submitBtn.disabled    = false;
+        submitBtn.textContent = '저장';
+        showToast('피드백 저장에 실패했습니다. 다시 시도해주세요.');
+      }
+    });
   }
 </script>
 </body>
