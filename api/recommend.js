@@ -774,15 +774,16 @@ export default async function handler(req, res) {
       activeEX = (activeEX || []).filter(t => !excludedTechniqueIds.includes(t.abbreviation));
     }
 
-    // target_tags hard filter: 해당 acuity 없는 기법 제외
+    // target_tags hard filter: 해당 acuity 없는 기법 제외 (MT + EX 모두 적용)
     const acuityTagMap = { '급성': 'acute', '아급성': 'subacute', '만성': 'chronic' };
     const requiredTag = acuityTagMap[acuity];
     if (requiredTag) {
-      activeMT = activeMT.filter(t =>
+      const acuityFilter = t =>
         !Array.isArray(t.target_tags) ||
         t.target_tags.length === 0 ||
-        t.target_tags.includes(requiredTag)
-      );
+        t.target_tags.includes(requiredTag);
+      activeMT = activeMT.filter(acuityFilter);
+      activeEX = (activeEX || []).filter(acuityFilter);
     }
   } catch (e) {
     console.error('[DEBUG] Supabase fetch error:', e);
