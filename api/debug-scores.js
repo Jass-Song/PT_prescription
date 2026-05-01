@@ -206,8 +206,19 @@ export default async function handler(req, res) {
   }).sort((a, b) => b.finalScore - a.finalScore);
 
   // 임베딩 벡터로 기법 간 cosine similarity 계산
+  // PostgREST가 pgvector를 문자열("[0.1,0.2,...]")로 반환 → JSON.parse 필요
+  function toVec(v) {
+    if (Array.isArray(v)) return v;
+    if (typeof v === 'string') {
+      try { return JSON.parse(v); } catch { return null; }
+    }
+    return null;
+  }
   const embMap = {};
-  embedRows.forEach(row => { embMap[row.id] = row.embedding; });
+  embedRows.forEach(row => {
+    const vec = toVec(row.embedding);
+    if (vec) embMap[row.id] = vec;
+  });
 
   function cosine(a, b) {
     if (!a || !b || a.length !== b.length) return 0;
