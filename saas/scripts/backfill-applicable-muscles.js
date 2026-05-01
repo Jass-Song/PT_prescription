@@ -226,6 +226,40 @@ const MUSCLE_DICT = [
   { ko: '허리 뒤쪽 통증점', en: 'posterior lumbar tender point' },
   { ko: '엉치뼈',          en: 'sacrum' },
   { ko: '갈비뼈',          en: 'rib' },
+
+  // ── 영역·이행부 zone (CTM/MFR 영역 기반 기법) ──
+  // 긴 합성어 우선 (SORTED_DICT가 길이순 정렬하므로 자동 처리)
+  { ko: '요추-고관절 이행부', en: 'lumbo-hip transition' },
+  { ko: '요추-골반 이행부', en: 'lumbopelvic junction' },
+  { ko: '경추-흉추 이행부', en: 'cervicothoracic junction' },
+  { ko: '엉덩 관절 외측',  en: 'lateral hip region' },
+  { ko: '엉덩 관절 전방',  en: 'anterior hip region' },
+  { ko: '엉덩 관절 후방',  en: 'posterior hip region' },
+  { ko: '어깨·가슴 앞쪽',  en: 'anterior shoulder/chest region' },
+  { ko: '경추 후방',       en: 'posterior cervical region' },
+  { ko: '경추 측방',       en: 'lateral cervical region' },
+  { ko: '요추 측방',       en: 'lateral lumbar region' },
+  { ko: '요추-천골',       en: 'lumbosacral region' },
+  { ko: '견갑대 후방',     en: 'posterior shoulder girdle' },
+  { ko: '견관절 전방',     en: 'anterior glenohumeral region' },
+  { ko: '견관절 후방',     en: 'posterior glenohumeral region' },
+  { ko: '어깨 앞쪽',       en: 'anterior shoulder region' },
+  { ko: '어깨 뒤쪽',       en: 'posterior shoulder region' },
+  { ko: '무릎 전방',       en: 'anterior knee region' },
+  { ko: '무릎 후방',       en: 'posterior knee region' },
+  { ko: '발목 전방',       en: 'anterior ankle region' },
+  { ko: '발목 후방',       en: 'posterior ankle region' },
+  { ko: '등 상부',         en: 'upper thoracic region' },
+  { ko: '등 중부',         en: 'middle thoracic region' },
+  { ko: '골반 바깥쪽',     en: 'lateral pelvis' },
+  { ko: '요추',            en: 'lumbar region' },
+  { ko: '배',              en: 'abdomen' },
+  { ko: '아킬레스',        en: 'Achilles region' },
+  // Forearm MFR — 괄호 포함 정확 일치 (이중 표기 패턴)
+  { ko: '아래팔(전완) 폄근(신전근)', en: 'forearm extensors' },
+  { ko: '아래팔(전완) 굽힘근(굴곡근)', en: 'forearm flexors' },
+  // DTFM-Patellar Tendon — name에 "무릎뼈 아래 힘줄"
+  { ko: '무릎뼈 아래 힘줄', en: 'patellar tendon' },
 ];
 
 // 사전 매칭 — name_ko에 등장하는 모든 근육 패턴 추출 (긴 패턴 우선)
