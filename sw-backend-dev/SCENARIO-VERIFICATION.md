@@ -37,10 +37,24 @@
 
 ## 발견된 개선 사항
 
-### 시나리오 9 — 카테고리 다양성 부족
+### 시나리오 9 — 카테고리 다양성 부족 (해결됨, 마이그레이션 044+ 후 적용)
 "만성 + 움직임 통증" 조건에서 룰점수 3점 동점 카테고리가 6개(joint_mob, mfr, art, deep_friction, trigger_point, pne)인데 LLM 최종 선택이 PNE 1개 카테고리에 클러스터링됨.
 
-**개선 방향**: `selectTopTechniquesGlobally()` 또는 LLM 시스템 프롬프트에 카테고리 다양성 강제 (예: 동일 카테고리 최대 1~2개) 로직 추가.
+**적용된 해결책** (`api/recommend.js`):
+- `selectTopTechniquesGlobally`에 `maxPerCategory=1` 파라미터 추가 → 카테고리당 후보 1개로 제한
+- 호출부 `(activeMT, acuity, symptom, 6, 6, vectorScoreMap)` → `(activeMT, acuity, symptom, 6, 2, vectorScoreMap, 1)` 변경
+- LLM 프롬프트에 "동일 카테고리 중복 선택 금지 — 서로 다른 모달리티로 다층 접근" 명시
+- 결과: 후보 6개가 자동으로 6개 다른 카테고리에서 추출 → LLM 선택 3개도 3개 다른 카테고리 보장
+
+### 카드당 다부위 노출 (모달리티 카드 모델)
+**문제**: 1 카드 = 1 DB 행 = 1 특정 근육 → 임상적으로 관련된 다른 근육 부위 노출 안 됨
+
+**적용된 해결책**:
+- DB: `applicable_muscles` JSONB 컬럼 추가 (마이그레이션 044, 1차 백필 045)
+- API: 카드별 `applicableMuscles` = 같은 카테고리 × primary regions 내 모든 행의 `applicable_muscles` 합집합
+- 프론트: `renderMuscles()`가 `applicableMuscles` 우선 사용, 없으면 LLM `targetMuscles` fallback
+
+**재검증 필요 (마이그레이션 044, 045 실행 + 배포 후)**: 시나리오 5, 9 우선 재실행하여 ① 카테고리 다양성 ② 카드당 다부위 노출 모두 확인.
 
 ---
 

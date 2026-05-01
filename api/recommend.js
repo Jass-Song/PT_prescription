@@ -453,7 +453,7 @@ async function fetchActiveTechniques(categories, bodyRegions = [], userToken = n
   if (!SUPABASE_KEY || categories.length === 0) return [];
 
   const catFilter = categories.map(c => `category.eq.${c}`).join(',');
-  const selectFields = `id,abbreviation,name_ko,category,body_region,body_regions,patient_position,therapist_position,contact_point,direction,technique_steps,target_tags`;
+  const selectFields = `id,abbreviation,name_ko,category,body_region,body_regions,patient_position,therapist_position,contact_point,direction,technique_steps,target_tags,applicable_muscles`;
   // RLS는 auth.uid() 기반 — 사용자 JWT가 있으면 사용, 없으면 anon key fallback
   const authToken = userToken || SUPABASE_KEY;
   const headers = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${authToken}` };
@@ -591,7 +591,11 @@ async function fetchCategoryPrinciples(userToken = null) {
 // vectorScoreMap: { [technique_id_uuid]: similarity(0~1) } — 없으면 빈 객체 (룰 기반만 사용)
 // 혼합 공식: finalScore = ruleScore * 0.6 + vectorScore * 0.4
 // ruleScore 최대값(3)으로 정규화하여 두 점수를 같은 스케일로 맞춤
-function selectTopTechniquesGlobally(activeMT, acuity, symptom, maxTotal = 6, maxPerGroup = 2, vectorScoreMap = {}) {
+//
+// 다양성 가드:
+//   - maxPerGroup: MT 5개 그룹(joint/soft/neuro/special/edu)당 최대 후보 수
+//   - maxPerCategory: 카테고리(12종)당 최대 후보 수 — 단일 카테고리 클러스터링 방지
+function selectTopTechniquesGlobally(activeMT, acuity, symptom, maxTotal = 6, maxPerGroup = 2, vectorScoreMap = {}, maxPerCategory = null) {
   const conditionScores = (CONDITION_CATEGORY_SCORES[acuity] || {})[symptom] || {};
   const RULE_SCORE_MAX = 3; // CONDITION_CATEGORY_SCORES 최대값
 
@@ -618,16 +622,39 @@ function selectTopTechniquesGlobally(activeMT, acuity, symptom, maxTotal = 6, ma
     .sort((a, b) => b.score - a.score);
 
   const groupCounts = {};
+  const categoryCounts = {};
   const selected = [];
   for (const t of scored) {
     if (selected.length >= maxTotal) break;
-    const count = groupCounts[t.mtGroup] || 0;
-    if (count < maxPerGroup) {
-      selected.push(t);
-      groupCounts[t.mtGroup] = count + 1;
-    }
+    if ((groupCounts[t.mtGroup] || 0) >= maxPerGroup) continue;
+    if (maxPerCategory != null && (categoryCounts[t.category] || 0) >= maxPerCategory) continue;
+    selected.push(t);
+    groupCounts[t.mtGroup] = (groupCounts[t.mtGroup] || 0) + 1;
+    categoryCounts[t.category] = (categoryCounts[t.category] || 0) + 1;
   }
   return selected;
+}
+
+// 카테고리 × region 단위 적용 가능 근육 합집합 — 카드 단위 다부위 노출용
+// activeMT: fetchActiveTechniques 결과 (applicable_muscles 포함)
+// regions: 필터할 region 배열 (primary regions). 빈 배열이면 region 무제한.
+// 반환: [{muscle_ko, muscle_en, ...}] dedupe (muscle_ko 키준)
+function aggregateApplicableMuscles(activeMT, category, regions) {
+  if (!category) return [];
+  const seen = new Map();
+  for (const t of activeMT) {
+    if (t.category !== category) continue;
+    if (regions.length > 0) {
+      const tRegions = t.body_regions?.length > 0 ? t.body_regions : (t.body_region ? [t.body_region] : []);
+      const matchesRegion = tRegions.length === 0 || tRegions.some(r => regions.includes(r));
+      if (!matchesRegion) continue;
+    }
+    const muscles = Array.isArray(t.applicable_muscles) ? t.applicable_muscles : [];
+    for (const m of muscles) {
+      if (m?.muscle_ko && !seen.has(m.muscle_ko)) seen.set(m.muscle_ko, m);
+    }
+  }
+  return Array.from(seen.values());
 }
 
 // 추천 세션 로깅 (recommendation_logs 테이블, fire-and-forget)
@@ -901,7 +928,9 @@ export default async function handler(req, res) {
   let topMT = [];
   let allowedMTText;
   if (activeMT.length > 0) {
-    topMT = selectTopTechniquesGlobally(activeMT, acuity, symptom, 6, 6, vectorScoreMap);
+    // 다양성 강제: 그룹당 최대 2 + 카테고리당 최대 1 → 6개 후보가 모두 다른 카테고리에서 추출됨
+    // → LLM 최종 선택 3개도 자동으로 3개 다른 카테고리(모달리티) 보장
+    topMT = selectTopTechniquesGlobally(activeMT, acuity, symptom, 6, 2, vectorScoreMap, 1);
     const allSelectedMT = topMT.map(t =>
       formatTechniqueForPrompt(t, MT_GROUP_LABEL[CATEGORY_TO_MT_GROUP[t.category]] || '기타')
     );
@@ -974,7 +1003,7 @@ ${allowedMTText}${allowedEXText}
 ${historyText}
 
 환자 정보(부위: ${region}, 시기: ${acuity}, 증상: ${symptom})에 맞게:
-${topMT.length > 0 ? `▸ MT: 후보 6개 중 이 환자(부위: ${region}, 시기: ${acuity}, 증상: ${symptom})에게 가장 적합한 3개를 임상적 우선순위 순서로 선택하여 DB 정보를 쉬운 한국어로 재작성.` : ''}
+${topMT.length > 0 ? `▸ MT: 후보 6개 중 이 환자(부위: ${region}, 시기: ${acuity}, 증상: ${symptom})에게 가장 적합한 3개를 임상적 우선순위 순서로 선택하여 DB 정보를 쉬운 한국어로 재작성. 동일 카테고리 중복 선택 금지 — 서로 다른 모달리티로 다층 접근 구성.` : ''}
 ${topEX.length > 0 ? '▸ 운동: 환자 상태를 고려하여 2개 선택' : ''}
 DB 정보를 쉬운 한국어로 재작성하여 아래 형식으로만 반환하세요. 목록에 없는 기법 생성 금지.
 
@@ -1018,6 +1047,7 @@ techniqueId는 [MT-XXX] 또는 [EX-XXX] ID를 그대로 복사.`;
 
   try {
     // techniqueId(인덱스 ID)로 기법 lookup → category 확보 → categoryInfo + abbreviation + isPrimary 부착
+    // 추가: 모달리티 카드 단위로 카테고리×region에 적용 가능 근육 합집합(applicableMuscles) 부착
     (result.manualTherapy || []).forEach(item => {
       const t = indexedTechniques.get(item.techniqueId);
       const catKey = t ? t.category : null;
@@ -1035,6 +1065,12 @@ techniqueId는 [MT-XXX] 또는 [EX-XXX] ID를 그대로 복사.`;
       // Option B: 환부(primary) vs 연관 부위(secondary) 구분
       const tRegions = t?.body_regions?.length > 0 ? t.body_regions : (t?.body_region ? [t.body_region] : []);
       item.isPrimary = tRegions.length === 0 || tRegions.some(r => primaryRegions.includes(r));
+      // 모달리티 카드 다부위 노출: 같은 카테고리 × primary regions의 applicable_muscles 합집합
+      if (catKey) {
+        item.applicableMuscles = aggregateApplicableMuscles(activeMT, catKey, primaryRegions);
+      } else {
+        item.applicableMuscles = [];
+      }
     });
 
     // exercise categoryInfo + abbreviation 부착 (EX 인덱스 ID로 lookup)

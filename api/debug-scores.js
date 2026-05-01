@@ -48,7 +48,7 @@ async function fetchAllTechniques(categories, bodyRegions) {
   const catFilter = categories.length > 0
     ? `&or=(${categories.map(c => `category.eq.${c}`).join(',')})`
     : '';
-  const url = `${SUPABASE_URL}/rest/v1/techniques?is_active=eq.true${catFilter}&select=id,abbreviation,name_ko,category,body_region,body_regions,target_tags&limit=200`;
+  const url = `${SUPABASE_URL}/rest/v1/techniques?is_active=eq.true${catFilter}&select=id,abbreviation,name_ko,category,body_region,body_regions,target_tags,applicable_muscles&limit=200`;
 
   try {
     const res = await fetch(url, {
@@ -195,6 +195,7 @@ export default async function handler(req, res) {
       category: t.category,
       body_region: t.body_region,
       target_tags: t.target_tags,
+      applicable_muscles: Array.isArray(t.applicable_muscles) ? t.applicable_muscles : [],
       ruleScore,
       ruleNorm: Math.round(ruleNorm * 100) / 100,
       vectorScore: Math.round(vectorScore * 1000) / 1000,

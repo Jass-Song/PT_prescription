@@ -2586,7 +2586,11 @@
         </div>
         <div class="card-section">
           <div class="card-section-title">${secTitle2}</div>
-          ${renderMuscles(item.targetMuscles)}
+          ${renderMuscles(
+            (Array.isArray(item.applicableMuscles) && item.applicableMuscles.length > 0)
+              ? item.applicableMuscles
+              : item.targetMuscles
+          )}
         </div>
         <div class="feedback-btn-wrap">
           <button class="btn-feedback" id="${fbId}"
@@ -2723,7 +2727,16 @@
 
   function renderMuscles(muscles) {
     if (!muscles || muscles.length === 0) return '<p class="card-section-value">—</p>';
-    return `<ul class="card-bullet-list">${muscles.map(m => `<li>${sanitizeTerms(m)}</li>`).join('')}</ul>`;
+    // 기존: string 배열 ("승모근(trapezius)") / 신규: object 배열 ({muscle_ko, muscle_en})
+    const items = muscles.map(m => {
+      if (typeof m === 'string') return sanitizeTerms(m);
+      if (m && typeof m === 'object' && m.muscle_ko) {
+        return sanitizeTerms(m.muscle_en ? `${m.muscle_ko}(${m.muscle_en})` : m.muscle_ko);
+      }
+      return '';
+    }).filter(Boolean);
+    if (items.length === 0) return '<p class="card-section-value">—</p>';
+    return `<ul class="card-bullet-list">${items.map(t => `<li>${t}</li>`).join('')}</ul>`;
   }
 
   function renderMovement(text) {
