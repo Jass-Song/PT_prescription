@@ -100,6 +100,20 @@ const REGION_MAP = {
   '발목 관절': { primary: ['ankle_foot'], secondary: [] },
 };
 
+// 디버그 쿼리 관용 입력 정규화 (수동 URL 테스트 편의)
+const REGION_ALIAS = {
+  cervical: '경추', lumbar: '요추', shoulder: '어깨 관절',
+  knee: '무릎 관절', hip: '엉덩 관절', ankle_foot: '발목 관절', ankle: '발목 관절',
+  '어깨': '어깨 관절', '무릎': '무릎 관절', '엉덩': '엉덩 관절', '발목': '발목 관절',
+};
+const SYMPTOM_ALIAS = {
+  '움직임통증': '움직임 시 통증', '움직임시통증': '움직임 시 통증', movement: '움직임 시 통증',
+  '안정통증':   '안정 시 통증',   '안정시통증':   '안정 시 통증',   rest:     '안정 시 통증',
+  '방사':       '방사통',        radicular: '방사통',
+};
+const normalizeRegion = (r) => REGION_ALIAS[r] || REGION_ALIAS[r?.replace(/\s/g, '')] || r;
+const normalizeSymptom = (s) => SYMPTOM_ALIAS[s?.replace(/\s/g, '')] || s;
+
 const CONDITION_CATEGORY_SCORES = {
   '급성': {
     '움직임 시 통증': { category_mulligan: 3, category_mdt: 3, category_scs: 3, category_d_neural: 2, category_joint_mobilization: 1, category_mfr: 1, category_ctm: 1, category_trigger_point: 1, category_pne: 1 },
@@ -125,7 +139,12 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const body = req.method === 'GET' ? req.query : req.body;
-  const { region = '경추', acuity = '아급성', symptom = '움직임 시 통증', selectedCategories, allRegions } = body;
+  const rawRegion = body.region ?? body.body_region ?? '경추';
+  const rawSymptom = body.symptom ?? '움직임 시 통증';
+  const region = normalizeRegion(rawRegion);
+  const symptom = normalizeSymptom(rawSymptom);
+  const acuity = body.acuity ?? '아급성';
+  const { selectedCategories, allRegions } = body;
 
   const categories = selectedCategories
     ? (typeof selectedCategories === 'string' ? JSON.parse(selectedCategories) : selectedCategories)
@@ -145,21 +164,28 @@ export default async function handler(req, res) {
     getQueryEmbedding(queryText),
   ]);
 
-  // 벡터 유사도
-  const vectorRows = await fetchVectorSimilarities(queryEmbedding);
+  // 벡터 유사도 + 후보 기법들의 임베딩 동시 조회
+  // (embedRows를 먼저 가져와야 hasEmbedding을 정확히 산정 가능)
+  const techniqueIds = techniques.map(t => t.id);
+  const [vectorRows, embedRows] = await Promise.all([
+    fetchVectorSimilarities(queryEmbedding),
+    fetchTechniquePairSimilarities(techniqueIds),
+  ]);
   const vectorScoreMap = Object.fromEntries(vectorRows.map(r => [r.id, r.similarity]));
+  const embeddedIds = new Set(embedRows.map(r => r.id));
 
   const RULE_SCORE_MAX = 3;
   const conditionScores = (CONDITION_CATEGORY_SCORES[acuity] || {})[symptom] || {};
   const acuityTagMap = { '급성': 'acute', '아급성': 'subacute', '만성': 'chronic' };
   const requiredTag = acuityTagMap[acuity];
 
+  const hasAnyVectorMatch = vectorRows.length > 0;
+
   const scoredTechniques = techniques.map(t => {
     const ruleScore = conditionScores[t.category] ?? 0;
     const ruleNorm = ruleScore / RULE_SCORE_MAX;
     const vectorScore = vectorScoreMap[t.id] ?? 0;
-    const hasVector = Object.keys(vectorScoreMap).length > 0;
-    const finalScore = hasVector ? ruleNorm * 0.6 + vectorScore * 0.4 : ruleNorm;
+    const finalScore = hasAnyVectorMatch ? ruleNorm * 0.6 + vectorScore * 0.4 : ruleNorm;
     const passesTagFilter = !requiredTag || !Array.isArray(t.target_tags) || t.target_tags.length === 0 || t.target_tags.includes(requiredTag);
 
     return {
@@ -174,17 +200,25 @@ export default async function handler(req, res) {
       vectorScore: Math.round(vectorScore * 1000) / 1000,
       finalScore: Math.round(finalScore * 1000) / 1000,
       passesTagFilter,
-      hasVector: vectorScore > 0,
+      hasEmbedding: embeddedIds.has(t.id), // technique_embeddings 테이블에 행 존재 여부
+      inTopMatches: vectorScore > 0,        // RPC top-N + threshold 통과 여부
     };
   }).sort((a, b) => b.finalScore - a.finalScore);
 
-  // 기법 간 임베딩 유사도 (그래프용) — technique_embeddings 테이블 조회
-  const techniqueIds = techniques.map(t => t.id);
-  const embedRows = await fetchTechniquePairSimilarities(techniqueIds);
-
   // 임베딩 벡터로 기법 간 cosine similarity 계산
+  // PostgREST가 pgvector를 문자열("[0.1,0.2,...]")로 반환 → JSON.parse 필요
+  function toVec(v) {
+    if (Array.isArray(v)) return v;
+    if (typeof v === 'string') {
+      try { return JSON.parse(v); } catch { return null; }
+    }
+    return null;
+  }
   const embMap = {};
-  embedRows.forEach(row => { embMap[row.id] = row.embedding; });
+  embedRows.forEach(row => {
+    const vec = toVec(row.embedding);
+    if (vec) embMap[row.id] = vec;
+  });
 
   function cosine(a, b) {
     if (!a || !b || a.length !== b.length) return 0;
@@ -212,16 +246,18 @@ export default async function handler(req, res) {
 
   const stats = {
     queryText,
-    hasEmbedding: !!queryEmbedding,
+    hasQueryEmbedding: !!queryEmbedding,
     voyageKeySet: !!process.env.VOYAGE_API_KEY,
     totalTechniques: techniques.length,
-    techniquesWithVector: scoredTechniques.filter(t => t.hasVector).length,
+    techniquesWithEmbedding: scoredTechniques.filter(t => t.hasEmbedding).length, // DB에 임베딩 보유
+    techniquesInTopMatches: scoredTechniques.filter(t => t.inTopMatches).length,  // RPC top-N + threshold 통과
     techniquesPassingTagFilter: scoredTechniques.filter(t => t.passesTagFilter).length,
     vectorRowsReturned: vectorRows.length,
     embeddingPairsComputed: links.length,
     categoryCounts,
     allRegions: !!allRegions,
     region, acuity, symptom,
+    rawRegion, rawSymptom, // 정규화 전 원본 (디버그용)
     bodyRegions,
     categories,
   };

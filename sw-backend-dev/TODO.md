@@ -10,7 +10,7 @@
 
 ## 🔄 진행 중 / 미완료 작업
 
-- [ ] [2026-04-28] Vercel Dashboard → VOYAGE_API_KEY 환경변수 등록 (수동 작업 필요 — Settings > Environment Variables)
+- [x] [2026-04-28] Vercel Dashboard → VOYAGE_API_KEY 환경변수 등록 (대표님 수동 등록 완료, 2026-05-01 확인)
 - [x] [2026-04-28] embed-techniques.js 실행 완료 — technique_embeddings 180개 적재 완료
 - [x] [2026-04-28] recommend.js d_neural 503 버그 픽스 — fetchActiveTechniques null/[] 반환 분리
 - [ ] [미정] 9개 컨디션 시나리오 하이브리드 추천 결과 검증 (026 마이그레이션 실행 후)

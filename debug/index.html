@@ -881,15 +881,22 @@ function renderStats(stats) {
     return `<span style="color:${color}">${label}:${n}</span>`;
   }).join(' ');
 
-  const embLabel = stats.hasEmbedding
+  // hasEmbedding(구) → hasQueryEmbedding(신) 호환
+  const queryEmbedded = stats.hasQueryEmbedding ?? stats.hasEmbedding;
+  const embLabel = queryEmbedded
     ? '<span style="color:var(--green)">✓</span>'
     : `<span style="color:var(--red)">✗${stats.voyageKeySet === false ? ' (VOYAGE_API_KEY 미설정)' : ''}</span>`;
 
+  // techniquesWithEmbedding(신) → techniquesWithVector(구) 호환
+  const embeddedCount = stats.techniquesWithEmbedding ?? stats.techniquesWithVector ?? 0;
+  const inTopCount = stats.techniquesInTopMatches ?? stats.techniquesWithVector ?? 0;
+
   bar.innerHTML = `
-    임베딩: ${embLabel} &nbsp;|&nbsp;
+    질의 임베딩: ${embLabel} &nbsp;|&nbsp;
     기법: <span>${stats.totalTechniques}개</span> (${catBreakdown}) &nbsp;|&nbsp;
-    벡터: <span style="color:${stats.techniquesWithVector > 0 ? 'var(--orange)' : 'var(--red)'}">
-      ${stats.techniquesWithVector}/${stats.totalTechniques}</span> &nbsp;|&nbsp;
+    임베딩 보유: <span style="color:${embeddedCount === stats.totalTechniques ? 'var(--green)' : 'var(--orange)'}">
+      ${embeddedCount}/${stats.totalTechniques}</span> &nbsp;|&nbsp;
+    상위매칭: <span style="color:${inTopCount > 0 ? 'var(--orange)' : 'var(--red)'}">${inTopCount}</span> &nbsp;|&nbsp;
     태그통과: <span>${stats.techniquesPassingTagFilter}개</span>
     ${stats.allRegions ? '<span style="color:var(--yellow)"> [모든 부위]</span>' : ''}
   `;
