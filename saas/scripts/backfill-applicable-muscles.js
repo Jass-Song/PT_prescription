@@ -38,6 +38,7 @@ const MUSCLE_TARGETED_CATEGORIES = new Set([
   'category_trigger_point',
   'category_deep_friction',
   'category_scs', // counterstrain — 압통점이라 근육 동반
+  'category_iastm', // IASTM 도구 기반 연부조직 처치
 ]);
 
 const NON_MUSCLE_CATEGORIES = new Set([
@@ -154,6 +155,77 @@ const MUSCLE_DICT = [
   { ko: '심부 척추 안정화 근육', en: 'deep spinal stabilizers' },
   { ko: '다열근',          en: 'multifidus' },
   { ko: '회전근',          en: 'rotatores' },
+  { ko: '장늑근',          en: 'iliocostalis' },
+
+  // ── 한국 해부학 명칭 (한국 의학용어 alias) ──
+  { ko: '엉덩허리근',      en: 'iliopsoas' },              // = 장요근
+  { ko: '궁둥구멍근',      en: 'piriformis' },             // = 이상근
+  { ko: '넙다리뒷근육',    en: 'hamstrings' },             // = 슬굴곡근
+  { ko: '넙다리뒤근육',    en: 'hamstrings' },
+  { ko: '넙다리네갈래근',  en: 'quadriceps' },             // = 대퇴사두근
+  { ko: '넙다리근막긴장근', en: 'tensor fasciae latae' },   // = 대퇴근막장근
+  { ko: '허리네모근',      en: 'quadratus lumborum' },     // = 요방형근
+  { ko: '큰볼기근',        en: 'gluteus maximus' },        // = 대둔근
+  { ko: '중간볼기근',      en: 'gluteus medius' },         // = 중둔근
+  { ko: '작은볼기근',      en: 'gluteus minimus' },        // = 소둔근
+  { ko: '가시위근',        en: 'supraspinatus' },          // = 극상근
+  { ko: '가시아래근',      en: 'infraspinatus' },          // = 극하근
+  { ko: '큰가슴근',        en: 'pectoralis major' },       // = 대흉근
+  { ko: '작은가슴근',      en: 'pectoralis minor' },       // = 소흉근
+  { ko: '이두박근',        en: 'biceps brachii' },         // = 이두근
+  { ko: '장딴지근',        en: 'gastrocnemius' },          // = 비복근
+  { ko: '둔근',            en: 'gluteal muscles' },
+
+  // ── 영역·일반 명칭 (MFR/CTM 영역 기반) ──
+  { ko: '발바닥 근막',     en: 'plantar fascia' },
+  { ko: '아래팔 폄근',     en: 'forearm extensors' },
+  { ko: '아래팔 굽힘근',   en: 'forearm flexors' },
+  { ko: '아래팔 신전근',   en: 'forearm extensors' },
+  { ko: '아래팔 굴곡근',   en: 'forearm flexors' },
+  { ko: '손목 폄근',       en: 'wrist extensors' },
+  { ko: '손목 굽힘근',     en: 'wrist flexors' },
+  { ko: '허벅지 앞쪽',     en: 'anterior thigh (quadriceps)' },
+  { ko: '허벅지 뒤쪽',     en: 'posterior thigh (hamstrings)' },
+  { ko: '허벅지 바깥쪽',   en: 'lateral thigh (ITB·TFL)' },
+  { ko: '종아리',          en: 'calf (gastrocnemius·soleus)' },
+  { ko: '엉덩이',          en: 'gluteal region' },
+  { ko: '날개뼈',          en: 'scapula' },
+  { ko: '견갑골',          en: 'scapula' },
+  { ko: 'IT밴드',          en: 'iliotibial band' },
+  { ko: 'ITB',             en: 'iliotibial band' },
+
+  // ── 인대·관절·구조물 (DFM/DTFM 표적) ──
+  { ko: '슬개건',          en: 'patellar tendon' },
+  { ko: '슬개힘줄',        en: 'patellar tendon' },
+  { ko: '내측측부인대',    en: 'medial collateral ligament' },
+  { ko: '내측 측부인대',   en: 'medial collateral ligament' },
+  { ko: '외측측부인대',    en: 'lateral collateral ligament' },
+  { ko: '외측 측부인대',   en: 'lateral collateral ligament' },
+  { ko: 'MCL',             en: 'medial collateral ligament' },
+  { ko: 'LCL',             en: 'lateral collateral ligament' },
+  { ko: '전거비인대',      en: 'anterior talofibular ligament' },
+  { ko: '종비인대',        en: 'calcaneofibular ligament' },
+  { ko: 'ATFL',            en: 'anterior talofibular ligament' },
+  { ko: 'CFL',             en: 'calcaneofibular ligament' },
+  { ko: '천결절인대',      en: 'sacrotuberous ligament' },
+  { ko: '장골요추 인대',   en: 'iliolumbar ligament' },
+  { ko: '요추 인대',       en: 'lumbar ligaments' },
+  { ko: '점액낭',          en: 'bursa' },
+  { ko: '관절낭',          en: 'joint capsule' },
+  { ko: '후관절',          en: 'facet joint' },
+  { ko: '견봉쇄골관절',    en: 'acromioclavicular joint' },
+  { ko: '견봉하',          en: 'subacromial' },
+  { ko: '대전자',          en: 'greater trochanter' },
+  { ko: '가쪽 뼈 돌출',    en: 'lateral epicondyle' },
+  { ko: '안쪽 뼈 돌출',    en: 'medial epicondyle' },
+  { ko: '외측상과',        en: 'lateral epicondyle' },
+  { ko: '내측상과',        en: 'medial epicondyle' },
+
+  // ── SCS 압통점·영역 ──
+  { ko: '허리 앞쪽 통증점', en: 'anterior lumbar tender point' },
+  { ko: '허리 뒤쪽 통증점', en: 'posterior lumbar tender point' },
+  { ko: '엉치뼈',          en: 'sacrum' },
+  { ko: '갈비뼈',          en: 'rib' },
 ];
 
 // 사전 매칭 — name_ko에 등장하는 모든 근육 패턴 추출 (긴 패턴 우선)
