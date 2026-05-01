@@ -846,7 +846,8 @@ export default async function handler(req, res) {
   const bodyRegions = [...primaryRegions, ...secondaryRegions];
 
   // 사용자 입력 텍스트 (증상 설명) 임베딩 — Supabase 조회와 병렬 실행
-  const queryText = `${region} ${acuity} ${symptom}`;
+  const acuityLabel = acuity === '급성' ? '급성기' : acuity === '아급성' ? '아급성기' : '만성';
+  const queryText = `${region} ${acuityLabel} 환자. 주소증: ${symptom}. 수기치료 적응증 검색.`;
   const [queryEmbedding] = await Promise.all([getQueryEmbedding(queryText)]);
 
   // Supabase에서 is_active=true 테크닉 + 카테고리 원칙 + vector 유사도 병렬 조회
