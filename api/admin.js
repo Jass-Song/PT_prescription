@@ -17,28 +17,30 @@ const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || SUPABASE_ANON_KEY;
 const ADMIN_EMAIL = 'junnyhsong@gmail.com';
 
 // ── 어드민 권한 확인: ADMIN_EMAIL 또는 user_profiles.tier='admin' ──
-async function checkAdmin(userId) {
-  // 1) email 체크 (legacy)
-  try {
-    const userRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${userId}`, {
-      headers: { Authorization: `Bearer ${SERVICE_KEY}`, apikey: SERVICE_KEY },
-    });
-    if (userRes.ok) {
-      const userData = await userRes.json();
-      if ((userData.email || '') === ADMIN_EMAIL) return true;
-    }
-  } catch {}
+// verifyToken이 반환하는 user 객체에 email 이미 포함됨 → 추가 fetch 불필요
+// path 2는 사용자 본인 토큰으로 자기 행 조회 (RLS-friendly)
+async function checkAdmin(user, userToken) {
+  // 1) email 체크 (legacy 어드민)
+  if ((user?.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase()) return true;
+
   // 2) user_profiles.tier='admin' 체크 (신규 등급 시스템)
+  // 본인 토큰으로 자기 행만 조회 — RLS: auth.uid()=id 정책으로 자기 행 SELECT 허용
   try {
+    const authToken = userToken || SERVICE_KEY;
     const tierRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/user_profiles?id=eq.${userId}&tier=eq.admin&select=id`,
-      { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } }
+      `${SUPABASE_URL}/rest/v1/user_profiles?id=eq.${user.id}&select=tier`,
+      { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${authToken}` } }
     );
     if (tierRes.ok) {
       const rows = await tierRes.json();
-      return Array.isArray(rows) && rows.length > 0;
+      const tier = rows?.[0]?.tier || null;
+      return tier === 'admin';
+    } else {
+      console.warn('[admin] user_profiles 조회 실패:', tierRes.status);
     }
-  } catch {}
+  } catch (e) {
+    console.warn('[admin] tier 조회 예외:', e.message);
+  }
   return false;
 }
 
@@ -58,11 +60,16 @@ export default async function handler(req, res) {
   if (!user) {
     return res.status(401).json({ error: authError || '인증 실패' });
   }
+  const userToken = (req.headers['authorization'] || '').split(' ')[1] || null;
 
-  // 2. 관리자 권한 확인 (ADMIN_EMAIL 또는 user_tiers.tier='admin')
-  const isAdminUser = await checkAdmin(user.id);
+  // 2. 관리자 권한 확인 (ADMIN_EMAIL 또는 user_profiles.tier='admin')
+  const isAdminUser = await checkAdmin(user, userToken);
   if (!isAdminUser) {
-    return res.status(403).json({ error: '관리자 전용 엔드포인트입니다.' });
+    return res.status(403).json({
+      error: '관리자 전용 엔드포인트입니다.',
+      hint: '본인 user_profiles.tier가 admin인지 확인하거나, 등록된 ADMIN_EMAIL과 일치하는지 확인하세요.',
+      debug: { user_email: user.email, user_id: user.id },
+    });
   }
 
   const headersAdmin = { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json' };
