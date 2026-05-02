@@ -123,6 +123,46 @@ const MT_GROUP_LABEL = {
   mt_edu:     '통증 신경과학 교육 (PNE)',
 };
 
+// ── Pillar 매핑 (한국 도수치료 3 박자 모델) ──
+// 한국 임상 워크플로우: 관절 가동 + 연부조직 + 운동 3 그룹.
+// 보조(d_neural/pne)는 룰점수 기반 자동 추가.
+// 사용자가 focusPillars로 직접 선택 가능 (기본: 모두 활성).
+const MT_PILLARS = {
+  joint: {
+    label: '관절 가동',
+    label_en: 'Joint Mobilization',
+    categories: ['category_joint_mobilization', 'category_mulligan', 'category_mdt'],
+  },
+  soft_tissue: {
+    label: '연부조직',
+    label_en: 'Soft Tissue',
+    categories: [
+      'category_mfr', 'category_art', 'category_ctm', 'category_deep_friction',
+      'category_trigger_point', 'category_anatomy_trains', 'category_scs', 'category_iastm',
+    ],
+  },
+};
+const EXERCISE_PILLAR = {
+  label: '운동',
+  label_en: 'Exercise',
+  categories: ['category_ex_resistance', 'category_ex_bodyweight', 'category_ex_neuromuscular', 'category_ex_aerobic'],
+};
+const ADJUNCT_PILLAR = {
+  label: '보조',
+  label_en: 'Adjunct',
+  categories: ['category_d_neural', 'category_pne'],
+};
+
+// 카테고리 → pillar 역방향 맵
+const CATEGORY_TO_PILLAR = {};
+for (const [pillarKey, def] of Object.entries(MT_PILLARS)) {
+  for (const cat of def.categories) CATEGORY_TO_PILLAR[cat] = pillarKey;
+}
+for (const cat of EXERCISE_PILLAR.categories) CATEGORY_TO_PILLAR[cat] = 'exercise';
+for (const cat of ADJUNCT_PILLAR.categories) CATEGORY_TO_PILLAR[cat] = 'adjunct';
+
+const ALL_PILLARS = { ...MT_PILLARS, exercise: EXERCISE_PILLAR, adjunct: ADJUNCT_PILLAR };
+
 // 운동 처방 선호 ID → Supabase category 매핑
 const EX_CATEGORY_MAP = {
   ex_neuro:    ['category_ex_neuromuscular'],
@@ -635,6 +675,42 @@ function selectTopTechniquesGlobally(activeMT, acuity, symptom, maxTotal = 6, ma
   return selected;
 }
 
+// Pillar별 상위 N 후보 추출 — 한국 도수치료 3 박자 모델
+// activeMT/activeEX 합집합 → ruleScore + vectorScore → pillar별 그룹화 → 각 pillar에서 top N
+// 반환: { joint: [...], soft_tissue: [...], adjunct: [...], exercise: [...] }
+function selectTopPerPillar(activeMT, activeEX, acuity, symptom, vectorScoreMap, perPillar = 5) {
+  const conditionScores = (CONDITION_CATEGORY_SCORES[acuity] || {})[symptom] || {};
+  const RULE_SCORE_MAX = 3;
+
+  const scoreOne = (t) => {
+    const ruleScore = conditionScores[t.category] ?? 0;
+    const ruleNorm = ruleScore / RULE_SCORE_MAX;
+    const vectorScore = vectorScoreMap[t.id] ?? 0;
+    const hasVector = Object.keys(vectorScoreMap).length > 0;
+    const finalScore = hasVector ? ruleNorm * 0.6 + vectorScore * 0.4 : ruleNorm;
+    return { ...t, _ruleScore: ruleScore, _vectorScore: vectorScore, score: finalScore };
+  };
+
+  const allScored = [
+    ...activeMT.map(scoreOne),
+    ...activeEX.map(scoreOne),
+  ].sort((a, b) => b.score - a.score);
+
+  const buckets = { joint: [], soft_tissue: [], adjunct: [], exercise: [] };
+  for (const t of allScored) {
+    const pillar = CATEGORY_TO_PILLAR[t.category];
+    if (!pillar) continue;
+    if (buckets[pillar].length < perPillar) buckets[pillar].push(t);
+  }
+  return buckets;
+}
+
+// 룰점수 ≥ threshold 인 보조 카테고리(d_neural/pne)가 있는지 확인 — 자동 보조 카드 트리거
+function shouldShowAdjunct(acuity, symptom, threshold = 2) {
+  const conditionScores = (CONDITION_CATEGORY_SCORES[acuity] || {})[symptom] || {};
+  return ADJUNCT_PILLAR.categories.some(cat => (conditionScores[cat] ?? 0) >= threshold);
+}
+
 // 카테고리 × region 단위 적용 가능 근육 합집합 — 카드 단위 다부위 노출용
 // activeMT: fetchActiveTechniques 결과 (applicable_muscles 포함)
 // regions: 필터할 region 배열 (primary regions). 빈 배열이면 region 무제한.
@@ -757,12 +833,21 @@ export default async function handler(req, res) {
     symptom,
     selectedCategories = [],
     excludedTechniqueIds = [],
-    sessionHistory = []
+    sessionHistory = [],
+    focusPillars: rawFocusPillars,
   } = req.body;
 
   if (!region || !acuity || !symptom) {
     return res.status(400).json({ error: '필수 항목 누락: region, acuity, symptom' });
   }
+
+  // ── focusPillars 정규화 ──
+  // 사용자가 [4]단계에서 선택한 도수치료 초점 (한국 3박자 모델: 관절·연부조직·운동)
+  // 미지정 시 기본 3 박자 모두 활성. 우선순위는 배열 순서.
+  const VALID_PILLARS = ['joint', 'soft_tissue', 'exercise'];
+  const focusPillars = Array.isArray(rawFocusPillars) && rawFocusPillars.length > 0
+    ? rawFocusPillars.filter(p => VALID_PILLARS.includes(p))
+    : ['joint', 'soft_tissue', 'exercise'];
 
   const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
   if (!ANTHROPIC_API_KEY) {
@@ -1096,6 +1181,107 @@ techniqueId는 [MT-XXX] 또는 [EX-XXX] ID를 그대로 복사.`;
     result.manualTherapy   = primaryMTItems;
     if (relatedMTItems.length > 0) result.relatedManualTherapy = relatedMTItems;
 
+    // ── recommendations[] 빌드 — 한국 도수치료 3박자 모델 (관절·연부조직·운동) ──
+    // 사용자 focusPillars 우선순위 순서로 카드 구성. 각 카드 = primary(LLM 재작성) + related(DB 직접).
+    // 보조(adjunct: d_neural/pne)는 LLM이 선택했거나 룰점수 ≥ 2일 때 자동 추가.
+    const pillarBuckets = selectTopPerPillar(activeMT, activeEX, acuity, symptom, vectorScoreMap, 5);
+
+    const buildRelatedFor = (pillarKey, primaryAbbr) => {
+      const candidates = pillarBuckets[pillarKey] || [];
+      return candidates
+        .filter(t => t.abbreviation !== primaryAbbr)
+        .slice(0, 4)
+        .map(t => {
+          const catData = categoryPrinciplesMap[t.category];
+          return {
+            techniqueId: t.abbreviation,
+            name_ko: t.name_ko,
+            applicableMuscles: aggregateApplicableMuscles(
+              [...activeMT, ...activeEX], t.category, primaryRegions
+            ),
+            categoryInfo: catData ? {
+              category_key: t.category,
+              name_ko: catData.name_ko,
+              name_en: catData.name_en,
+              basic_principles: catData.basic_principles || [],
+            } : null,
+            _score: Math.round((t.score || 0) * 1000) / 1000,
+          };
+        });
+    };
+
+    const itemPillarOf = (item) =>
+      CATEGORY_TO_PILLAR[item.categoryInfo?.category_key] || null;
+
+    const allItems = [
+      ...(primaryMTItems || []).map(i => ({ ...i, _source: 'mt' })),
+      ...(result.exercise || []).map(i => ({ ...i, _source: 'ex' })),
+    ];
+
+    const recommendations = [];
+    let rank = 1;
+
+    // (1) 사용자 선택 pillar 순서대로 카드 빌드
+    for (const pillarKey of focusPillars) {
+      const pillarDef = ALL_PILLARS[pillarKey];
+      if (!pillarDef) continue;
+      const primary = allItems.find(i => itemPillarOf(i) === pillarKey);
+      if (!primary) continue; // pillar 후보 부재 — 카드 생략 (강제 채우기 X)
+      const { _source, ...primaryClean } = primary;
+      recommendations.push({
+        pillar: pillarKey,
+        pillarLabel: pillarDef.label,
+        pillarLabel_en: pillarDef.label_en,
+        rank: rank++,
+        primary: primaryClean,
+        related: buildRelatedFor(pillarKey, primary.techniqueId),
+      });
+    }
+
+    // (2) 보조(adjunct) — LLM이 선택했거나 룰점수 ≥ 2인 경우 자동 추가
+    const adjunctInLLMOutput = allItems.find(i => itemPillarOf(i) === 'adjunct');
+    if (adjunctInLLMOutput) {
+      const { _source, ...primaryClean } = adjunctInLLMOutput;
+      recommendations.push({
+        pillar: 'adjunct',
+        pillarLabel: ADJUNCT_PILLAR.label,
+        pillarLabel_en: ADJUNCT_PILLAR.label_en,
+        rank: rank++,
+        auto: false,
+        primary: primaryClean,
+        related: buildRelatedFor('adjunct', adjunctInLLMOutput.techniqueId),
+      });
+    } else if (shouldShowAdjunct(acuity, symptom, 2)) {
+      // LLM이 선택 안 했지만 룰점수가 강하면 DB 후보 1개를 PRIMARY로 (LLM 재작성 X — 정보만)
+      const adjunctTop = (pillarBuckets.adjunct || [])[0];
+      if (adjunctTop) {
+        const catData = categoryPrinciplesMap[adjunctTop.category];
+        recommendations.push({
+          pillar: 'adjunct',
+          pillarLabel: ADJUNCT_PILLAR.label,
+          pillarLabel_en: ADJUNCT_PILLAR.label_en,
+          rank: rank++,
+          auto: true,
+          primary: {
+            techniqueId: adjunctTop.abbreviation,
+            technique: adjunctTop.name_ko,
+            applicableMuscles: aggregateApplicableMuscles(
+              [...activeMT, ...activeEX], adjunctTop.category, primaryRegions
+            ),
+            categoryInfo: catData ? {
+              category_key: adjunctTop.category,
+              name_ko: catData.name_ko,
+              name_en: catData.name_en,
+              basic_principles: catData.basic_principles || [],
+            } : null,
+          },
+          related: buildRelatedFor('adjunct', adjunctTop.abbreviation),
+        });
+      }
+    }
+
+    result.recommendations = recommendations;
+
     result.selectedCategories = selectedCategories;
 
     result.sessionSummary = {
@@ -1103,6 +1289,7 @@ techniqueId는 [MT-XXX] 또는 [EX-XXX] ID를 그대로 복사.`;
       acuity,
       symptom,
       selectedCategories,
+      focusPillars,
     };
 
     logRecommendationSession(user.id, userToken, {
