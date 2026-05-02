@@ -930,6 +930,49 @@
     }
     .pillar-chip.selected .pillar-rank { display: flex; }
 
+    /* ── Pillar 결과 카드 헤더 + related list ── */
+    .pillar-block { border-left: 4px solid var(--primary); padding-left: 4px; }
+    .pillar-title { display: flex; align-items: center; gap: 8px; }
+    .pillar-rank-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 24px; height: 24px; border-radius: 50%;
+      background: var(--primary); color: #fff;
+      font-size: 0.78rem; font-weight: 700;
+    }
+    .pillar-auto-badge {
+      margin-left: 8px; padding: 2px 8px; border-radius: 10px;
+      background: #fef3c7; color: #92400e;
+      font-size: 0.7rem; font-weight: 600;
+    }
+    .pillar-related-wrap { margin-top: 8px; }
+    .pillar-related-details { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
+    .pillar-related-summary {
+      cursor: pointer; padding: 4px 0;
+      font-size: 0.875rem; font-weight: 600; color: var(--text-secondary);
+      list-style: none;
+    }
+    .pillar-related-summary::-webkit-details-marker { display: none; }
+    .pillar-related-summary::before { content: '▶ '; font-size: 0.7rem; transition: transform 0.15s ease; display: inline-block; }
+    .pillar-related-details[open] .pillar-related-summary::before { transform: rotate(90deg); }
+    .pillar-related-list {
+      list-style: none; padding: 8px 0 0; margin: 0;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .pillar-related-item {
+      padding: 10px 12px; background: var(--background);
+      border-radius: 8px; border: 1px solid var(--border);
+    }
+    .rel-name-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .rel-name { font-weight: 600; color: var(--text); font-size: 0.92rem; }
+    .rel-cat { font-size: 0.78rem; color: var(--text-secondary); }
+    .btn-rel-catinfo {
+      border: none; background: var(--primary-light); color: var(--primary);
+      border-radius: 6px; padding: 2px 8px; font-size: 0.78rem; cursor: pointer;
+      margin-left: auto;
+    }
+    .btn-rel-catinfo:hover { background: var(--primary); color: #fff; }
+    .rel-muscles { margin-top: 6px; font-size: 0.82rem; color: var(--text-secondary); line-height: 1.4; }
+
     .cat-slot-label { font-size: 0.75rem; color: var(--text-secondary); margin: 14px 0 6px; }
     .cat-slot-row { display: flex; flex-wrap: wrap; gap: 8px; min-height: 32px; }
     .cat-slot-item {
@@ -2703,6 +2746,92 @@
     }
   }
 
+  /* ══════════════════════════════════════
+     PILLAR RECOMMENDATIONS RENDERING (new shape)
+     recommendations[] = [{ pillar, pillarLabel, rank, primary, related }]
+  ══════════════════════════════════════ */
+  function renderPillarRecommendations(result) {
+    const area = document.getElementById('cat-sections-area');
+    area.innerHTML = '';
+
+    const recs = result.recommendations || [];
+    const pillarIcon = { joint: '🔧', soft_tissue: '💆', exercise: '🏃', adjunct: '⚡' };
+
+    recs.forEach((rec, i) => {
+      const isEX = rec.pillar === 'exercise';
+      const isAdjunct = rec.pillar === 'adjunct';
+      const icon = pillarIcon[rec.pillar] || '📋';
+      const autoBadge = rec.auto
+        ? '<span class="pillar-auto-badge">자동</span>'
+        : '';
+
+      const section = document.createElement('div');
+      section.className = 'rec-block pillar-block';
+      section.innerHTML = `
+        <div class="rec-block-title pillar-title">
+          <span class="pillar-rank-badge">${rec.rank}</span>
+          <span class="icon">${icon}</span>${rec.pillarLabel || rec.pillar}${autoBadge}
+        </div>
+        <div class="cat-card-list pillar-primary"></div>
+        <div class="pillar-related-wrap"></div>
+      `;
+
+      // Primary card — 기존 renderTechniqueCard 재사용
+      const primaryList = section.querySelector('.pillar-primary');
+      if (rec.primary) {
+        renderTechniqueCard(rec.primary, 0, isEX, primaryList);
+      } else {
+        primaryList.innerHTML = '<div class="no-rec">대표 추천 없음.</div>';
+      }
+
+      // Related list — 같은 그룹의 다른 후보 (compact 형식)
+      const relWrap = section.querySelector('.pillar-related-wrap');
+      const related = Array.isArray(rec.related) ? rec.related : [];
+      if (related.length > 0) {
+        const detailsEl = document.createElement('details');
+        detailsEl.className = 'pillar-related-details';
+        detailsEl.innerHTML = `
+          <summary class="pillar-related-summary">
+            🔗 같은 그룹 관련 기법 ${related.length}개 보기
+          </summary>
+          <ul class="pillar-related-list"></ul>
+        `;
+        const ul = detailsEl.querySelector('.pillar-related-list');
+        related.forEach(rel => {
+          const catLabel = rel.categoryInfo?.name_ko || rel.categoryInfo?.category_key || '';
+          const muscles = Array.isArray(rel.applicableMuscles) && rel.applicableMuscles.length > 0
+            ? rel.applicableMuscles
+                .slice(0, 4)
+                .map(m => typeof m === 'string' ? m : (m.muscle_ko || ''))
+                .filter(Boolean)
+                .join(' · ')
+            : '';
+          const muscleHtml = muscles ? `<div class="rel-muscles">🎯 ${sanitizeTerms(muscles)}</div>` : '';
+          const catInfoAttr = rel.categoryInfo
+            ? `data-catinfo='${JSON.stringify(rel.categoryInfo).replace(/'/g, "&apos;")}'`
+            : '';
+          const catBtn = rel.categoryInfo
+            ? `<button class="btn-rel-catinfo" onclick="showCategoryModal(this)" ${catInfoAttr}>📖</button>`
+            : '';
+          const li = document.createElement('li');
+          li.className = 'pillar-related-item';
+          li.innerHTML = `
+            <div class="rel-name-row">
+              <span class="rel-name">${sanitizeTerms(rel.name_ko || rel.technique || rel.techniqueId)}</span>
+              <span class="rel-cat">${catLabel ? `(${catLabel})` : ''}</span>
+              ${catBtn}
+            </div>
+            ${muscleHtml}
+          `;
+          ul.appendChild(li);
+        });
+        relWrap.appendChild(detailsEl);
+      }
+
+      area.appendChild(section);
+    });
+  }
+
   function renderTechniqueCard(item, idx, isEX, container) {
     const rankClass = idx === 0 ? 'rank-1' : idx === 1 ? 'rank-2' : idx === 2 ? 'rank-3' : '';
     const catKey = item.categoryInfo?.category_key || '';
@@ -2971,7 +3100,12 @@
       symptom: SYMPTOM_LABEL[selectedSymptom]|| '',
     };
 
-    renderCategoryResults(result);
+    // recommendations[] (신규 pillar 형식) 우선, 없으면 legacy renderCategoryResults
+    if (Array.isArray(result.recommendations) && result.recommendations.length > 0) {
+      renderPillarRecommendations(result);
+    } else {
+      renderCategoryResults(result);
+    }
 
     // ── Clinical Note ──
     const noteWrap = document.getElementById('clinical-note-wrap');
