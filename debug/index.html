@@ -691,18 +691,25 @@ function renderGraph(data) {
 
   // Force simulation — forceLink 제거, 카테고리 인력은 커스텀 force로 적용
   simulation = d3.forceSimulation(nodes)
+    .alphaDecay(0.03)
+    .velocityDecay(0.35)
     .force('charge', d3.forceManyBody().strength(-90).distanceMax(320))
     .force('center', d3.forceCenter(width / 2, height / 2))
     .force('collision', d3.forceCollide().radius(20))
     .force('category', () => {
-      // 같은 카테고리 노드끼리 서로 당기는 인력 (forceLink 대체)
+      // O(n) 센트로이드 기반 카테고리 클러스터링
+      const centroids = new Map();
       nodes.forEach(n => {
-        nodes.forEach(m => {
-          if (n === m || n.category !== m.category) return;
-          const dx = m.x - n.x, dy = m.y - n.y;
-          n.vx += dx * 0.008;
-          n.vy += dy * 0.008;
-        });
+        if (!centroids.has(n.category)) centroids.set(n.category, { x: 0, y: 0, count: 0 });
+        const c = centroids.get(n.category);
+        c.x += n.x; c.y += n.y; c.count++;
+      });
+      centroids.forEach(c => { c.x /= c.count; c.y /= c.count; });
+      nodes.forEach(n => {
+        const c = centroids.get(n.category);
+        if (!c) return;
+        n.vx += (c.x - n.x) * 0.008;
+        n.vy += (c.y - n.y) * 0.008;
       });
     });
 
@@ -748,19 +755,12 @@ function renderGraph(data) {
 
   // tick: nodeMap으로 좌표 직접 조회 → D3 forceLink ID 해석 실패 완전 우회
   function edgePathDirect(d) {
-    // source/target이 이미 객체면 그대로, 문자열이면 nodeMap에서 조회
     const src = (typeof d.source === 'object') ? d.source : nodeMap.get(d.source);
     const tgt = (typeof d.target === 'object') ? d.target : nodeMap.get(d.target);
     if (!src || !tgt) return '';
     const sx = src.x, sy = src.y, tx = tgt.x, ty = tgt.y;
     if (!isFinite(sx) || !isFinite(sy) || !isFinite(tx) || !isFinite(ty)) return '';
-    const mx = (sx + tx) / 2, my = (sy + ty) / 2;
-    const dx = tx - sx, dy = ty - sy;
-    const len = Math.sqrt(dx * dx + dy * dy) || 1;
-    const curve = Math.min(30, len * 0.25);
-    const cx = mx - (dy / len) * curve;
-    const cy = my + (dx / len) * curve;
-    return `M${sx},${sy} Q${cx},${cy} ${tx},${ty}`;
+    return `M${sx},${sy} L${tx},${ty}`;
   }
 
   simulation.on('tick', () => {
