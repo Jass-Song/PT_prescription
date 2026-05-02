@@ -843,9 +843,10 @@ export default async function handler(req, res) {
 
   // ── focusPillars 정규화 ──
   // 사용자가 [4]단계에서 선택한 도수치료 초점 (한국 3박자 모델: 관절·연부조직·운동)
-  // 미지정 시 기본 3 박자 모두 활성. 우선순위는 배열 순서.
+  // 명시적으로 전송된 경우만 pillar 모드 진입. 미지정/legacy는 기존 프롬프트 사용.
   const VALID_PILLARS = ['joint', 'soft_tissue', 'exercise'];
-  const focusPillars = Array.isArray(rawFocusPillars) && rawFocusPillars.length > 0
+  const isPillarMode = Array.isArray(rawFocusPillars) && rawFocusPillars.length > 0;
+  const focusPillars = isPillarMode
     ? rawFocusPillars.filter(p => VALID_PILLARS.includes(p))
     : ['joint', 'soft_tissue', 'exercise'];
 
@@ -1009,19 +1010,47 @@ export default async function handler(req, res) {
     indexedExercises.set(id, t);
   });
 
-  // 알고리즘: 전체 글로벌 스코어링 → 상위 6개 후보 → Claude가 3개 선택
-  // topMT를 블록 밖에 선언: LLM 프롬프트용 후보 목록 구성
+  // 알고리즘: pillar 모드 vs legacy 모드 분기
+  // - pillar 모드: focusPillars 명시 → pillar별 candidate section, LLM이 각 pillar에서 1개씩 선택
+  // - legacy 모드: focusPillars 미지정 → 기존 글로벌 스코어링 + 다양성 가드 (3개 선택)
   let topMT = [];
   let allowedMTText;
+  let mtPickCount = 3; // LLM 선택 갯수 (legacy 기본 3)
+  let promptPillarOrder = []; // pillar 모드일 때 순서 정보 (프롬프트에 명시)
+
   if (activeMT.length > 0) {
-    // 다양성 강제: 그룹당 최대 2 + 카테고리당 최대 1 → 6개 후보가 모두 다른 카테고리에서 추출됨
-    // → LLM 최종 선택 3개도 자동으로 3개 다른 카테고리(모달리티) 보장
-    topMT = selectTopTechniquesGlobally(activeMT, acuity, symptom, 6, 2, vectorScoreMap, 1);
-    const allSelectedMT = topMT.map(t =>
-      formatTechniqueForPrompt(t, MT_GROUP_LABEL[CATEGORY_TO_MT_GROUP[t.category]] || '기타')
-    );
-    allowedMTText = `Manual Therapy 후보 기법 (condition score 상위 6개. 이 중 이 환자에게 가장 적합한 3개를 임상적 우선순위 순으로 선택하세요):\n\n` +
-      allSelectedMT.join('\n\n');
+    if (isPillarMode) {
+      // ── Pillar 모드 ──
+      // pillarBuckets에서 사용자 선택 pillar만 추출, pillar별 top 5 후보
+      const pillarBuckets = selectTopPerPillar(activeMT, [], acuity, symptom, vectorScoreMap, 5);
+      const pillarSections = [];
+      for (const pkey of focusPillars) {
+        const pillarDef = MT_PILLARS[pkey]; // EXERCISE는 별도 처리
+        if (!pillarDef) continue;
+        const candidates = pillarBuckets[pkey] || [];
+        if (candidates.length === 0) continue;
+        promptPillarOrder.push({ key: pkey, label: pillarDef.label, count: candidates.length });
+        topMT.push(...candidates);
+        const items = candidates.map(t => formatTechniqueForPrompt(t, pillarDef.label)).join('\n\n');
+        pillarSections.push(`=== [${pillarDef.label} 그룹] 후보 ${candidates.length}개 ===\n\n${items}`);
+      }
+      mtPickCount = promptPillarOrder.length; // 그룹 수 = 선택 카드 수
+      if (pillarSections.length > 0) {
+        allowedMTText = `Manual Therapy 후보 — 한국 도수치료 ${promptPillarOrder.length} 그룹별로 정렬되어 있습니다.\n각 그룹에서 이 환자에게 가장 적합한 1개씩 선택하세요. 동일 그룹 내 중복 금지.\n\n` +
+          pillarSections.join('\n\n');
+      } else {
+        allowedMTText = '';
+      }
+    } else {
+      // ── Legacy 모드 (기존 동작 유지) ──
+      // 다양성 강제: 그룹당 최대 2 + 카테고리당 최대 1 → 6개 후보가 모두 다른 카테고리에서 추출됨
+      topMT = selectTopTechniquesGlobally(activeMT, acuity, symptom, 6, 2, vectorScoreMap, 1);
+      const allSelectedMT = topMT.map(t =>
+        formatTechniqueForPrompt(t, MT_GROUP_LABEL[CATEGORY_TO_MT_GROUP[t.category]] || '기타')
+      );
+      allowedMTText = `Manual Therapy 후보 기법 (condition score 상위 ${topMT.length}개. 이 중 이 환자에게 가장 적합한 ${Math.min(3, topMT.length)}개를 임상적 우선순위 순으로 선택하세요):\n\n` +
+        allSelectedMT.join('\n\n');
+    }
   } else {
     allowedMTText = '';
   }
@@ -1089,7 +1118,11 @@ ${allowedMTText}${allowedEXText}
 ${historyText}
 
 환자 정보(부위: ${region}, 시기: ${acuity}, 증상: ${symptom})에 맞게:
-${topMT.length > 0 ? `▸ MT: 후보 6개 중 이 환자(부위: ${region}, 시기: ${acuity}, 증상: ${symptom})에게 가장 적합한 3개를 임상적 우선순위 순서로 선택하여 DB 정보를 쉬운 한국어로 재작성. 동일 카테고리 중복 선택 금지 — 서로 다른 모달리티로 다층 접근 구성.` : ''}
+${topMT.length > 0
+  ? (isPillarMode
+      ? `▸ MT: 위 후보는 ${promptPillarOrder.length}개 그룹으로 정렬되어 있습니다 (${promptPillarOrder.map(p => p.label).join(' → ')}). 각 그룹에서 1개씩 선택하여 총 ${mtPickCount}개를 그룹 우선순위 순서대로 manualTherapy에 배치. 동일 그룹 내 중복 금지.`
+      : `▸ MT: 후보 ${topMT.length}개 중 이 환자(부위: ${region}, 시기: ${acuity}, 증상: ${symptom})에게 가장 적합한 ${Math.min(3, topMT.length)}개를 임상적 우선순위 순서로 선택하여 DB 정보를 쉬운 한국어로 재작성. 동일 카테고리 중복 선택 금지 — 서로 다른 모달리티로 다층 접근 구성.`)
+  : ''}
 ${topEX.length > 0 ? '▸ 운동: 환자 상태를 고려하여 2개 선택' : ''}
 DB 정보를 쉬운 한국어로 재작성하여 아래 형식으로만 반환하세요. 목록에 없는 기법 생성 금지.
 
