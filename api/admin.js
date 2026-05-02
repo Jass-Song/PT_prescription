@@ -16,12 +16,38 @@ const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || SUPABASE_ANON_KEY;
 
 const ADMIN_EMAIL = 'junnyhsong@gmail.com';
 
+// ── 어드민 권한 확인: ADMIN_EMAIL 또는 user_tiers.tier='admin' ──
+async function checkAdmin(userId) {
+  // 1) email 체크 (legacy)
+  try {
+    const userRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${userId}`, {
+      headers: { Authorization: `Bearer ${SERVICE_KEY}`, apikey: SERVICE_KEY },
+    });
+    if (userRes.ok) {
+      const userData = await userRes.json();
+      if ((userData.email || '') === ADMIN_EMAIL) return true;
+    }
+  } catch {}
+  // 2) user_tiers.tier='admin' 체크 (신규 등급 시스템)
+  try {
+    const tierRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/user_tiers?user_id=eq.${userId}&tier=eq.admin&select=user_id`,
+      { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } }
+    );
+    if (tierRes.ok) {
+      const rows = await tierRes.json();
+      return Array.isArray(rows) && rows.length > 0;
+    }
+  } catch {}
+  return false;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, PATCH, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+  if (!['GET', 'PATCH'].includes(req.method)) return res.status(405).json({ error: 'Method not allowed' });
 
   if (!SERVICE_KEY) {
     return res.status(500).json({ error: 'Supabase 키 미설정' });
@@ -33,29 +59,62 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: authError || '인증 실패' });
   }
 
-  // 2. 관리자 이메일 확인 — auth.admin API로 사용자 정보 조회
-  try {
-    const userRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${user.id}`, {
-      headers: {
-        Authorization: `Bearer ${SERVICE_KEY}`,
-        apikey: SERVICE_KEY,
-      },
-    });
-
-    if (!userRes.ok) {
-      return res.status(403).json({ error: '사용자 정보를 확인할 수 없습니다.' });
-    }
-
-    const userData = await userRes.json();
-    const email = userData.email || '';
-
-    if (email !== ADMIN_EMAIL) {
-      return res.status(403).json({ error: '관리자 전용 엔드포인트입니다.' });
-    }
-  } catch (e) {
-    console.error('[admin] 관리자 확인 실패:', e.message);
-    return res.status(500).json({ error: '관리자 확인 중 오류 발생' });
+  // 2. 관리자 권한 확인 (ADMIN_EMAIL 또는 user_tiers.tier='admin')
+  const isAdminUser = await checkAdmin(user.id);
+  if (!isAdminUser) {
+    return res.status(403).json({ error: '관리자 전용 엔드포인트입니다.' });
   }
+
+  const headersAdmin = { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json' };
+  const type = req.query?.type || req.body?.type || '';
+
+  // ── 신규 등급 관리 엔드포인트 (type 분기) ──
+  if (req.method === 'GET' && type === 'tier_limits') {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/tier_limits?select=*&order=daily_limit`, { headers: headersAdmin });
+    return res.status(r.status).json(r.ok ? await r.json() : { error: 'tier_limits 조회 실패' });
+  }
+  if (req.method === 'GET' && type === 'tiers') {
+    // user_tiers + auth.users.email 조인 (Supabase admin API 활용)
+    const tr = await fetch(`${SUPABASE_URL}/rest/v1/user_tiers?select=*&order=updated_at.desc&limit=200`, { headers: headersAdmin });
+    if (!tr.ok) return res.status(500).json({ error: 'user_tiers 조회 실패' });
+    const rows = await tr.json();
+    // 이메일 보강 (Supabase Auth Admin API)
+    const enriched = await Promise.all(rows.map(async row => {
+      try {
+        const ur = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${row.user_id}`, { headers: { Authorization: `Bearer ${SERVICE_KEY}`, apikey: SERVICE_KEY } });
+        const u = ur.ok ? await ur.json() : null;
+        return { ...row, email: u?.email || null };
+      } catch { return row; }
+    }));
+    return res.status(200).json(enriched);
+  }
+  if (req.method === 'PATCH' && type === 'tier_limit') {
+    const tier = req.query?.tier || req.body?.tier;
+    const daily_limit = req.body?.daily_limit;
+    if (!tier || !Number.isFinite(Number(daily_limit))) {
+      return res.status(400).json({ error: 'tier 및 daily_limit 필수' });
+    }
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/tier_limits?tier=eq.${encodeURIComponent(tier)}`, {
+      method: 'PATCH', headers: { ...headersAdmin, Prefer: 'return=representation' },
+      body: JSON.stringify({ daily_limit: Number(daily_limit), updated_at: new Date().toISOString(), updated_by: user.id }),
+    });
+    return res.status(r.status).json(r.ok ? await r.json() : { error: 'tier_limit 갱신 실패' });
+  }
+  if (req.method === 'PATCH' && type === 'user_tier') {
+    const target_user_id = req.query?.user_id || req.body?.user_id;
+    const tier = req.body?.tier;
+    const notes = req.body?.notes ?? null;
+    if (!target_user_id || !tier) return res.status(400).json({ error: 'user_id 및 tier 필수' });
+    // upsert: 행 없으면 INSERT, 있으면 UPDATE
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/user_tiers?on_conflict=user_id`, {
+      method: 'POST',
+      headers: { ...headersAdmin, Prefer: 'resolution=merge-duplicates,return=representation' },
+      body: JSON.stringify({ user_id: target_user_id, tier, notes, updated_at: new Date().toISOString(), updated_by: user.id }),
+    });
+    return res.status(r.status).json(r.ok ? await r.json() : { error: 'user_tier 갱신 실패' });
+  }
+
+  if (req.method !== 'GET') return res.status(405).json({ error: 'GET only for dashboard' });
 
   // 3. 데이터 병렬 조회
   const now = new Date();

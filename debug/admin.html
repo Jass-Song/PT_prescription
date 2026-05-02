@@ -424,10 +424,61 @@
     </div>
   </div>
 
+  <!-- ═══ 등급별 한도 ═══ -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">⚙️ 등급별 일일 한도</span>
+      <span class="sub" id="tier-limits-status"></span>
+    </div>
+    <div class="card-body">
+      <div id="tier-limits-wrap">
+        <div class="empty-state">로딩 중...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 사용자 등급 관리 ═══ -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">👥 사용자 등급 관리</span>
+      <span class="sub" id="user-tiers-status"></span>
+    </div>
+    <div class="card-body">
+      <div style="display:flex;gap:8px;align-items:end;margin-bottom:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:240px">
+          <label style="display:block;font-size:0.78rem;color:#64748b;margin-bottom:4px">사용자 ID (auth.users.id)</label>
+          <input type="text" id="ut-user-id" placeholder="UUID 입력" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-family:monospace;font-size:0.85rem" />
+        </div>
+        <div>
+          <label style="display:block;font-size:0.78rem;color:#64748b;margin-bottom:4px">등급</label>
+          <select id="ut-tier" style="padding:8px;border:1px solid #cbd5e1;border-radius:6px">
+            <option value="beta">beta</option>
+            <option value="pro">pro</option>
+            <option value="admin">admin</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:0.78rem;color:#64748b;margin-bottom:4px">메모(선택)</label>
+          <input type="text" id="ut-notes" placeholder="비고" style="padding:8px;border:1px solid #cbd5e1;border-radius:6px" />
+        </div>
+        <button onclick="saveUserTier()" style="padding:8px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600">저장</button>
+      </div>
+      <div id="user-tiers-wrap">
+        <div class="empty-state">로딩 중...</div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
 const API_BASE = window.location.origin;
+
+// ── 인증 토큰 helper (init에서 발견된 토큰을 전역 보관) ──
+let _adminToken = null;
+function getAuthHeaders() {
+  return _adminToken ? { Authorization: `Bearer ${_adminToken}` } : {};
+}
 
 // ── 유틸 ──────────────────────────────────────────────────────────────────
 
@@ -655,6 +706,7 @@ async function init() {
   showGate('데이터 로딩 중...', '', '');
 
   try {
+    _adminToken = token; // 등급 관리 fetch에서도 사용
     const res = await fetch(`${API_BASE}/api/admin`, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -699,6 +751,10 @@ async function init() {
     renderFeedback(generalFeedback);
     renderErrors(recentErrors);
 
+    // ── 등급 관리 데이터 ──
+    loadTierLimits();
+    loadUserTiers();
+
     document.getElementById('updated-at').textContent =
       '업데이트: ' + new Date().toLocaleTimeString('ko-KR', { hour12: false });
 
@@ -709,6 +765,120 @@ async function init() {
       '<a href="javascript:location.reload()">다시 시도</a>'
     );
   }
+}
+
+// ── 등급별 한도 ──
+async function loadTierLimits() {
+  const wrap = document.getElementById('tier-limits-wrap');
+  const status = document.getElementById('tier-limits-status');
+  try {
+    const res = await fetch(`${API_BASE}/api/admin?type=tier_limits`, { headers: getAuthHeaders() });
+    if (!res.ok) { wrap.innerHTML = '<div class="empty-state">조회 실패</div>'; return; }
+    const rows = await res.json();
+    if (!Array.isArray(rows) || rows.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">등급 데이터 없음 (마이그레이션 046 실행 확인)</div>';
+      return;
+    }
+    status.textContent = `${rows.length} 등급`;
+    wrap.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:0.92rem">
+        <thead><tr style="background:#f1f5f9">
+          <th style="padding:8px;text-align:left">등급</th>
+          <th style="padding:8px;text-align:left">설명</th>
+          <th style="padding:8px;text-align:right">일일 한도</th>
+          <th style="padding:8px"></th>
+        </tr></thead>
+        <tbody>${rows.map(r => `
+          <tr style="border-top:1px solid #e2e8f0">
+            <td style="padding:8px;font-weight:600">${r.tier}</td>
+            <td style="padding:8px;color:#64748b">${r.description || ''}</td>
+            <td style="padding:8px;text-align:right">
+              <input type="number" id="tl-${r.tier}" value="${r.daily_limit}" min="0" style="width:90px;padding:4px;border:1px solid #cbd5e1;border-radius:4px;text-align:right" />
+            </td>
+            <td style="padding:8px;text-align:right">
+              <button onclick="saveTierLimit('${r.tier}')" style="padding:4px 10px;background:#059669;color:#fff;border:none;border-radius:4px;cursor:pointer">저장</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } catch (e) {
+    wrap.innerHTML = `<div class="empty-state">오류: ${e.message}</div>`;
+  }
+}
+
+async function saveTierLimit(tier) {
+  const input = document.getElementById(`tl-${tier}`);
+  const val = parseInt(input.value, 10);
+  if (!Number.isFinite(val) || val < 0) { alert('0 이상 정수 입력'); return; }
+  try {
+    const res = await fetch(`${API_BASE}/api/admin?type=tier_limit&tier=${encodeURIComponent(tier)}`, {
+      method: 'PATCH',
+      headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ daily_limit: val }),
+    });
+    if (!res.ok) { alert('저장 실패: ' + res.status); return; }
+    alert(`${tier} 한도 저장됨 (최대 5분 캐시 후 반영)`);
+    loadTierLimits();
+  } catch (e) { alert('오류: ' + e.message); }
+}
+
+// ── 사용자 등급 관리 ──
+async function loadUserTiers() {
+  const wrap = document.getElementById('user-tiers-wrap');
+  const status = document.getElementById('user-tiers-status');
+  try {
+    const res = await fetch(`${API_BASE}/api/admin?type=tiers`, { headers: getAuthHeaders() });
+    if (!res.ok) { wrap.innerHTML = '<div class="empty-state">조회 실패</div>'; return; }
+    const rows = await res.json();
+    if (!Array.isArray(rows) || rows.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">등록된 사용자 등급 없음 (모두 기본 beta)</div>';
+      return;
+    }
+    const counts = rows.reduce((m, r) => { m[r.tier] = (m[r.tier] || 0) + 1; return m; }, {});
+    status.textContent = Object.entries(counts).map(([t, c]) => `${t}: ${c}`).join(' · ');
+    wrap.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:0.85rem">
+        <thead><tr style="background:#f1f5f9">
+          <th style="padding:8px;text-align:left">이메일</th>
+          <th style="padding:8px;text-align:left">User ID</th>
+          <th style="padding:8px;text-align:center">등급</th>
+          <th style="padding:8px;text-align:left">메모</th>
+          <th style="padding:8px;text-align:right">갱신</th>
+        </tr></thead>
+        <tbody>${rows.map(r => `
+          <tr style="border-top:1px solid #e2e8f0">
+            <td style="padding:8px">${r.email || '<span style="color:#94a3b8">unknown</span>'}</td>
+            <td style="padding:8px;font-family:monospace;font-size:0.78rem;color:#64748b">${r.user_id.slice(0,8)}…</td>
+            <td style="padding:8px;text-align:center">
+              <span style="padding:2px 8px;border-radius:10px;background:${r.tier==='admin'?'#fee2e2':r.tier==='pro'?'#dbeafe':'#f1f5f9'};color:${r.tier==='admin'?'#991b1b':r.tier==='pro'?'#1e40af':'#475569'};font-weight:600">${r.tier}</span>
+            </td>
+            <td style="padding:8px;color:#64748b">${r.notes || ''}</td>
+            <td style="padding:8px;text-align:right;color:#94a3b8;font-size:0.78rem">${(r.updated_at||'').slice(0,10)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } catch (e) {
+    wrap.innerHTML = `<div class="empty-state">오류: ${e.message}</div>`;
+  }
+}
+
+async function saveUserTier() {
+  const userId = document.getElementById('ut-user-id').value.trim();
+  const tier = document.getElementById('ut-tier').value;
+  const notes = document.getElementById('ut-notes').value.trim() || null;
+  if (!userId) { alert('User ID 필요'); return; }
+  try {
+    const res = await fetch(`${API_BASE}/api/admin?type=user_tier&user_id=${encodeURIComponent(userId)}`, {
+      method: 'PATCH',
+      headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tier, notes }),
+    });
+    if (!res.ok) { alert('저장 실패: ' + res.status); return; }
+    alert(`사용자 등급 저장됨 (${tier})`);
+    document.getElementById('ut-user-id').value = '';
+    document.getElementById('ut-notes').value = '';
+    loadUserTiers();
+  } catch (e) { alert('오류: ' + e.message); }
 }
 
 init();
