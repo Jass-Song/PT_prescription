@@ -1893,6 +1893,20 @@
           selectedPillars.map((k, i) => `${i+1}. ${PILLAR_META[k].label}`).join('  ·  ');
       }
     }
+    // ── Pillar 필터 (B안): advanced picker 라벨·카테고리 갱신 ──
+    const advSummary = document.querySelector('#cat-advanced > summary');
+    if (advSummary) {
+      if (selectedPillars.length > 0) {
+        const labels = selectedPillars.map(k => PILLAR_META[k].label).join('·');
+        advSummary.textContent = `고급: ${labels} 그룹 안에서 특정 카테고리 선택 (선택사항)`;
+      } else {
+        advSummary.textContent = '고급: 특정 기법 카테고리 직접 선택 (선택사항)';
+      }
+    }
+    // pillar 변경 시 advanced picker도 다시 그려서 필터링 적용
+    if (document.getElementById('cat-picker-area')) {
+      renderCatPicker();
+    }
   }
 
   // pillar에서 카테고리 자동 파생 (advanced 직접 선택 없을 때 사용)
@@ -2411,15 +2425,31 @@
     const saved = loadSettings();
     if (!saved) { goScreen('screen1'); return; }
 
-    const availableCats = [
+    let availableCats = [
       ...(saved.mt || []).flatMap(g => MT_GROUP_TO_CATS[g] || []),
       ...(saved.ex || []).flatMap(g => EX_GROUP_TO_CATS[g] || []),
     ];
+
+    // ── Pillar 필터 (B안): pillar 선택 시 해당 pillar 카테고리만 노출 ──
+    if (selectedPillars.length > 0) {
+      const pillarCats = new Set(categoriesFromPillars());
+      availableCats = availableCats.filter(k => pillarCats.has(k));
+      // pillar에 없는 advanced 선택은 자동 해제
+      selectedCategories = selectedCategories.filter(k => pillarCats.has(k));
+    }
 
     selectedCategories = selectedCategories.filter(k => availableCats.includes(k));
 
     const area = document.getElementById('cat-picker-area');
     area.innerHTML = '';
+
+    // 빈 상태 안내 (pillar 필터 결과가 0)
+    if (availableCats.length === 0 && selectedPillars.length > 0) {
+      area.innerHTML = '<p style="color:var(--text-secondary);font-size:0.85rem;padding:8px">선택한 그룹에 사용 가능한 카테고리가 설정되어 있지 않습니다. 설정에서 카테고리를 활성화하세요.</p>';
+      renderCatSlots();
+      updateCatSubmitBtn();
+      return;
+    }
 
     const groupOrder = [];
     const groupMap = {};
