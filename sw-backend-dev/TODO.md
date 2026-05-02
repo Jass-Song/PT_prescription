@@ -20,7 +20,8 @@
 - [x] [2026-05-02] Pillar 카드 렌더링 — primary + related 계층 (PR #15)
 - [x] [2026-05-02] Legacy 모드도 pillar 카드 렌더링 적용 (PR #16)
 - [x] [2026-05-02] LLM 프롬프트 pillar 단위 재구성 (PR #17)
-- [x] [2026-05-02] 사용자 등급 차등 한도 (user_tiers + tier_limits) + KST 시간대 정정 (Migration 046)
+- [x] [2026-05-02] 사용자 등급 차등 한도 + KST 시간대 정정 (Migration 046)
+- [x] [2026-05-02] tier 컬럼을 user_profiles로 이전 (Migration 047, user_tiers 별도 테이블 폐기)
 
 ## 📋 백로그 (장기·향후 작업)
 
