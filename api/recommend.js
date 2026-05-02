@@ -5,6 +5,58 @@
 import { verifyToken } from './_auth.js';
 import { logServerError } from './_logger.js';
 
+// ── KST 자정 시각 (UTC로 환산) ──
+// Vercel 서버는 UTC 동작. 한국 사용자 기준 자정 리셋 보장.
+// KST 00:00 = UTC 15:00 (전날). 현재 UTC 시각에 따라 오늘/어제 결정.
+function getKSTTodayStartUTC() {
+  const now = new Date();
+  const todayUTC = new Date(now);
+  todayUTC.setUTCHours(15, 0, 0, 0);
+  // UTC 15:00 이전이면 KST 자정이 아직 지나지 않음 → 어제 UTC 15:00이 KST 오늘 자정
+  if (now.getUTCHours() < 15) {
+    todayUTC.setUTCDate(todayUTC.getUTCDate() - 1);
+  }
+  return todayUTC;
+}
+
+// ── 사용자 등급 기반 일일 한도 조회 (5분 메모리 캐시) ──
+// user_tiers + tier_limits 테이블 조회. 행 없으면 기본 'beta' 등급 (한도 20).
+// Vercel serverless 인스턴스 분리로 캐시는 인스턴스 단위 — 등급 변경 시 최대 5분 후 반영.
+const _userLimitCache = new Map(); // userId → { limit, expiresAt }
+const USER_LIMIT_CACHE_TTL_MS = 5 * 60 * 1000;
+
+async function getUserDailyLimit(userId, userToken) {
+  if (!userId) return 20;
+  const cached = _userLimitCache.get(userId);
+  if (cached && cached.expiresAt > Date.now()) return cached.limit;
+
+  const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gnusyjnviugpofvaicbv.supabase.co';
+  const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
+  if (!SUPABASE_KEY) return 20;
+  const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${userToken || SUPABASE_KEY}` };
+
+  try {
+    const tierRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/user_tiers?user_id=eq.${userId}&select=tier`,
+      { headers }
+    );
+    const tierRows = tierRes.ok ? await tierRes.json() : [];
+    const tier = tierRows[0]?.tier || 'beta';
+
+    const limitRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/tier_limits?tier=eq.${encodeURIComponent(tier)}&select=daily_limit`,
+      { headers }
+    );
+    const limitRows = limitRes.ok ? await limitRes.json() : [];
+    const limit = Number.isFinite(limitRows[0]?.daily_limit) ? limitRows[0].daily_limit : 20;
+
+    _userLimitCache.set(userId, { limit, expiresAt: Date.now() + USER_LIMIT_CACHE_TTL_MS });
+    return limit;
+  } catch {
+    return 20;
+  }
+}
+
 // ── 세션 단위 usage 로깅 (session_logs 테이블, fire-and-forget) ──
 // 추천 요청마다 부위·acuity·증상·카테고리·결과 수·응답시간 자동 저장
 // 오류가 추천 응답을 막지 않도록 catch 필수
@@ -804,13 +856,14 @@ export default async function handler(req, res) {
   }
   const userToken = (req.headers['authorization'] || '').split(' ')[1] || null;
 
-  // ── 일일 추천 한도 체크 (베타: 하루 20회) ──
+  // ── 일일 추천 한도 체크 ──
+  // 등급 기반 동적 한도 (user_tiers + tier_limits)
+  // KST 자정(00:00 KST = UTC 15:00 전날) 기준 리셋
   const SUPABASE_URL_RL = process.env.SUPABASE_URL || 'https://gnusyjnviugpofvaicbv.supabase.co';
   const SUPABASE_KEY_RL = process.env.SUPABASE_ANON_KEY;
-  const DAILY_LIMIT = 20;
   try {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
+    const DAILY_LIMIT = await getUserDailyLimit(user.id, userToken);
+    const todayStart = getKSTTodayStartUTC();
     const rlRes = await fetch(
       `${SUPABASE_URL_RL}/rest/v1/recommendation_logs?user_id=eq.${user.id}&created_at=gte.${todayStart.toISOString()}&select=id`,
       { headers: { apikey: SUPABASE_KEY_RL, Authorization: `Bearer ${userToken || SUPABASE_KEY_RL}` } }

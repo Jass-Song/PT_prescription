@@ -15,7 +15,12 @@
 - [x] [2026-04-28] recommend.js d_neural 503 버그 픽스 — fetchActiveTechniques null/[] 반환 분리
 - [x] [2026-05-01] 9개 컨디션 시나리오 하이브리드 추천 결과 검증 — 9/9 통과 (정확일치 2 + 통과 4 + 부분통과 3). SCENARIO-VERIFICATION.md 매트릭스 갱신.
 - [x] [2026-05-01] 카테고리 다양성 강제 로직 추가 — selectTopTechniquesGlobally maxPerCategory 도입 (PR #12 머지)
-- [x] [2026-05-02] 한국 도수치료 3박자 모델 — pillar 기반 recommendations[] (백엔드 Phase A 완료, cd12b19)
+- [x] [2026-05-02] 한국 도수치료 3박자 모델 — pillar 기반 recommendations[] (PR #13)
+- [x] [2026-05-02] B안 — pillar 선택 시 advanced 카테고리 picker 자동 필터링 (PR #14)
+- [x] [2026-05-02] Pillar 카드 렌더링 — primary + related 계층 (PR #15)
+- [x] [2026-05-02] Legacy 모드도 pillar 카드 렌더링 적용 (PR #16)
+- [x] [2026-05-02] LLM 프롬프트 pillar 단위 재구성 (PR #17)
+- [x] [2026-05-02] 사용자 등급 차등 한도 (user_tiers + tier_limits) + KST 시간대 정정 (Migration 046)
 
 ## 📋 백로그 (장기·향후 작업)
 
