@@ -37,6 +37,7 @@
   - 현재: LLM이 후보 6개 중 3개 MT 선택. pillar 분류는 후처리에서.
   - 미래: 프롬프트에 pillar별 candidate section 분리 → LLM이 각 pillar에서 PRIMARY 1개씩 선택
   - 효과: 토큰 절약 + pillar 보장 강화
+  - ✅ **완료 (PR #17, 2026-05-02)** — focusPillars 명시 시 pillar 단위 LLM 프롬프트 적용
 - [ ] **[backlog] 4 부위(어깨/무릎/엉덩/발목) × 급성 적응증 기법 enrichment**
   - 어깨 SCS 회전근개 5개, MDT 4개, 신경 슬라이더 3개
   - 무릎 SCS 5개, MDT 2개, 신경 슬라이더 4개
@@ -45,6 +46,24 @@
   - 임상 검토(sw-clinical-translator) 후 마이그레이션 SQL 작성
 - [ ] **[backlog] 사용자 즐겨찾기 pillar 조합 저장** — 자주 쓰는 [관절+운동] 같은 조합 저장
 - [ ] **[backlog] Pillar 선택 행동 분석 대시보드** — 어느 pillar 조합이 가장 자주 선택되는지
+
+### UX 개선 (사용량·알림)
+- [ ] **[backlog] 사용량 표시 UI** — 메인 화면에 "오늘 12/20회 사용" 같은 일일 한도 진행도 표시
+  - **관련**: `api/recommend.js` 응답 (`usedToday`, `dailyLimit` 이미 포함됨), `index.html` 상단/하단 표시
+- [ ] **[backlog] 한도 도달 80%/100% 알림** — toast 또는 이메일/푸시 알림
+  - 80%: "한도 곧 소진" 사전 안내 / 100%: 차단 시 명확한 다음 리셋 시각 안내
+- [ ] **[backlog] 사용자 history 페이지** — 본인 추천 이력 일자별·부위별 조회
+  - **데이터 소스**: `recommendation_logs` (이미 존재)
+  - **UI**: 메인 앱에 "내 이력" 탭 추가, 일자별 필터 + 부위/카테고리 통계
+
+### 비즈니스 (결제·구독)
+- [ ] **[backlog] 결제 연동 (Stripe / 토스페이먼츠)** — pro 등급 자동 전환
+  - **트리거**: 베타 종료 + 비즈니스 모델 결정 후
+  - **연계**: `user_profiles.tier` + 구독 상태 컬럼 추가, 만료일 추적, 갱신 알림
+  - **선결**: 가격 정책, 환불 규정, 결제 공급사 결정
+
+### 잡 정리
+- [ ] **[backlog] favicon.ico 추가** — 브라우저 탭 아이콘 + 콘솔 404 노이즈 제거
 
 ---
 
