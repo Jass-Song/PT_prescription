@@ -75,10 +75,10 @@ export default async function handler(req, res) {
   }
   if (req.method === 'GET' && type === 'tiers') {
     // user_profiles에서 tier 있는 사용자만 (기본 'beta' 제외 옵션 가능). 일단 모두 반환.
-    const tr = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?select=id,tier,display_name,updated_at&order=updated_at.desc.nullslast&limit=200`, { headers: headersAdmin });
+    const tr = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?select=id,tier,display_name,tier_updated_at,updated_at&order=tier_updated_at.desc.nullslast&limit=200`, { headers: headersAdmin });
     if (!tr.ok) return res.status(500).json({ error: 'user_profiles 조회 실패' });
     const rows = await tr.json();
-    // user_id 표준화 (id → user_id) + 이메일 보강
+    // user_id 표준화 (id → user_id) + 이메일 보강 + tier_updated_at 노출
     const enriched = await Promise.all(rows.map(async row => {
       let email = null;
       try {
@@ -86,7 +86,14 @@ export default async function handler(req, res) {
         const u = ur.ok ? await ur.json() : null;
         email = u?.email || null;
       } catch {}
-      return { user_id: row.id, tier: row.tier, notes: row.display_name, updated_at: row.updated_at, email };
+      return {
+        user_id: row.id,
+        tier: row.tier,
+        notes: row.display_name,
+        tier_updated_at: row.tier_updated_at,
+        updated_at: row.updated_at,
+        email,
+      };
     }));
     return res.status(200).json(enriched);
   }

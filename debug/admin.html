@@ -843,7 +843,8 @@ async function loadUserTiers() {
           <th style="padding:8px;text-align:left">User ID</th>
           <th style="padding:8px;text-align:center">등급</th>
           <th style="padding:8px;text-align:left">메모</th>
-          <th style="padding:8px;text-align:right">갱신</th>
+          <th style="padding:8px;text-align:right">등급 변경일</th>
+          <th style="padding:8px;text-align:right">최근 갱신</th>
         </tr></thead>
         <tbody>${rows.map(r => `
           <tr style="border-top:1px solid #e2e8f0">
@@ -853,6 +854,7 @@ async function loadUserTiers() {
               <span style="padding:2px 8px;border-radius:10px;background:${r.tier==='admin'?'#fee2e2':r.tier==='pro'?'#dbeafe':'#f1f5f9'};color:${r.tier==='admin'?'#991b1b':r.tier==='pro'?'#1e40af':'#475569'};font-weight:600">${r.tier}</span>
             </td>
             <td style="padding:8px;color:#64748b">${r.notes || ''}</td>
+            <td style="padding:8px;text-align:right;color:#475569;font-size:0.78rem">${(r.tier_updated_at||'').slice(0,10) || '—'}</td>
             <td style="padding:8px;text-align:right;color:#94a3b8;font-size:0.78rem">${(r.updated_at||'').slice(0,10)}</td>
           </tr>`).join('')}
         </tbody>
