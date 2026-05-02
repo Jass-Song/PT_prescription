@@ -14,7 +14,30 @@
 - [x] [2026-04-28] embed-techniques.js 실행 완료 — technique_embeddings 180개 적재 완료
 - [x] [2026-04-28] recommend.js d_neural 503 버그 픽스 — fetchActiveTechniques null/[] 반환 분리
 - [x] [2026-05-01] 9개 컨디션 시나리오 하이브리드 추천 결과 검증 — 9/9 통과 (정확일치 2 + 통과 4 + 부분통과 3). SCENARIO-VERIFICATION.md 매트릭스 갱신.
-- [ ] [2026-05-01] 카테고리 다양성 강제 로직 추가 — 시나리오 9에서 PNE ×3 클러스터링 발견. selectTopTechniquesGlobally 또는 LLM 프롬프트 단에서 동일 카테고리 최대 N개 제한 검토
+- [x] [2026-05-01] 카테고리 다양성 강제 로직 추가 — selectTopTechniquesGlobally maxPerCategory 도입 (PR #12 머지)
+- [x] [2026-05-02] 한국 도수치료 3박자 모델 — pillar 기반 recommendations[] (백엔드 Phase A 완료, cd12b19)
+
+## 📋 백로그 (장기·향후 작업)
+
+- [ ] **[backlog] 피드백 점수를 추천 알고리즘에 통합**
+  - **배경**: 현재 별점 피드백은 `technique_feedback` 테이블에 수집만 되고 추천 점수에 미반영
+  - **할 일**: 같은 조건(region × acuity × symptom)에서의 기법별 평균 별점 집계 → 정규화 → 스코어 공식에 추가
+  - **공식 안**: `ruleScore × 0.5 + vectorScore × 0.3 + feedbackScore × 0.2`
+  - **Cold start 처리**: 별점 N개 미만 기법은 feedbackScore 가중치 0 (또는 데이터 충분할 때까지 기존 공식 유지)
+  - **선결 조건**: 피드백 데이터 충분량 누적 (수십 ~ 수백 건/기법). 데이터 적을 때 적용하면 노이즈 큼
+  - **관련 파일**: `api/recommend.js` (스코어링), `api/feedback.js` (데이터 소스), `saas/migrations/041-ratings-table.sql`
+- [ ] **[backlog] LLM 프롬프트 pillar 단위 재구성**
+  - 현재: LLM이 후보 6개 중 3개 MT 선택. pillar 분류는 후처리에서.
+  - 미래: 프롬프트에 pillar별 candidate section 분리 → LLM이 각 pillar에서 PRIMARY 1개씩 선택
+  - 효과: 토큰 절약 + pillar 보장 강화
+- [ ] **[backlog] 4 부위(어깨/무릎/엉덩/발목) × 급성 적응증 기법 enrichment**
+  - 어깨 SCS 회전근개 5개, MDT 4개, 신경 슬라이더 3개
+  - 무릎 SCS 5개, MDT 2개, 신경 슬라이더 4개
+  - 엉덩 SCS 4개, 신경 슬라이더 2개
+  - 발목 SCS 4개, MDT 2개, 신경 슬라이더 4개
+  - 임상 검토(sw-clinical-translator) 후 마이그레이션 SQL 작성
+- [ ] **[backlog] 사용자 즐겨찾기 pillar 조합 저장** — 자주 쓰는 [관절+운동] 같은 조합 저장
+- [ ] **[backlog] Pillar 선택 행동 분석 대시보드** — 어느 pillar 조합이 가장 자주 선택되는지
 
 ---
 
