@@ -713,10 +713,10 @@ function renderGraph(data) {
       });
     });
 
-  // Edges — path 렌더링 (nodeMap으로 직접 좌표 조회 — forceLink ID 해석 불필요)
-  const link = g.append('g').selectAll('path')
+  // Edges — line 렌더링 (path보다 빠름: x1/y1/x2/y2 숫자 업데이트만 필요)
+  const link = g.append('g').selectAll('line')
     .data(edges)
-    .join('path')
+    .join('line')
     .attr('class', 'link')
     .attr('stroke-dasharray', '6,4')
     .style('stroke', 'rgba(255,255,255,0.5)')
@@ -729,7 +729,7 @@ function renderGraph(data) {
     .join('g')
     .attr('class', 'node')
     .call(d3.drag()
-      .on('start', (e, d) => { if (!e.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+      .on('start', (e, d) => { if (!e.active) simulation.alphaTarget(0.1).restart(); d.fx = d.x; d.fy = d.y; })
       .on('drag',  (e, d) => { d.fx = e.x; d.fy = e.y; })
       .on('end',   (e, d) => { if (!e.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; }))
     .on('click', (e, d) => {
@@ -753,18 +753,12 @@ function renderGraph(data) {
     .attr('dy', d => 14 + d.finalScore * 14)
     .style('font-size', '9px');
 
-  // tick: nodeMap으로 좌표 직접 조회 → D3 forceLink ID 해석 실패 완전 우회
-  function edgePathDirect(d) {
-    const src = (typeof d.source === 'object') ? d.source : nodeMap.get(d.source);
-    const tgt = (typeof d.target === 'object') ? d.target : nodeMap.get(d.target);
-    if (!src || !tgt) return '';
-    const sx = src.x, sy = src.y, tx = tgt.x, ty = tgt.y;
-    if (!isFinite(sx) || !isFinite(sy) || !isFinite(tx) || !isFinite(ty)) return '';
-    return `M${sx},${sy} L${tx},${ty}`;
-  }
-
   simulation.on('tick', () => {
-    link.attr('d', edgePathDirect);
+    link
+      .attr('x1', d => ((typeof d.source === 'object') ? d.source : nodeMap.get(d.source))?.x ?? 0)
+      .attr('y1', d => ((typeof d.source === 'object') ? d.source : nodeMap.get(d.source))?.y ?? 0)
+      .attr('x2', d => ((typeof d.target === 'object') ? d.target : nodeMap.get(d.target))?.x ?? 0)
+      .attr('y2', d => ((typeof d.target === 'object') ? d.target : nodeMap.get(d.target))?.y ?? 0);
     node.attr('transform', d => `translate(${d.x},${d.y})`);
   });
 
