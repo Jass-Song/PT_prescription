@@ -16,7 +16,7 @@ const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || SUPABASE_ANON_KEY;
 
 const ADMIN_EMAIL = 'junnyhsong@gmail.com';
 
-// ── 어드민 권한 확인: ADMIN_EMAIL 또는 user_tiers.tier='admin' ──
+// ── 어드민 권한 확인: ADMIN_EMAIL 또는 user_profiles.tier='admin' ──
 async function checkAdmin(userId) {
   // 1) email 체크 (legacy)
   try {
@@ -28,10 +28,10 @@ async function checkAdmin(userId) {
       if ((userData.email || '') === ADMIN_EMAIL) return true;
     }
   } catch {}
-  // 2) user_tiers.tier='admin' 체크 (신규 등급 시스템)
+  // 2) user_profiles.tier='admin' 체크 (신규 등급 시스템)
   try {
     const tierRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/user_tiers?user_id=eq.${userId}&tier=eq.admin&select=user_id`,
+      `${SUPABASE_URL}/rest/v1/user_profiles?id=eq.${userId}&tier=eq.admin&select=id`,
       { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } }
     );
     if (tierRes.ok) {
@@ -74,17 +74,19 @@ export default async function handler(req, res) {
     return res.status(r.status).json(r.ok ? await r.json() : { error: 'tier_limits 조회 실패' });
   }
   if (req.method === 'GET' && type === 'tiers') {
-    // user_tiers + auth.users.email 조인 (Supabase admin API 활용)
-    const tr = await fetch(`${SUPABASE_URL}/rest/v1/user_tiers?select=*&order=updated_at.desc&limit=200`, { headers: headersAdmin });
-    if (!tr.ok) return res.status(500).json({ error: 'user_tiers 조회 실패' });
+    // user_profiles에서 tier 있는 사용자만 (기본 'beta' 제외 옵션 가능). 일단 모두 반환.
+    const tr = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?select=id,tier,display_name,updated_at&order=updated_at.desc.nullslast&limit=200`, { headers: headersAdmin });
+    if (!tr.ok) return res.status(500).json({ error: 'user_profiles 조회 실패' });
     const rows = await tr.json();
-    // 이메일 보강 (Supabase Auth Admin API)
+    // user_id 표준화 (id → user_id) + 이메일 보강
     const enriched = await Promise.all(rows.map(async row => {
+      let email = null;
       try {
-        const ur = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${row.user_id}`, { headers: { Authorization: `Bearer ${SERVICE_KEY}`, apikey: SERVICE_KEY } });
+        const ur = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${row.id}`, { headers: { Authorization: `Bearer ${SERVICE_KEY}`, apikey: SERVICE_KEY } });
         const u = ur.ok ? await ur.json() : null;
-        return { ...row, email: u?.email || null };
-      } catch { return row; }
+        email = u?.email || null;
+      } catch {}
+      return { user_id: row.id, tier: row.tier, notes: row.display_name, updated_at: row.updated_at, email };
     }));
     return res.status(200).json(enriched);
   }
@@ -103,15 +105,14 @@ export default async function handler(req, res) {
   if (req.method === 'PATCH' && type === 'user_tier') {
     const target_user_id = req.query?.user_id || req.body?.user_id;
     const tier = req.body?.tier;
-    const notes = req.body?.notes ?? null;
     if (!target_user_id || !tier) return res.status(400).json({ error: 'user_id 및 tier 필수' });
-    // upsert: 행 없으면 INSERT, 있으면 UPDATE
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/user_tiers?on_conflict=user_id`, {
+    // user_profiles는 가입 시 자동 생성됨 → UPDATE 직접 사용. 없으면 upsert.
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?on_conflict=id`, {
       method: 'POST',
       headers: { ...headersAdmin, Prefer: 'resolution=merge-duplicates,return=representation' },
-      body: JSON.stringify({ user_id: target_user_id, tier, notes, updated_at: new Date().toISOString(), updated_by: user.id }),
+      body: JSON.stringify({ id: target_user_id, tier, updated_at: new Date().toISOString() }),
     });
-    return res.status(r.status).json(r.ok ? await r.json() : { error: 'user_tier 갱신 실패' });
+    return res.status(r.status).json(r.ok ? await r.json() : { error: 'user tier 갱신 실패' });
   }
 
   if (req.method !== 'GET') return res.status(405).json({ error: 'GET only for dashboard' });

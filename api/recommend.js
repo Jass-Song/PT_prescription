@@ -37,7 +37,7 @@ async function getUserDailyLimit(userId, userToken) {
 
   try {
     const tierRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/user_tiers?user_id=eq.${userId}&select=tier`,
+      `${SUPABASE_URL}/rest/v1/user_profiles?id=eq.${userId}&select=tier`,
       { headers }
     );
     const tierRows = tierRes.ok ? await tierRes.json() : [];
