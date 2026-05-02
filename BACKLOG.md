@@ -7,7 +7,45 @@
 
 ---
 
-## 📋 현재 백로그 (9개)
+## 📋 현재 백로그 (14개)
+
+### 📊 MVP 분석 측정 (다음 우선) ⭐ 다음 작업
+> **컨텍스트**: MVP 출시 전 사용자 행동 분석 인프라 보강 필요. 출시 후 데이터가 모이기 전에 수집 구조부터 갖춰야 함.
+
+- [ ] **[NEXT][high] focus_pillars 로깅 (Migration 049)**
+  - `recommendation_logs.focus_pillars TEXT[]` 컬럼 추가
+  - `api/recommend.js`에서 INSERT 시 focus_pillars 같이 저장
+  - 분석: 어느 pillar 조합이 가장 자주 선택되는지, 효과는?
+  - 영향 범위: Migration 1개 + recommend.js 1줄
+
+- [ ] **[NEXT][high] 클라이언트 이벤트 로깅 인프라**
+  - **Migration 050**: `client_events (id, user_id, event_type, payload jsonb, created_at)` + RLS
+  - **`api/telemetry.js`**: POST 이벤트 수집 엔드포인트 (fire-and-forget)
+  - **`index.html` hooks**: 6개 핵심 이벤트 트래킹
+    - `card_expand` — 자세히 보기 클릭
+    - `card_feedback_click` — 별점 모달 오픈
+    - `refresh_category` — "다른 기법 보기"
+    - `star_rating_submit` — 별점 저장
+    - `session_start` — 앱 진입
+    - `pillar_select` — pillar 칩 클릭
+  - 영향 범위: ~200줄 추가, 5개 파일
+
+- [ ] **[NEXT][medium] 재시도·이탈 패턴 추적**
+  - 같은 조건으로 재추천 빈도 (만족도 proxy)
+  - "다른 기법 보기" 호출률
+  - 결과 화면 평균 체류 시간 (page_unload 이벤트)
+
+- [ ] **[NEXT][medium] 분석 SQL 뷰·문서**
+  - `saas/docs/ANALYTICS-QUERIES.md` 신설
+  - Funnel: 가입 → 첫 추천 → 재방문 → 별점
+  - Cohort: 주간 신규/리텐션
+  - Pillar 사용 패턴
+  - 카테고리·기법 인기도
+  - 부위별·시기별 사용 분포
+
+- [ ] **[NEXT][low] A/B 테스트 인프라**
+  - 베타 단계엔 불필요, 사용자 풀 커지면 검토
+  - `experiments` 테이블 + variant 할당 로직
 
 ### 🤖 알고리즘·임상
 - [ ] **피드백 점수를 추천 알고리즘에 통합**

@@ -10,6 +10,35 @@
 
 ## 🔄 진행 중 / 미완료 작업
 
+### ⭐ 다음 작업 (NEXT) — MVP 분석 측정 인프라
+
+- [ ] **[NEXT-1][high] Migration 049 — focus_pillars 로깅**
+  - `recommendation_logs.focus_pillars TEXT[]` 컬럼 추가
+  - `api/recommend.js`에서 INSERT 시 focus_pillars 저장
+  - 영향 범위: 작음 (Migration 1 + recommend.js 1줄)
+
+- [ ] **[NEXT-2][high] 클라이언트 이벤트 로깅**
+  - Migration 050 — `client_events` 테이블 (id, user_id, event_type, payload jsonb, created_at) + RLS
+  - `api/telemetry.js` — POST 엔드포인트 (fire-and-forget, 인증 필요)
+  - `index.html` — 6개 hook: card_expand, card_feedback_click, refresh_category, star_rating_submit, session_start, pillar_select
+  - 영향 범위: ~200줄 추가
+
+- [ ] **[NEXT-3][medium] 재시도·이탈 패턴 추적**
+  - 같은 조건 재추천 빈도 (만족도 proxy)
+  - "다른 기법 보기" 호출률
+  - 결과 화면 체류 시간 (page_unload 이벤트)
+
+- [ ] **[NEXT-4][medium] 분석 SQL 뷰·문서**
+  - `saas/docs/ANALYTICS-QUERIES.md` 신설
+  - Funnel (가입→첫추천→재방문→별점)
+  - Cohort (주간 신규/리텐션)
+  - Pillar·카테고리·기법 인기도
+  - 부위별·시기별 사용 분포
+
+- [ ] **[NEXT-5][low] A/B 테스트 인프라** — 베타 단계엔 불필요, 추후 검토
+
+---
+
 - [x] [2026-04-28] Vercel Dashboard → VOYAGE_API_KEY 환경변수 등록 (대표님 수동 등록 완료, 2026-05-01 확인)
 - [x] [2026-04-28] embed-techniques.js 실행 완료 — technique_embeddings 180개 적재 완료
 - [x] [2026-04-28] recommend.js d_neural 503 버그 픽스 — fetchActiveTechniques null/[] 반환 분리
