@@ -944,6 +944,10 @@
       background: #fef3c7; color: #92400e;
       font-size: 0.7rem; font-weight: 600;
     }
+    .pillar-subtitle {
+      margin-left: 4px; color: var(--text-secondary);
+      font-size: 0.875rem; font-weight: 500;
+    }
     .pillar-related-wrap { margin-top: 8px; }
     .pillar-related-details { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
     .pillar-related-summary {
@@ -2641,10 +2645,16 @@
         }));
 
         // 카테고리별 결과 병합
+        // recommendations[]는 legacy 모드에서도 사용 — 카테고리당 1 카드 (primary + related)
+        // rank를 카테고리 순서대로 재부여
+        const mergedRecs = results.flatMap((r, ri) =>
+          (r.recommendations || []).map(rec => ({ ...rec, rank: ri + 1 }))
+        );
         const merged = {
           manualTherapy:        results.flatMap(r => r.manualTherapy || []),
           exercise:             results.flatMap(r => r.exercise || []),
           relatedManualTherapy: results.flatMap(r => r.relatedManualTherapy || []),
+          recommendations:      mergedRecs,
           clinicalNote:         results.map(r => r.clinicalNote).filter(Boolean).join(' | '),
           selectedCategories,
         };
@@ -2757,6 +2767,9 @@
     const recs = result.recommendations || [];
     const pillarIcon = { joint: '🔧', soft_tissue: '💆', exercise: '🏃', adjunct: '⚡' };
 
+    // 같은 pillar에 카드가 여러 개 있는지 (legacy 카테고리별 호출 시 발생) → 부제 표시
+    const pillarCounts = recs.reduce((m, r) => { m[r.pillar] = (m[r.pillar] || 0) + 1; return m; }, {});
+
     recs.forEach((rec, i) => {
       const isEX = rec.pillar === 'exercise';
       const isAdjunct = rec.pillar === 'adjunct';
@@ -2764,13 +2777,17 @@
       const autoBadge = rec.auto
         ? '<span class="pillar-auto-badge">자동</span>'
         : '';
+      // 같은 pillar에 여러 카드(legacy 모드)면 카테고리 이름을 부제로
+      const catLabelSubtitle = (pillarCounts[rec.pillar] > 1 && rec.primary?.categoryInfo?.name_ko)
+        ? `<span class="pillar-subtitle">· ${rec.primary.categoryInfo.name_ko}</span>`
+        : '';
 
       const section = document.createElement('div');
       section.className = 'rec-block pillar-block';
       section.innerHTML = `
         <div class="rec-block-title pillar-title">
-          <span class="pillar-rank-badge">${rec.rank}</span>
-          <span class="icon">${icon}</span>${rec.pillarLabel || rec.pillar}${autoBadge}
+          <span class="pillar-rank-badge">${i + 1}</span>
+          <span class="icon">${icon}</span>${rec.pillarLabel || rec.pillar}${catLabelSubtitle}${autoBadge}
         </div>
         <div class="cat-card-list pillar-primary"></div>
         <div class="pillar-related-wrap"></div>
