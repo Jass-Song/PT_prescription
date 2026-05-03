@@ -1,5 +1,5 @@
 // PT 처방 도우미 — 기법 별점 평가 저장 (ratings 테이블)
-// Input:  { technique, category, region, acuity, symptom, rating, notes }
+// Input:  { technique, category, region, acuity, symptom, rating, notes, outcome?, indication_accuracy? }
 // Output: { success: true }
 //
 // 동작:
@@ -30,13 +30,30 @@ export default async function handler(req, res) {
 
   const userToken = (req.headers['authorization'] || '').split(' ')[1];
 
-  const { technique, category, region, acuity, symptom, rating, notes } = req.body || {};
+  const {
+    technique, category, region, acuity, symptom,
+    rating, notes,
+    outcome, indication_accuracy,
+  } = req.body || {};
 
   if (!technique || !rating) {
     return res.status(400).json({ error: '필수 항목 누락: technique, rating' });
   }
   if (typeof rating !== 'number' || rating < 1 || rating > 5) {
     return res.status(400).json({ error: '평점은 1~5 사이의 정수여야 합니다' });
+  }
+
+  // outcome: rating_outcome ENUM 6값 중 하나 또는 null/undefined (선택)
+  const VALID_OUTCOMES = ['excellent', 'good', 'moderate', 'poor', 'no_effect', 'adverse'];
+  if (outcome != null && !VALID_OUTCOMES.includes(outcome)) {
+    return res.status(400).json({ error: 'outcome 값이 유효하지 않습니다' });
+  }
+
+  // indication_accuracy: 1~5 또는 null/undefined (선택)
+  if (indication_accuracy != null) {
+    if (typeof indication_accuracy !== 'number' || indication_accuracy < 1 || indication_accuracy > 5) {
+      return res.status(400).json({ error: 'indication_accuracy 는 1~5 사이의 정수여야 합니다' });
+    }
   }
 
   // techniques.name_ko → UUID 조회 (없으면 null 폴백)
@@ -61,15 +78,17 @@ export default async function handler(req, res) {
   }
 
   const payload = {
-    user_id:         user.id,
-    technique_id:    techniqueId,
-    technique_label: technique,
-    category_key:    category || null,
-    region:          region   || null,
-    acuity:          acuity   || null,
-    symptom:         symptom  || null,
-    star_rating:     Math.round(rating),
-    notes:           notes    || null,
+    user_id:             user.id,
+    technique_id:        techniqueId,
+    technique_label:     technique,
+    category_key:        category || null,
+    region:              region   || null,
+    acuity:              acuity   || null,
+    symptom:             symptom  || null,
+    star_rating:         Math.round(rating),
+    notes:               notes    || null,
+    outcome:             outcome  || null,
+    indication_accuracy: indication_accuracy != null ? Math.round(indication_accuracy) : null,
   };
 
   const response = await fetch(`${SUPABASE_URL}/rest/v1/ratings`, {
