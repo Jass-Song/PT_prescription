@@ -12,13 +12,14 @@
 
 ### ⭐ 다음 작업 (NEXT) — MVP 분석 측정 인프라
 
-- [ ] **[NEXT-1][high] Migration 049 — focus_pillars 로깅**
+- [ ] **[NEXT-1][high] Migration 051 — focus_pillars 로깅**
   - `recommendation_logs.focus_pillars TEXT[]` 컬럼 추가
   - `api/recommend.js`에서 INSERT 시 focus_pillars 저장
   - 영향 범위: 작음 (Migration 1 + recommend.js 1줄)
+  - ⚠️ 049/050은 ratings 효과 컬럼 + recommendation_weight 트리거로 사용됨 (PR #32)
 
 - [ ] **[NEXT-2][high] 클라이언트 이벤트 로깅**
-  - Migration 050 — `client_events` 테이블 (id, user_id, event_type, payload jsonb, created_at) + RLS
+  - Migration 052 — `client_events` 테이블 (id, user_id, event_type, payload jsonb, created_at) + RLS
   - `api/telemetry.js` — POST 엔드포인트 (fire-and-forget, 인증 필요)
   - `index.html` — 6개 hook: card_expand, card_feedback_click, refresh_category, star_rating_submit, session_start, pillar_select
   - 영향 범위: ~200줄 추가
@@ -52,6 +53,8 @@
 - [x] [2026-05-02] 사용자 등급 차등 한도 + KST 시간대 정정 (Migration 046)
 - [x] [2026-05-02] tier 컬럼을 user_profiles로 이전 (Migration 047, user_tiers 별도 테이블 폐기)
 - [x] [2026-05-02] tier_updated_at 자동 추적 (Migration 048, 트리거 기반)
+- [x] [2026-05-03] C-4 recommendation_weight 트리거 — Migration 049(ratings 효과 컬럼) + 050(fn_refresh_technique_stats + 트리거) + 검증 스크립트 (PR #32, 대표님 SQL 실행 필요)
+- [x] [2026-05-03] B-2 신규 기법 임베딩 --only-new 실행 완료 — 대상 0개 (이미 357개 전체 임베딩 완료 상태)
 
 ## 📋 백로그 (장기·향후 작업)
 
