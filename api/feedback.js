@@ -1,5 +1,5 @@
 // PT 처방 도우미 — 기법 별점 평가 저장 (ratings 테이블)
-// Input:  { technique, category, region, acuity, symptom, rating, notes, outcome?, indication_accuracy? }
+// Input:  { technique, category, region, acuity, symptom, rating, notes, outcome, indication_accuracy }
 // Output: { success: true }
 //
 // 동작:
@@ -109,7 +109,7 @@ export default async function handler(req, res) {
       http_status: response.status,
       request_path: '/api/feedback',
       user_id: user?.id ?? null,
-      context: { technique, star_rating: Math.round(rating) },
+      context: { technique, star_rating: Math.round(rating), outcome, indication_accuracy },
     });
     return res.status(502).json({ error: '저장 실패' });
   }
