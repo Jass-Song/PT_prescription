@@ -36,7 +36,7 @@ const VOYAGE_MODEL = 'voyage-3-lite';  // 512차원
 const BATCH_SIZE = 3;                  // 무료 플랜 3 RPM 대응 (배치당 1 req)
 
 // ── 임베딩 텍스트 조합 ──
-// name_ko + technique_steps instructions + clinical_notes
+// name_ko + technique_steps instructions + clinical_notes + symptom_tags + contraindication_tags
 function buildEmbeddingText(technique) {
   const namePart = technique.name_ko || '';
 
@@ -51,9 +51,35 @@ function buildEmbeddingText(technique) {
 
   const notesPart = technique.clinical_notes || '';
 
-  return [namePart, stepsPart, notesPart]
+  const symptomText = Array.isArray(technique.symptom_tags) && technique.symptom_tags.length > 0
+    ? `적응증: ${technique.symptom_tags.join(', ')}`
+    : '';
+  const contraindicationText = Array.isArray(technique.contraindication_tags) && technique.contraindication_tags.length > 0
+    ? `금기: ${technique.contraindication_tags.join(', ')}`
+    : '';
+
+  return [namePart, stepsPart, notesPart, symptomText, contraindicationText]
     .filter(Boolean)
     .join(' | ');
+}
+
+// ── Exponential Backoff Retry ──
+// 429 Too Many Requests 에러 시 최대 maxRetries번 재시도
+async function withRetry(fn, maxRetries = 5) {
+  let lastErr;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      const is429 = err.message?.includes('429');
+      if (!is429 || attempt === maxRetries) throw err;
+      const waitMs = Math.min(1000 * Math.pow(2, attempt) + Math.random() * 500, 60000);
+      console.warn(`\n  ⚠️  429 rate limit — ${Math.round(waitMs / 1000)}초 후 재시도 (${attempt + 1}/${maxRetries})...`);
+      await new Promise(r => setTimeout(r, waitMs));
+    }
+  }
+  throw lastErr;
 }
 
 // ── Voyage AI 임베딩 API 호출 (배치) ──
@@ -92,12 +118,13 @@ function chunkArray(arr, size) {
 // ── 메인 ──
 async function main() {
   const onlyNew = process.argv.includes('--only-new');
+  const forceAll = process.argv.includes('--force-all');
 
   console.log('📦 Supabase에서 is_active=true 기법 조회 중...');
 
   const { data: techniques, error: fetchErr } = await supabase
     .from('techniques')
-    .select('id, name_ko, technique_steps, clinical_notes')
+    .select('id, name_ko, technique_steps, clinical_notes, symptom_tags, contraindication_tags')
     .eq('is_active', true);
 
   if (fetchErr) {
@@ -109,7 +136,7 @@ async function main() {
 
   // --only-new 플래그: 이미 임베딩된 기법 제외
   let targetTechniques = techniques;
-  if (onlyNew) {
+  if (onlyNew && !forceAll) {
     console.log('🔍 이미 임베딩된 기법 조회 중...');
     const { data: existing, error: embErr } = await supabase
       .from('technique_embeddings')
@@ -158,7 +185,7 @@ async function main() {
 
     let embeddings;
     try {
-      embeddings = await getEmbeddings(texts);
+      embeddings = await withRetry(() => getEmbeddings(texts));
     } catch (err) {
       console.error(`\n❌ Voyage API 오류 (배치 ${batchIdx + 1}):`, err.message);
       failCount += batch.length;

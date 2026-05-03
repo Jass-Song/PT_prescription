@@ -1,155 +1,155 @@
-# [테크닉 한국어 이름] 리서치 시트
+# [Technique Name] Research Sheet
 
 <!-- owner: technique-researcher -->
 
-## 1. 기본 정보
+## 1. Basic Information
 
-| 항목 | 내용 |
+| Field | Content |
 |------|------|
-| 한국어 이름 | |
-| 영문 이름 | |
-| 약어 | |
-| 카테고리 | category_a_joint_mobilization / category_b_mulligan / category_c_manipulation / category_d_neural / category_e_soft_tissue |
-| 해당 부위 | cervical / thoracic / lumbar / shoulder / elbow / wrist / hip / knee / ankle / foot |
-| 세부 분절 | C3-C4 / L4-L5 등 (해당 시) |
-| Maitland Grade | I / II / III / IV (해당 항목 표시) |
+| Korean name | |
+| English name | |
+| Abbreviation | |
+| Category | category_a_joint_mobilization / category_b_mulligan / category_c_manipulation / category_d_neural / category_e_soft_tissue |
+| Body region | cervical / thoracic / lumbar / shoulder / elbow / wrist / hip / knee / ankle / foot |
+| Specific segment | C3-C4 / L4-L5 etc. (if applicable) |
+| Maitland Grade | I / II / III / IV (mark applicable) |
 
 ---
 
-## 2. 알고리즘 태그 (필수 — AI 추천 핵심)
+## 2. Algorithm Tags (required — core of AI recommendation)
 
-> 아래 체크박스에서 해당 항목 선택. 복수 선택 가능. 근거 없이 광범위하게 체크하지 말 것.
+> Select applicable items from the checkboxes below. Multiple selections allowed. Do not check broadly without evidence.
 
-### 2-1. 치료 목적 태그 (purpose_tags) — 해당 항목 체크
+### 2-1. Treatment purpose tags (purpose_tags) — check applicable items
 
-- [ ] pain_relief — 통증 감소
-- [ ] rom_improvement — 관절 가동 범위 개선
-- [ ] neurodynamics — 신경 증상 (신경 가동성)
-- [ ] stabilization — 안정화
-- [ ] proprioception — 고유감각 재훈련
+- [ ] pain_relief — pain reduction
+- [ ] rom_improvement — joint range of motion improvement
+- [ ] neurodynamics — neural symptoms (neural mobility)
+- [ ] stabilization — stabilization
+- [ ] proprioception — proprioceptive retraining
 
-### 2-2. 대상 환자 태그 (target_tags) — 해당 항목 체크
+### 2-2. Target patient tags (target_tags) — check applicable items
 
-- [ ] acute — 급성 (발병 0-2주)
-- [ ] subacute — 아급성 (2-12주)
-- [ ] chronic — 만성 (12주 이상)
-- [ ] post_surgical — 수술 후
-- [ ] hypermobile — 과가동성
-- [ ] hypomobile — 저가동성 (관절 뻣뻣함)
+- [ ] acute — acute (onset 0-2 weeks)
+- [ ] subacute — subacute (2-12 weeks)
+- [ ] chronic — chronic (12+ weeks)
+- [ ] post_surgical — post-surgical
+- [ ] hypermobile — hypermobile
+- [ ] hypomobile — hypomobile (joint stiffness)
 
-### 2-3. 증상 태그 (symptom_tags) — 해당 항목 체크
+### 2-3. Symptom tags (symptom_tags) — check applicable items
 
-- [ ] movement_pain — 움직일 때 통증
-- [ ] rest_pain — 가만히 있을 때 통증
-- [ ] radicular_pain — 방사통 / 퍼지는 통증
-- [ ] radiculopathy — 신경근병증 (신경 눌림 확인된 경우)
-- [ ] 기타 (직접 입력):
+- [ ] movement_pain — pain with movement
+- [ ] rest_pain — pain at rest
+- [ ] radicular_pain — radicular / radiating pain
+- [ ] radiculopathy — radiculopathy (confirmed nerve compression)
+- [ ] Other (enter directly):
 
-### 2-4. 금기증 태그 (contraindication_tags) — 해당 항목 체크
+### 2-4. Contraindication tags (contraindication_tags) — check applicable items
 
-**절대 금기 (Absolute contraindications):**
-- [ ] vbi_risk — 척추동맥 혈액순환 장애 위험 (경추 테크닉 시 필수 확인)
-- [ ] fracture — 골절 (의심 포함)
-- [ ] instability — 불안정성 (인대 파열, 척추 불안정 포함)
-- [ ] malignancy — 종양 / 악성 질환
-- [ ] neurological_deficit — 신경학적 결손 (근력 저하, 반사 소실, 방광·장 기능 이상)
+**Absolute contraindications:**
+- [ ] vbi_risk — vertebrobasilar insufficiency risk (must verify for cervical techniques)
+- [ ] fracture — fracture (including suspected)
+- [ ] instability — instability (including ligament rupture, spinal instability)
+- [ ] malignancy — tumor / malignancy
+- [ ] neurological_deficit — neurological deficit (muscle weakness, reflex loss, bladder/bowel dysfunction)
 
-**상대 금기 (Relative contraindications):**
-- [ ] osteoporosis — 골다공증
-- [ ] inflammation_acute — 급성 염증 (감염, 류마티스 급성기)
-- [ ] 기타 절대 금기 (직접 입력):
-- [ ] 기타 상대 금기 (직접 입력):
+**Relative contraindications:**
+- [ ] osteoporosis — osteoporosis
+- [ ] inflammation_acute — acute inflammation (infection, rheumatoid flare)
+- [ ] Other absolute contraindication (enter directly):
+- [ ] Other relative contraindication (enter directly):
 
 ---
 
-## 3. 초기 추천 가중치 설정
+## 3. Initial Recommendation Weight Setting
 
-| 항목 | 값 | 근거 |
+| Field | Value | Rationale |
 |------|-----|------|
-| recommendation_weight | 0.00 ~ 1.00 | (예: 0.85 — RCT 2편, 임상 활용 높음) |
-| 근거 수준 (evidence_level) | level_1a / 1b / 2a / 2b / 3 / 4 / 5 / insufficient | |
+| recommendation_weight | 0.00 ~ 1.00 | (e.g., 0.85 — 2 RCTs, high clinical utility) |
+| Evidence level (evidence_level) | level_1a / 1b / 2a / 2b / 3 / 4 / 5 / insufficient | |
 
-**근거 수준 기준:**
+**Evidence level criteria:**
 
-| 수준 | 정의 |
+| Level | Definition |
 |------|------|
-| level_1a | 동질성 높은 RCT의 체계적 고찰 |
-| level_1b | 개별 RCT (신뢰 구간 좁음) |
-| level_2a | 동질성 높은 코호트 연구의 체계적 고찰 |
-| level_2b | 개별 코호트 연구 또는 낮은 질의 RCT |
-| level_3 | 증례-대조 연구 또는 낮은 질의 코호트 연구 |
-| level_4 | 증례 보고 또는 낮은 질의 증례-대조 연구 |
-| level_5 | 전문가 의견 / 기전 기반 추론 |
-| insufficient | 근거 불충분 또는 상충 |
+| level_1a | Systematic review of homogeneous RCTs |
+| level_1b | Individual RCT (narrow confidence interval) |
+| level_2a | Systematic review of homogeneous cohort studies |
+| level_2b | Individual cohort study or low-quality RCT |
+| level_3 | Case-control study or low-quality cohort study |
+| level_4 | Case report or low-quality case-control study |
+| level_5 | Expert opinion / mechanism-based reasoning |
+| insufficient | Insufficient or conflicting evidence |
 
-**가중치 설정 가이드:**
+**Weight setting guide:**
 
-| 범위 | 적용 기준 |
+| Range | Criteria |
 |------|----------|
-| 0.90 – 1.00 | 근거 매우 강함 + 임상 활용도 높음 (level_1a/1b) |
-| 0.70 – 0.89 | 근거 양호, 자주 사용 (level_2a/2b) |
-| 0.50 – 0.69 | 제한적 근거 또는 특정 상황에서만 유용 (level_3) |
-| 0.30 – 0.49 | 근거 부족, 보조적 사용 (level_4) |
-| 0.00 – 0.29 | 실험적 또는 매우 제한적 사용 (level_5 / insufficient) |
+| 0.90 – 1.00 | Very strong evidence + high clinical utility (level_1a/1b) |
+| 0.70 – 0.89 | Good evidence, frequently used (level_2a/2b) |
+| 0.50 – 0.69 | Limited evidence or useful only in specific situations (level_3) |
+| 0.30 – 0.49 | Insufficient evidence, adjunctive use (level_4) |
+| 0.00 – 0.29 | Experimental or very limited use (level_5 / insufficient) |
 
 ---
 
-## 4. 시술 방법 (technique_steps)
+## 4. Technique Steps (technique_steps)
 
-> 각 단계는 치료사가 실제 시행 순서대로 작성. 전문 의학 용어 사용 후 괄호 안에 쉬운 표현 병기.
+> Write each step in the actual order the therapist performs them. Use technical medical terms followed by plain-language clarification in parentheses.
 
-**시작 전 준비:**
+**Pre-procedure preparation:**
 
-- 환자 자세:
-- 치료사 자세:
-- 접촉 부위 (치료사):
-- 힘 방향:
-- 치료 시작 전 설명 (환자에게):
+- Patient positioning:
+- Therapist positioning:
+- Contact area (therapist):
+- Force direction:
+- Pre-treatment explanation (to patient):
 
-**단계별 시술:**
+**Step-by-step procedure:**
 
-1. (준비 단계 — 자세 잡기)
-2. (접촉 단계 — 손/접촉 위치)
-3. (시행 단계 — 힘 전달 방식)
-4. (반복 / 조정 단계 — 횟수, 등급 조절)
-5. (평가 단계 — 반응 확인 및 재평가)
+1. (Preparation step — positioning)
+2. (Contact step — hand/contact location)
+3. (Execution step — force delivery method)
+4. (Repetition / adjustment step — repetitions, grade adjustment)
+5. (Assessment step — response check and reassessment)
 
-**1회 세션 기준 (권고):**
+**Per session recommendation:**
 
-- 반복 횟수:
-- 세트 수:
-- 총 치료 시간:
+- Repetitions:
+- Sets:
+- Total treatment time:
 
 ---
 
-## 5. 임상 결과 기준
+## 5. Clinical Outcome Criteria
 
-### 좋은 반응 (good_response) — 시술이 효과적으로 이루어졌을 때 나타나는 반응
-
--
--
--
-
-### 주의 반응 (caution_response) — 즉시 확인 후 조정이 필요한 반응
+### Good response (good_response) — responses indicating the technique was applied effectively
 
 -
 -
+-
 
-### 중단 기준 (stop_criteria) — 시술 즉시 중단해야 하는 반응
+### Caution response (caution_response) — responses requiring immediate check and adjustment
 
 -
 -
 
-### 흔한 실수 및 교정 방법 (common_mistake)
+### Stop criteria (stop_criteria) — responses requiring immediate cessation of the technique
 
-| 흔한 실수 | 올바른 교정 |
+-
+-
+
+### Common mistakes and corrections (common_mistake)
+
+| Common mistake | Correct approach |
 |----------|-----------|
 | | |
 | | |
 
-### 핵심 임상 팁 (clinical_notes)
+### Key clinical tips (clinical_notes)
 
-> 3줄 이내, 가장 중요한 포인트만:
+> Maximum 3 lines, most important points only:
 
 1.
 2.
@@ -157,52 +157,52 @@
 
 ---
 
-## 6. 근거 문헌 (key_references)
+## 6. Evidence References (key_references)
 
-> PubMed MCP로 PMID 3중 검증 필수. 인용 전 메시지·링크·메타데이터 확인. - 필수 x 없어도 괜찮음
+> Triple-verify all PMIDs using PubMed MCP. Confirm message, link, and metadata before citing. — Not required; omission is acceptable
 
-| PMID | 제목 | 연도 | 저널 | 연구 유형 | 주요 발견 |
+| PMID | Title | Year | Journal | Study type | Key finding |
 |------|------|------|------|----------|---------|
-| | | | | RCT / SR / 코호트 / 증례 | |
+| | | | | RCT / SR / Cohort / Case report | |
 | | | | | | |
 | | | | | | |
 
 ---
 
-## 7. 검수 체크리스트
+## 7. Review Checklist
 
-> 제출 전 모든 항목을 확인하고 체크. 미완료 항목 있으면 제출 불가.
+> Check all items before submission. Submission not allowed if any items are incomplete.
 
-**태그 정확성**
-- [ ] 모든 purpose_tags가 실제 임상 적응증과 일치하는가?
-- [ ] target_tags가 근거 및 임상 경험과 일치하는가?
-- [ ] contraindication_tags에 절대 금기가 빠짐없이 기재됐는가?
+**Tag accuracy**
+- [ ] Do all purpose_tags match the actual clinical indications?
+- [ ] Do target_tags align with evidence and clinical experience?
+- [ ] Are all absolute contraindications included in contraindication_tags without omission?
 
-**가중치 및 근거(필수 아님)**
-- [ ] recommendation_weight가 근거 수준과 일치하는가?
-- [ ] 인용 문헌이 RCT 또는 체계적 고찰 위주인가?
-- [ ] PMID가 PubMed에서 3중 검증됐는가?
+**Weight and evidence (not required)**
+- [ ] Does recommendation_weight align with the evidence level?
+- [ ] Are cited references primarily RCTs or systematic reviews?
+- [ ] Have all PMIDs been triple-verified in PubMed?
 
-**시술 기술**
-- [ ] 시술 단계가 5단계 이상으로 구체적으로 작성됐는가?
-- [ ] 환자 자세, 치료사 자세, 접촉 부위, 힘 방향이 모두 기재됐는가?
-- [ ] 1회 세션 권고 횟수 및 세트가 명시됐는가?
+**Technique description**
+- [ ] Are the technique steps written with 5 or more steps in specific detail?
+- [ ] Are patient positioning, therapist positioning, contact area, and force direction all documented?
+- [ ] Are the recommended repetitions and sets per session specified?
 
-**임상 결과 기준**
-- [ ] 좋은 반응이 3개 이상 작성됐는가?
-- [ ] 중단 기준이 명확히 기재됐는가?
-- [ ] 흔한 실수가 2개 이상, 교정 방법과 함께 기재됐는가?
+**Clinical outcome criteria**
+- [ ] Are 3 or more good responses documented?
+- [ ] Are stop criteria clearly stated?
+- [ ] Are 2 or more common mistakes documented along with corrections?
 
-**KMO 철학 일치성**
-- [ ] 통증 = 손상이라는 프레임으로 설명하지 않았는가?
-- [ ] 환자에게 공포를 유발하는 표현이 없는가?
-- [ ] "몸은 적응적이다" 관점과 충돌하지 않는가?
-- [ ] KPM 프레임 (자세 불균형, 정렬 이상) 언급이 없는가?
+**KMO philosophy alignment**
+- [ ] Does the content avoid explaining through the "pain = damage" frame?
+- [ ] Is there no fear-inducing language for patients?
+- [ ] Does it not conflict with the "the body is adaptive" perspective?
+- [ ] Is there no mention of the KPM frame (postural imbalance, alignment abnormality)?
 
-**가독성**
-- [ ] 전문 의학 용어에 쉬운 표현이 병기됐는가?
-- [ ] 치료사가 아닌 리서치 담당자도 이해할 수 있는가?
+**Readability**
+- [ ] Are plain-language clarifications provided alongside technical medical terms?
+- [ ] Can a research staff member (not a therapist) understand the content?
 
 ---
 
-_작성자:_ | _작성일:_ | _검수자:_ | _검수일:_
+_Author:_ | _Date:_ | _Reviewer:_ | _Review date:_

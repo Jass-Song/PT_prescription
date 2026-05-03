@@ -1,0 +1,8 @@
+.vercel
+.env
+.env.local
+.env.production
+PT_prescription/
+scenario-*.json
+docs/*.pdf
+node_modules/
