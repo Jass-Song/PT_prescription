@@ -1397,6 +1397,61 @@
       transition: background 0.15s;
     }
     .inline-btn-skip:hover { background: #f1f5f9; }
+    .inline-fb-extra {
+      margin-bottom: 8px;
+      padding: 8px 10px;
+      background: #f8fafc;
+      border-radius: 6px;
+    }
+    .inline-fb-extra-label {
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+      display: block;
+    }
+    .inline-fb-outcome { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-bottom: 8px; }
+    .inline-fb-outcome label {
+      font-size: 0.72rem;
+      padding: 3px 8px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      cursor: pointer;
+      background: #fff;
+      transition: background 0.12s, border-color 0.12s, color 0.12s;
+      color: var(--text-secondary);
+      user-select: none;
+    }
+    .inline-fb-outcome input[type="radio"] { display: none; }
+    .inline-fb-outcome input[type="radio"]:checked + span,
+    .inline-fb-outcome label.selected {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .inline-fb-accuracy {
+      display: grid;
+      grid-template-columns: auto repeat(5, 1fr) auto;
+      gap: 4px;
+      align-items: center;
+      font-size: 0.7rem;
+    }
+    .inline-fb-accuracy .acc-edge { color: var(--text-secondary); white-space: nowrap; }
+    .inline-fb-accuracy label {
+      padding: 3px 0;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      cursor: pointer;
+      background: #fff;
+      text-align: center;
+      transition: background 0.12s, border-color 0.12s, color 0.12s;
+      color: var(--text-secondary);
+    }
+    .inline-fb-accuracy input[type="radio"] { display: none; }
+    .inline-fb-accuracy label.selected {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
     .inline-feedback-done {
       font-size: 0.78rem;
       color: #059669;
@@ -2956,6 +3011,29 @@
         <button class="inline-star-btn" data-value="4" aria-label="4점">★</button>
         <button class="inline-star-btn" data-value="5" aria-label="5점">★</button>
       </div>
+      <div class="inline-fb-extra inline-fb-outcome-wrap" style="display:none">
+        <span class="inline-fb-extra-label">효과 분류 (선택사항)</span>
+        <div class="inline-fb-outcome" role="radiogroup" aria-label="효과 분류 선택">
+          <label data-outcome="excellent">매우 효과적</label>
+          <label data-outcome="good">효과적</label>
+          <label data-outcome="moderate">보통</label>
+          <label data-outcome="poor">효과 미미</label>
+          <label data-outcome="no_effect">효과 없음</label>
+          <label data-outcome="adverse">부작용</label>
+        </div>
+      </div>
+      <div class="inline-fb-extra inline-fb-accuracy-wrap" style="display:none">
+        <span class="inline-fb-extra-label">적응증 적합도 (1=완전 부적합, 5=완벽 적합, 선택사항)</span>
+        <div class="inline-fb-accuracy" role="radiogroup" aria-label="적응증 적합도 선택">
+          <span class="acc-edge">부적합</span>
+          <label data-accuracy="1">1</label>
+          <label data-accuracy="2">2</label>
+          <label data-accuracy="3">3</label>
+          <label data-accuracy="4">4</label>
+          <label data-accuracy="5">5</label>
+          <span class="acc-edge">적합</span>
+        </div>
+      </div>
       <textarea class="inline-feedback-notes" placeholder="메모 (선택사항, 최대 200자)" maxlength="200" rows="2" style="display:none"></textarea>
       <div class="inline-feedback-actions" style="display:none">
         <button class="inline-btn-submit">저장</button>
@@ -3536,13 +3614,19 @@
   ══════════════════════════════════════ */
   function initFeedbackSection(sectionEl, context) {
     // context: { technique, category, region, acuity, symptom }
-    const stars   = sectionEl.querySelectorAll('.inline-star-btn');
-    const notes   = sectionEl.querySelector('.inline-feedback-notes');
-    const actions = sectionEl.querySelector('.inline-feedback-actions');
-    const doneMsg = sectionEl.querySelector('.inline-feedback-done');
-    let selectedRating = 0;
+    const stars        = sectionEl.querySelectorAll('.inline-star-btn');
+    const notes        = sectionEl.querySelector('.inline-feedback-notes');
+    const actions      = sectionEl.querySelector('.inline-feedback-actions');
+    const doneMsg      = sectionEl.querySelector('.inline-feedback-done');
+    const outcomeWrap  = sectionEl.querySelector('.inline-fb-outcome-wrap');
+    const accuracyWrap = sectionEl.querySelector('.inline-fb-accuracy-wrap');
+    const outcomeLabels  = sectionEl.querySelectorAll('.inline-fb-outcome label');
+    const accuracyLabels = sectionEl.querySelectorAll('.inline-fb-accuracy label');
+    let selectedRating   = 0;
+    let selectedOutcome  = null;
+    let selectedAccuracy = null;
 
-    // 호버 효과
+    // 호버 효과 (별점)
     stars.forEach(btn => {
       btn.addEventListener('mouseenter', () => {
         const val = +btn.dataset.value;
@@ -3557,16 +3641,52 @@
       btn.addEventListener('click', () => {
         selectedRating = +btn.dataset.value;
         stars.forEach(s => s.classList.toggle('selected', +s.dataset.value <= selectedRating));
-        notes.style.display = 'block';
-        actions.style.display = 'flex';
+        outcomeWrap.style.display  = 'block';
+        accuracyWrap.style.display = 'block';
+        notes.style.display        = 'block';
+        actions.style.display      = 'flex';
+      });
+    });
+
+    // outcome 라디오 (단일 선택)
+    outcomeLabels.forEach(lbl => {
+      lbl.addEventListener('click', () => {
+        const val = lbl.dataset.outcome;
+        if (selectedOutcome === val) {
+          selectedOutcome = null;
+          lbl.classList.remove('selected');
+        } else {
+          selectedOutcome = val;
+          outcomeLabels.forEach(l => l.classList.toggle('selected', l === lbl));
+        }
+      });
+    });
+
+    // accuracy 라디오 (단일 선택)
+    accuracyLabels.forEach(lbl => {
+      lbl.addEventListener('click', () => {
+        const val = +lbl.dataset.accuracy;
+        if (selectedAccuracy === val) {
+          selectedAccuracy = null;
+          lbl.classList.remove('selected');
+        } else {
+          selectedAccuracy = val;
+          accuracyLabels.forEach(l => l.classList.toggle('selected', l === lbl));
+        }
       });
     });
 
     sectionEl.querySelector('.inline-btn-skip').addEventListener('click', () => {
-      actions.style.display = 'none';
-      notes.style.display   = 'none';
+      actions.style.display      = 'none';
+      notes.style.display        = 'none';
+      outcomeWrap.style.display  = 'none';
+      accuracyWrap.style.display = 'none';
       selectedRating = 0;
+      selectedOutcome = null;
+      selectedAccuracy = null;
       stars.forEach(s => s.classList.remove('selected', 'hovered'));
+      outcomeLabels.forEach(l => l.classList.remove('selected'));
+      accuracyLabels.forEach(l => l.classList.remove('selected'));
     });
 
     const submitBtn = sectionEl.querySelector('.inline-btn-submit');
@@ -3582,19 +3702,23 @@
             'Authorization': `Bearer ${currentAccessToken}`,
           },
           body: JSON.stringify({
-            technique: context.technique,
-            category:  context.category,
-            region:    context.region  || null,
-            acuity:    context.acuity  || null,
-            symptom:   context.symptom || null,
-            rating:    selectedRating,
-            notes:     notes.value.trim() || null,
+            technique:           context.technique,
+            category:            context.category,
+            region:              context.region  || null,
+            acuity:              context.acuity  || null,
+            symptom:             context.symptom || null,
+            rating:              selectedRating,
+            outcome:             selectedOutcome,
+            indication_accuracy: selectedAccuracy,
+            notes:               notes.value.trim() || null,
           }),
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        notes.style.display   = 'none';
-        actions.style.display = 'none';
-        doneMsg.style.display = 'block';
+        notes.style.display        = 'none';
+        actions.style.display      = 'none';
+        outcomeWrap.style.display  = 'none';
+        accuracyWrap.style.display = 'none';
+        doneMsg.style.display      = 'block';
         // 기존 모달 피드백 버튼도 완료 표시
         const fbBtnWrap = sectionEl.closest('.result-card')?.querySelector('.btn-feedback');
         if (fbBtnWrap) {
