@@ -10,7 +10,20 @@
 
 ## 🔄 진행 중 / 미완료 작업
 
-<!-- 여기에 날짜순으로 현재 작업 항목 추가 -->
+### 📅 2026-05-03 D-2 sprint
+- [x] Migration 049 — ratings 효과 평가 컬럼 (outcome ENUM / indication_accuracy / was_ai_recommended) — PR #31 머지 + Supabase 적용 완료
+- [x] Migration 050 — technique_stats 보강 + fn_refresh_technique_stats + trg_refresh_stats_on_rating + 백필 — PR #31 머지 + Supabase 적용 완료
+- [x] Migration 050b — fn_refresh_technique_stats SECURITY DEFINER + outcome 비율 분모 보정 — PR #34 hotfix 머지 + Supabase 적용 완료
+- [x] Migration 049c — ratings 누락 컬럼 6개 (region/acuity/symptom/category_key/technique_label/notes) — PR #37 hotfix 머지 + Supabase 적용 완료 (production 별점 502 에러 해결)
+- [x] verify-recommendation-weight-trigger.sql — BEGIN…ROLLBACK 검증 + post-rating-quick-verify.sql 한 방 검증 — 7 PASS + 1 cosmetic
+- [x] ANALYTICS-QUERIES.md — Notion "Outcome measure" 5 카테고리 매핑 SQL 모음
+
+### 🟡 출시 후 진행
+- [ ] 가시위근/극상근 동의어 중복 제거 (데이터 정규화 마이그)
+- [ ] technique_id NOT NULL 제약 검토 — Anatomy Trains 등 NULL 케이스 발생 시 049d ALTER COLUMN DROP NOT NULL
+- [ ] 부위 통계 "??" 9건 (13%) — region 누락 데이터 추적
+- [ ] Migration 051 (NEXT-1 focus_pillars 로깅) — sw-backend-dev 협업
+- [ ] Migration 052 (NEXT-2 client_events 테이블) — telemetry 인프라
 
 ---
 
