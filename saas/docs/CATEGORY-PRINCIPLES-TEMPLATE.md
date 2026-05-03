@@ -1,94 +1,94 @@
-# [카테고리 이름] 기본 원칙 리서치 시트
+# [Category Name] Core Principles Research Sheet
 
 <!-- owner: technique-researcher -->
 
-> 이 템플릿을 채우면 Page 3 추천 결과 상단의 "기본 원칙" 카드에 자동 반영됩니다.
+> Completing this template will automatically populate the "Core Principles" card at the top of the Page 3 recommendation results.
 
 ---
 
-## 1. 카테고리 기본 정보
+## 1. Category Basic Information
 
-| 항목 | 내용 |
+| Field | Content |
 |------|------|
-| 카테고리 키 (시스템용) | joint_mobilization / mulligan / neurodynamics / soft_tissue / manipulation / ... |
-| 한국어 이름 | |
-| 영문 이름 | |
-| 핵심 개념가 | (예: Brian Mulligan, Geoffrey Maitland) |
-| 핵심 철학 한 문장 | |
-| UI 부제목 | (예: Maitland Concept 기반 접근법 — Page 3 카드 상단에 표시됨) |
+| Category key (system) | joint_mobilization / mulligan / neurodynamics / soft_tissue / manipulation / ... |
+| Korean name | |
+| English name | |
+| Key founder(s) | (e.g., Brian Mulligan, Geoffrey Maitland) |
+| Core philosophy in one sentence | |
+| UI subtitle | (e.g., Maitland Concept-based approach — displayed at the top of the Page 3 card) |
 
 ---
 
-## 2. 핵심 원칙 (최소 4개, 최대 7개)
+## 2. Core Principles (minimum 4, maximum 7)
 
-> 치료사가 이 접근법을 시행하기 전 반드시 알아야 할 원칙. 순서는 중요도 순.
-> UI에서 아이콘 + 제목 + 설명(2-3문장) 형태로 표시됩니다.
+> Principles the therapist must know before applying this approach. Order by importance.
+> Displayed in the UI as icon + title + description (2-3 sentences).
 
-### 원칙 1 — [제목]
+### Principle 1 — [Title]
 
-- **아이콘**: (이모지 1개 — 원칙의 성격을 직관적으로 표현)
-- **제목**: (10자 이내 핵심 문구 — UI에서 굵게 표시됨)
-- **설명**: (치료사가 바로 이해할 수 있는 2-3문장. 의학 전문용어 최소화, 사용 시 괄호로 쉬운 표현 병기)
-- **왜 중요한가**: (이 원칙을 무시하면 어떤 문제가 발생하는가 — 내부 참고용, UI에는 미표시)
+- **Icon**: (1 emoji — intuitively represents the nature of the principle)
+- **Title**: (key phrase within ~10 characters — displayed in bold in the UI)
+- **Description**: (2-3 sentences a therapist can understand immediately. Minimize medical jargon; when used, add plain-language clarification in parentheses)
+- **Why it matters**: (what problems arise if this principle is ignored — internal reference only, not displayed in UI)
 
-### 원칙 2 — [제목]
+### Principle 2 — [Title]
 
-- **아이콘**:
-- **제목**:
-- **설명**:
-- **왜 중요한가**:
+- **Icon**:
+- **Title**:
+- **Description**:
+- **Why it matters**:
 
-### 원칙 3 — [제목]
+### Principle 3 — [Title]
 
-- **아이콘**:
-- **제목**:
-- **설명**:
-- **왜 중요한가**:
+- **Icon**:
+- **Title**:
+- **Description**:
+- **Why it matters**:
 
-### 원칙 4 — [제목]
+### Principle 4 — [Title]
 
-- **아이콘**:
-- **제목**:
-- **설명**:
-- **왜 중요한가**:
+- **Icon**:
+- **Title**:
+- **Description**:
+- **Why it matters**:
 
-### 원칙 5 — 절대 금기 (필수 포함)
+### Principle 5 — Absolute Contraindications (required)
 
-- **아이콘**: ⚠️
-- **제목**: 절대 금기 확인
-- **설명**: (이 접근법을 시행하면 안 되는 상황 목록. 구체적으로 열거. 공포 유발 표현은 사용하지 않되 명확하게 기술)
-- **왜 중요한가**: 환자 안전 — 금기 미확인 시 신경학적 손상, 골절 악화 등 심각한 결과 가능
+- **Icon**: ⚠️
+- **Title**: Verify Absolute Contraindications
+- **Description**: (List of situations in which this approach must not be applied. Be specific. State clearly without using fear-inducing language)
+- **Why it matters**: Patient safety — failure to check contraindications can result in serious consequences such as neurological injury or worsening fractures
 
-### 원칙 6 — [제목] (선택)
+### Principle 6 — [Title] (optional)
 
-- **아이콘**:
-- **제목**:
-- **설명**:
-- **왜 중요한가**:
+- **Icon**:
+- **Title**:
+- **Description**:
+- **Why it matters**:
 
-### 원칙 7 — [제목] (선택)
+### Principle 7 — [Title] (optional)
 
-- **아이콘**:
-- **제목**:
-- **설명**:
-- **왜 중요한가**:
+- **Icon**:
+- **Title**:
+- **Description**:
+- **Why it matters**:
 
 ---
 
-## 3. 이 접근법으로 치료하기 좋은 환자 프로파일
+## 3. Ideal Patient Profile for This Approach
 
-| 항목 | 내용 |
+| Field | Content |
 |------|------|
-| 주 적응증 | |
-| 이상적인 환자 상태 | acute / subacute / chronic (해당 항목 선택 및 근거 기술) |
-| 특히 효과적인 증상 | |
-| 이 접근법이 적합하지 않은 경우 | |
+| Primary indications | |
+| Ideal patient stage | acute / subacute / chronic (select applicable and provide rationale) |
+| Symptoms where especially effective | |
+| When this approach is not appropriate | |
 
 ---
 
-## 4. 다른 접근법과의 차이점
+## 4. Differences from Other Approaches
 
-| 비교 접근법 | 차이점 | 언제 이 접근법을 선택하는가 |
+| Comparison approach | Difference | When to choose this approach |
 |------------|--------|--------------------------|
 | | | |
 | | | |
@@ -96,58 +96,58 @@
 
 ---
 
-## 5. 핵심 참고 문헌 / 교재
+## 5. Key References / Textbooks
 
-> PubMed MCP로 PMID 3중 검증 필수. 인용 전 메시지·링크·메타데이터 확인.
+> Triple-verify all PMIDs using PubMed MCP. Confirm message, link, and metadata before citing.
 
-| 제목 | 저자 | 연도 | 유형 | PMID (해당 시) |
+| Title | Author | Year | Type | PMID (if applicable) |
 |------|------|------|------|---------------|
-| | | | 교재 / RCT / 체계적 고찰 / 가이드라인 | |
+| | | | Textbook / RCT / Systematic Review / Guideline | |
 | | | | | |
 | | | | | |
 
 ---
 
-## 6. KMO 철학 정합성 체크
+## 6. KMO Philosophy Alignment Check
 
-- [ ] 통증 = 손상이 아님을 전제하는가?
-- [ ] 환자의 능동적 참여를 강조하는가?
-- [ ] 공포 회피 유발 표현이 없는가?
-- [ ] 생물심리사회적 관점과 충돌하지 않는가?
-- [ ] "Calm things down, and build things back up" 원칙과 일치하는가?
-- [ ] KPM 프레임 (자세 불균형, 정렬 이상) 언급이 없는가?
+- [ ] Does this content assume pain does not equal damage?
+- [ ] Does it emphasize active patient participation?
+- [ ] Is there no fear-avoidance-inducing language?
+- [ ] Does it not conflict with the biopsychosocial perspective?
+- [ ] Does it align with the "Calm things down, and build things back up" principle?
+- [ ] Is there no mention of the KPM frame (postural imbalance, alignment abnormality)?
 
 ---
 
-## 7. 코드 반영 가이드
+## 7. Code Integration Guide
 
-원칙 작성 완료 후 `prototype/index.html`의 `APPROACH_PRINCIPLES` 객체에 아래 형식으로 추가:
+After completing the principles, add them to the `APPROACH_PRINCIPLES` object in `prototype/index.html` using the format below:
 
 ```js
-'[카테고리 키]': {
-  title: '[카테고리 이름] 기본 원칙',
-  subtitle: '[UI 부제목]',
+'[category key]': {
+  title: '[Category Name] Core Principles',
+  subtitle: '[UI subtitle]',
   principles: [
-    { icon: '[이모지]', title: '[원칙 제목]', desc: '[설명 2-3문장]' },
-    { icon: '[이모지]', title: '[원칙 제목]', desc: '[설명 2-3문장]' },
-    { icon: '[이모지]', title: '[원칙 제목]', desc: '[설명 2-3문장]' },
-    { icon: '[이모지]', title: '[원칙 제목]', desc: '[설명 2-3문장]' },
-    { icon: '⚠️',      title: '절대 금기 확인', desc: '[금기 목록]' },
-    // 원칙 6-7은 필요 시 추가 (최대 7개)
+    { icon: '[emoji]', title: '[principle title]', desc: '[description 2-3 sentences]' },
+    { icon: '[emoji]', title: '[principle title]', desc: '[description 2-3 sentences]' },
+    { icon: '[emoji]', title: '[principle title]', desc: '[description 2-3 sentences]' },
+    { icon: '[emoji]', title: '[principle title]', desc: '[description 2-3 sentences]' },
+    { icon: '⚠️',      title: 'Verify Absolute Contraindications', desc: '[contraindication list]' },
+    // Add principles 6-7 if needed (maximum 7)
   ]
 }
 ```
 
-**카테고리 키 목록 (현재 시스템 기준):**
+**Category key list (current system):**
 
-| 키 | 한국어 이름 | 상태 |
+| Key | Korean name | Status |
 |----|-----------|------|
-| `joint_mobilization` | 관절가동술 | 완성 |
-| `mulligan` | 멀리건 기법 | 준비 중 |
-| `neurodynamics` | 신경가동술 | 준비 중 |
-| `soft_tissue` | 연부조직 가동술 | 준비 중 |
-| `manipulation` | 도수조작 | 준비 중 |
+| `joint_mobilization` | 관절가동술 | Complete |
+| `mulligan` | 멀리건 기법 | In progress |
+| `neurodynamics` | 신경가동술 | In progress |
+| `soft_tissue` | 연부조직 가동술 | In progress |
+| `manipulation` | 도수조작 | In progress |
 
 ---
 
-_작성자:_ | _작성일:_ | _검수자 (치료사 호스트):_ | _검수일:_
+_Author:_ | _Date:_ | _Reviewer (therapist host):_ | _Review date:_
