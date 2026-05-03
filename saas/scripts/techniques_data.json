@@ -1,0 +1,1910 @@
+[
+  {
+    "file": "calf-gastrocnemius.md",
+    "cat": "ART",
+    "categoryKey": "category_art",
+    "nameKo": "장딴지근 능동적 이완기법",
+    "nameEn": "Active Release Technique — Gastrocnemius",
+    "abbrev": "ART-Gastroc",
+    "bodyRegionRaw": "ankle / knee",
+    "bodySegment": "대퇴골 내측과·외측과(무릎 뒤쪽 뼈) ~ 종골(calcaneus, 발뒤꿈치 뼈)",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "post_surgical",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_2b",
+    "bodyRegion": "ankle_foot"
+  },
+  {
+    "file": "foot-plantar-fascia.md",
+    "cat": "ART",
+    "categoryKey": "category_art",
+    "nameKo": "발바닥 근막 능동적 이완기법",
+    "nameEn": "Active Release Technique — Plantar Fascia",
+    "abbrev": "ART-PlantarFascia",
+    "bodyRegionRaw": "foot",
+    "bodySegment": "종골(calcaneus, 발뒤꿈치 뼈) 내측 결절 ~ 발가락 기저부 (중족지골관절, MTP joint)",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_2b",
+    "bodyRegion": "ankle_foot"
+  },
+  {
+    "file": "forearm-extensor-wrist.md",
+    "cat": "ART",
+    "categoryKey": "category_art",
+    "nameKo": "아래팔 폄근 능동적 이완기법",
+    "nameEn": "Active Release Technique — Forearm Wrist Extensors (Lateral Epicondyle)",
+    "abbrev": "ART-Ext",
+    "bodyRegionRaw": "elbow / wrist / forearm",
+    "bodySegment": "위팔뼈 가쪽위관절융기(외측상과) → 손목 폄근(단요측수근신근·장요측수근신근·총지신근 등)",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_2b",
+    "bodyRegion": "elbow"
+  },
+  {
+    "file": "forearm-flexor-wrist.md",
+    "cat": "ART",
+    "categoryKey": "category_art",
+    "nameKo": "아래팔 굽힘근 능동적 이완기법",
+    "nameEn": "Active Release Technique — Forearm Wrist Flexors (Medial Epicondyle)",
+    "abbrev": "ART-Flex",
+    "bodyRegionRaw": "elbow / wrist / forearm",
+    "bodySegment": "위팔뼈 안쪽위관절융기(내측상과) → 손목 굽힘근(요측수근굴근·척측수근굴근·천지굴근 등)",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_3",
+    "bodyRegion": "elbow"
+  },
+  {
+    "file": "hip-piriformis.md",
+    "cat": "ART",
+    "categoryKey": "category_art",
+    "nameKo": "궁둥구멍근 능동적 이완기법",
+    "nameEn": "Active Release Technique — Piriformis",
+    "abbrev": "ART-Piriformis",
+    "bodyRegionRaw": "hip",
+    "bodySegment": "천골(sacrum, 엉치뼈) ~ 대퇴골 대전자(greater trochanter, 허벅지 바깥 위쪽 돌출 뼈)",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement",
+      "neurodynamics"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain",
+      "radicular_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_3",
+    "bodyRegion": "hip"
+  },
+  {
+    "file": "hip-psoas.md",
+    "cat": "ART",
+    "categoryKey": "category_art",
+    "nameKo": "엉덩허리근 능동적 이완기법",
+    "nameEn": "Active Release Technique — Iliopsoas",
+    "abbrev": "ART-Iliopsoas",
+    "bodyRegionRaw": "hip / lumbar",
+    "bodySegment": "L1-L4 신경 지배 (엉덩허리근 기시 부위)",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_3",
+    "bodyRegion": "hip"
+  },
+  {
+    "file": "neck-scalenes.md",
+    "cat": "ART",
+    "categoryKey": "category_art",
+    "nameKo": "목갈비근 능동적 이완기법",
+    "nameEn": "Active Release Technique — Scalenes",
+    "abbrev": "ART-Scalenes",
+    "bodyRegionRaw": "cervical / shoulder / thoracic outlet",
+    "bodySegment": "C3–C6 기시부, 1번 갈비뼈(제1늑골) 부착부",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement",
+      "neurodynamics"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "radicular_pain"
+    ],
+    "absContraTags": [
+      "vbi_risk",
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_3",
+    "bodyRegion": "cervical"
+  },
+  {
+    "file": "shoulder-pectoralis-minor.md",
+    "cat": "ART",
+    "categoryKey": "category_art",
+    "nameKo": "작은가슴근 능동적 이완기법",
+    "nameEn": "Active Release Technique — Pectoralis Minor",
+    "abbrev": "ART-Pec Minor",
+    "bodyRegionRaw": "shoulder / thoracic outlet",
+    "bodySegment": "3–5번 갈비뼈(늑골) 기시부 → 어깨뼈 부리돌기(오훼돌기, coracoid process)",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement",
+      "neurodynamics"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "post_surgical",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "radicular_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_3",
+    "bodyRegion": "shoulder"
+  },
+  {
+    "file": "shoulder-rotator-cuff.md",
+    "cat": "ART",
+    "categoryKey": "category_art",
+    "nameKo": "어깨 회전근개 능동적 이완기법",
+    "nameEn": "Active Release Technique — Rotator Cuff (Supraspinatus & Infraspinatus)",
+    "abbrev": "ART-RC",
+    "bodyRegionRaw": "shoulder",
+    "bodySegment": "가시위근(극상근, Supraspinatus), 가시아래근(극하근, Infraspinatus)",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "post_surgical",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_3",
+    "bodyRegion": "shoulder"
+  },
+  {
+    "file": "thigh-hamstring.md",
+    "cat": "ART",
+    "categoryKey": "category_art",
+    "nameKo": "넙다리뒤근육 능동적 이완기법",
+    "nameEn": "Active Release Technique — Hamstrings",
+    "abbrev": "ART-Hamstring",
+    "bodyRegionRaw": "knee / hip",
+    "bodySegment": "궁둥뼈결절(ischial tuberosity, 앉을 때 닿는 뼈 돌출부) ~ 무릎 안쪽·바깥쪽 뼈 (경골내측과·비골두)",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement",
+      "neurodynamics"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "post_surgical",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain",
+      "radicular_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_2b",
+    "bodyRegion": "knee"
+  },
+  {
+    "file": "thigh-quadriceps.md",
+    "cat": "ART",
+    "categoryKey": "category_art",
+    "nameKo": "넙다리네갈래근 능동적 이완기법",
+    "nameEn": "Active Release Technique — Quadriceps",
+    "abbrev": "ART-Quad",
+    "bodyRegionRaw": "knee / hip",
+    "bodySegment": "장골전상극(ASIS, 골반 앞쪽 뼈 돌출부) ~ 무릎뼈(patella, 슬개골)",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "post_surgical",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_2b",
+    "bodyRegion": "knee"
+  },
+  {
+    "file": "abdomen.md",
+    "cat": "CTM",
+    "categoryKey": "category_ctm",
+    "nameKo": "배 결합조직 마사지",
+    "nameEn": "Abdominal Connective Tissue Massage",
+    "abbrev": "CTM-AB",
+    "bodyRegionRaw": "배(복부) — 배꼽 주변·배 전체",
+    "bodySegment": "배 앞쪽 근막, 내장 반사 구역 (척수 분절 T5–L2 대응)",
+    "purposeTags": [
+      "pain_relief"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "post_surgical"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_4",
+    "bodyRegion": "full_spine"
+  },
+  {
+    "file": "hip-lateral.md",
+    "cat": "CTM",
+    "categoryKey": "category_ctm",
+    "nameKo": "엉덩이·허벅지 바깥쪽 결합조직 마사지",
+    "nameEn": "Hip and Lateral Thigh Connective Tissue Massage",
+    "abbrev": "CTM-HL",
+    "bodyRegionRaw": "hip, 허벅지 바깥쪽",
+    "bodySegment": "엉덩이뼈 능선(장골능)·허벅지 바깥쪽 근막(장경인대 주변)",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "post_surgical",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_4",
+    "bodyRegion": "hip"
+  },
+  {
+    "file": "lower-leg-foot.md",
+    "cat": "CTM",
+    "categoryKey": "category_ctm",
+    "nameKo": "종아리·발 결합조직 마사지",
+    "nameEn": "Lower Leg and Foot Connective Tissue Massage",
+    "abbrev": "CTM-LF",
+    "bodyRegionRaw": "knee (하부), ankle, foot",
+    "bodySegment": "종아리 전체·발목·발등·발바닥 근막",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "post_surgical",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_4",
+    "bodyRegion": "ankle_foot"
+  },
+  {
+    "file": "neck-occipital.md",
+    "cat": "CTM",
+    "categoryKey": "category_ctm",
+    "nameKo": "목·뒤통수 결합조직 마사지",
+    "nameEn": "Neck-Occipital Connective Tissue Massage",
+    "abbrev": "CTM-NO",
+    "bodyRegionRaw": "cervical",
+    "bodySegment": "C1–C7, 뒤통수(후두골) 하단 경계",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain"
+    ],
+    "absContraTags": [
+      "vbi_risk",
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_4",
+    "bodyRegion": "cervical"
+  },
+  {
+    "file": "sacral-lumbar-region.md",
+    "cat": "CTM",
+    "categoryKey": "category_ctm",
+    "nameKo": "천추·허리 부위 결합조직 마사지",
+    "nameEn": "Sacral-Lumbar Connective Tissue Massage",
+    "abbrev": "CTM-SL",
+    "bodyRegionRaw": "lumbar, sacral",
+    "bodySegment": "L1–S4",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_4",
+    "bodyRegion": "lumbar"
+  },
+  {
+    "file": "shoulder-chest.md",
+    "cat": "CTM",
+    "categoryKey": "category_ctm",
+    "nameKo": "어깨·가슴 앞쪽 결합조직 마사지",
+    "nameEn": "Shoulder and Anterior Chest Connective Tissue Massage",
+    "abbrev": "CTM-SC",
+    "bodyRegionRaw": "shoulder, thoracic (anterior)",
+    "bodySegment": "빗장뼈(쇄골) 주변, 어깨 앞쪽, 가슴 앞쪽(흉골 옆)",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "post_surgical",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_4",
+    "bodyRegion": "shoulder"
+  },
+  {
+    "file": "thoracic-back.md",
+    "cat": "CTM",
+    "categoryKey": "category_ctm",
+    "nameKo": "등 상부·중부 결합조직 마사지",
+    "nameEn": "Thoracic Back Connective Tissue Massage",
+    "abbrev": "CTM-TB",
+    "bodyRegionRaw": "thoracic",
+    "bodySegment": "T1–T12",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "post_surgical",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_4",
+    "bodyRegion": "thoracic"
+  },
+  {
+    "file": "achilles-tendon.md",
+    "cat": "DeepFriction",
+    "categoryKey": "category_deep_friction",
+    "nameKo": "아킬레스건 심부마사지",
+    "nameEn": "Deep Transverse Friction Massage — Achilles Tendon",
+    "abbrev": "DTFM-Achilles",
+    "bodyRegionRaw": "ankle",
+    "bodySegment": "아킬레스건(Achilles tendon) — 건 중간부(midportion, 발꿈치뼈 위 2~6cm 구간) 및 건-뼈 이행부(insertional, 발꿈치뼈 부착부)",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_5",
+    "bodyRegion": "ankle_foot"
+  },
+  {
+    "file": "elbow-lateral-epicondyle.md",
+    "cat": "DeepFriction",
+    "categoryKey": "category_deep_friction",
+    "nameKo": "팔꿈치 가쪽 뼈 돌출 부위 심부마사지 (테니스 엘보)",
+    "nameEn": "Deep Transverse Friction Massage — Lateral Epicondyle (Tennis Elbow)",
+    "abbrev": "DTFM-Lateral Epicondyle",
+    "bodyRegionRaw": "elbow",
+    "bodySegment": "손목 폄근 기시부 — 단요측수근신근(ECRB, extensor carpi radialis brevis) 및 총지신근(EDC) 기시부, 팔꿈치 가쪽 뼈 돌출 부위(lateral epicondyle) 부착부",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "malignancy"
+    ],
+    "relContraTags": [
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_2b",
+    "bodyRegion": "elbow"
+  },
+  {
+    "file": "elbow-medial-epicondyle.md",
+    "cat": "DeepFriction",
+    "categoryKey": "category_deep_friction",
+    "nameKo": "팔꿈치 안쪽 뼈 돌출 부위 심부마사지 (골프 엘보)",
+    "nameEn": "Deep Transverse Friction Massage — Medial Epicondyle (Golfer's Elbow)",
+    "abbrev": "DTFM-Medial Epicondyle",
+    "bodyRegionRaw": "elbow",
+    "bodySegment": "손목 굽힘근 기시부 — 원형 엎침근(pronator teres), 요측수근굴근(FCR), 척측수근굴근(FCU) 공동 기시부, 팔꿈치 안쪽 뼈 돌출 부위(medial epicondyle) 부착부",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy"
+    ],
+    "relContraTags": [
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_5",
+    "bodyRegion": "elbow"
+  },
+  {
+    "file": "foot-plantar-fascia.md",
+    "cat": "DeepFriction",
+    "categoryKey": "category_deep_friction",
+    "nameKo": "발바닥 근막 기시부 심부마사지 (발꿈치 통증)",
+    "nameEn": "Deep Transverse Friction Massage — Plantar Fascia Origin (Heel Pain)",
+    "abbrev": "DTFM-Plantar Fascia",
+    "bodyRegionRaw": "foot",
+    "bodySegment": "발바닥 근막(plantar fascia) 기시부 — 발꿈치뼈(calcaneus, 종골) 내측 결절(medial tubercle) 부착 지점",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "malignancy"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_5",
+    "bodyRegion": "ankle_foot"
+  },
+  {
+    "file": "knee-medial-collateral-ligament.md",
+    "cat": "DeepFriction",
+    "categoryKey": "category_deep_friction",
+    "nameKo": "무릎 안쪽 인대 심부마사지 (내측 측부인대 손상)",
+    "nameEn": "Deep Transverse Friction Massage — Medial Collateral Ligament (MCL)",
+    "abbrev": "DTFM-MCL",
+    "bodyRegionRaw": "knee",
+    "bodySegment": "내측 측부인대(medial collateral ligament, MCL) — 대퇴골(허벅지뼈) 내측 상과 기시부·인대 중간부·경골(정강이뼈) 부착부",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy"
+    ],
+    "relContraTags": [
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_5",
+    "bodyRegion": "knee"
+  },
+  {
+    "file": "knee-patellar-tendon.md",
+    "cat": "DeepFriction",
+    "categoryKey": "category_deep_friction",
+    "nameKo": "무릎뼈 아래 힘줄 심부마사지 (점퍼스 니)",
+    "nameEn": "Deep Transverse Friction Massage — Patellar Tendon (Jumper's Knee)",
+    "abbrev": "DTFM-Patellar Tendon",
+    "bodyRegionRaw": "knee",
+    "bodySegment": "무릎뼈 아래 힘줄(patellar tendon) — 무릎뼈(patella) 하극(lower pole) 부착부 및 힘줄 중간부",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "malignancy"
+    ],
+    "relContraTags": [
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_5",
+    "bodyRegion": "knee"
+  },
+  {
+    "file": "shoulder-supraspinatus-tendon.md",
+    "cat": "DeepFriction",
+    "categoryKey": "category_deep_friction",
+    "nameKo": "어깨 가시위근 힘줄 심부마사지",
+    "nameEn": "Deep Transverse Friction Massage — Supraspinatus Tendon",
+    "abbrev": "DTFM-Supraspinatus",
+    "bodyRegionRaw": "shoulder",
+    "bodySegment": "가시위근 힘줄 (supraspinatus tendon) — 대결절(greater tubercle) 부착부 및 건-근 이행부",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "malignancy"
+    ],
+    "relContraTags": [
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_5",
+    "bodyRegion": "shoulder"
+  },
+  {
+    "file": "calf-gastrocnemius-soleus.md",
+    "cat": "TriggerPoint",
+    "categoryKey": "category_trigger_point",
+    "nameKo": "장딴지근·가자미근 트리거포인트 압박",
+    "nameEn": "Gastrocnemius & Soleus Trigger Point Release",
+    "abbrev": "GAST-SOL-TPR",
+    "bodyRegionRaw": "knee / ankle",
+    "bodySegment": "오금(무릎 뒤 관절)–발꿈치(종골) 사이 종아리 전체",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "post_surgical",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain",
+      "radicular_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_3",
+    "bodyRegion": "ankle_foot"
+  },
+  {
+    "file": "forearm-extensor-wrist.md",
+    "cat": "TriggerPoint",
+    "categoryKey": "category_trigger_point",
+    "nameKo": "손목 폄근 트리거포인트 허혈성 압박 (아래팔 폄근)",
+    "nameEn": "Wrist Extensor Trigger Point — Ischemic Compression (Lateral Epicondylalgia)",
+    "abbrev": "WE-TrP",
+    "bodyRegionRaw": "elbow (팔꿈치) / forearm (아래팔)",
+    "bodySegment": "손목 요측수근신근 (ECRB/ECRL, Extensor Carpi Radialis Brevis/Longus), 총지신근 (EDC, Extensor Digitorum Communis) — 가쪽위관절융기(lateral epicondyle, 팔꿈치 바깥쪽 뼈 돌출부) 기시부에서 아래팔까지",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain",
+      "radicular_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_2b",
+    "bodyRegion": "elbow"
+  },
+  {
+    "file": "hip-glute-medius.md",
+    "cat": "TriggerPoint",
+    "categoryKey": "category_trigger_point",
+    "nameKo": "중간볼기근 트리거포인트 압박",
+    "nameEn": "Gluteus Medius Trigger Point Release",
+    "abbrev": "GMED-TPR",
+    "bodyRegionRaw": "hip",
+    "bodySegment": "장골능(엉덩이 위쪽 뼈)–대퇴골 대전자(허벅지 뼈 바깥 돌기) 사이 엉덩이 옆",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain",
+      "radicular_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_3",
+    "bodyRegion": "hip"
+  },
+  {
+    "file": "hip-piriformis.md",
+    "cat": "TriggerPoint",
+    "categoryKey": "category_trigger_point",
+    "nameKo": "궁둥구멍근 트리거포인트 압박",
+    "nameEn": "Piriformis Trigger Point Release",
+    "abbrev": "PIR-TPR",
+    "bodyRegionRaw": "hip",
+    "bodySegment": "천골(엉치뼈)–대퇴골 대전자(허벅지 뼈 바깥 돌기) 사이",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain",
+      "radicular_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_3",
+    "bodyRegion": "hip"
+  },
+  {
+    "file": "lower-back-quadratus-lumborum.md",
+    "cat": "TriggerPoint",
+    "categoryKey": "category_trigger_point",
+    "nameKo": "허리네모근 트리거포인트 압박",
+    "nameEn": "Quadratus Lumborum Trigger Point Release",
+    "abbrev": "QL-TPR",
+    "bodyRegionRaw": "lumbar / hip",
+    "bodySegment": "L1-L4 (허리 척추 1~4번) 옆쪽",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_3",
+    "bodyRegion": "lumbar"
+  },
+  {
+    "file": "neck-sternocleidomastoid.md",
+    "cat": "TriggerPoint",
+    "categoryKey": "category_trigger_point",
+    "nameKo": "목빗근 트리거포인트 허혈성 압박",
+    "nameEn": "Sternocleidomastoid (SCM) Trigger Point — Ischemic Compression",
+    "abbrev": "SCM-TrP",
+    "bodyRegionRaw": "cervical (목 척추)",
+    "bodySegment": "목빗근 (Sternocleidomastoid) — 흉골(가슴뼈)·빗장뼈(쇄골)에서 귀 뒤 유양돌기(mastoid process)까지",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain",
+      "radicular_pain"
+    ],
+    "absContraTags": [
+      "vbi_risk",
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_3",
+    "bodyRegion": "cervical"
+  },
+  {
+    "file": "neck-upper-trapezius.md",
+    "cat": "TriggerPoint",
+    "categoryKey": "category_trigger_point",
+    "nameKo": "위등세모근 트리거포인트 허혈성 압박",
+    "nameEn": "Upper Trapezius Trigger Point — Ischemic Compression",
+    "abbrev": "UT-TrP",
+    "bodyRegionRaw": "cervical (목 척추) / shoulder (어깨)",
+    "bodySegment": "위등세모근 (Upper Trapezius) — 목덜미~어깨 봉우리(acromion) 구간",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain",
+      "radicular_pain"
+    ],
+    "absContraTags": [
+      "vbi_risk",
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_2b",
+    "bodyRegion": "cervical"
+  },
+  {
+    "file": "shoulder-infraspinatus.md",
+    "cat": "TriggerPoint",
+    "categoryKey": "category_trigger_point",
+    "nameKo": "가시아래근 트리거포인트 허혈성 압박",
+    "nameEn": "Infraspinatus Trigger Point — Ischemic Compression",
+    "abbrev": "IS-TrP",
+    "bodyRegionRaw": "shoulder (어깨)",
+    "bodySegment": "가시아래근 (Infraspinatus) — 어깨뼈(견갑골, scapula) 뒤면의 가시아래오목(infraspinous fossa)",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "post_surgical",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain",
+      "radicular_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_2b",
+    "bodyRegion": "shoulder"
+  },
+  {
+    "file": "thigh-hamstring.md",
+    "cat": "TriggerPoint",
+    "categoryKey": "category_trigger_point",
+    "nameKo": "넙다리뒤근육 트리거포인트 압박",
+    "nameEn": "Hamstring Trigger Point Release",
+    "abbrev": "HAM-TPR",
+    "bodyRegionRaw": "hip / thigh",
+    "bodySegment": "좌골결절(앉는 뼈)–오금(무릎 뒤 관절) 사이 허벅지 뒤쪽",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "post_surgical",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain",
+      "radicular_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_3",
+    "bodyRegion": "hip"
+  },
+  {
+    "file": "thigh-tensor-fascia-latae.md",
+    "cat": "TriggerPoint",
+    "categoryKey": "category_trigger_point",
+    "nameKo": "넙다리근막긴장근 트리거포인트 압박",
+    "nameEn": "Tensor Fascia Latae Trigger Point Release",
+    "abbrev": "TFL-TPR",
+    "bodyRegionRaw": "hip / thigh",
+    "bodySegment": "상전장골극(앞쪽 엉덩이 뼈 위 돌기)–장경인대(허벅지 바깥 긴 띠) 상부",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "radicular_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_3",
+    "bodyRegion": "hip"
+  },
+  {
+    "file": "upper-back-rhomboids.md",
+    "cat": "TriggerPoint",
+    "categoryKey": "category_trigger_point",
+    "nameKo": "마름근 트리거포인트 허혈성 압박",
+    "nameEn": "Rhomboid Major/Minor Trigger Point — Ischemic Compression",
+    "abbrev": "RH-TrP",
+    "bodyRegionRaw": "thoracic (등 척추) / shoulder (어깨뼈 사이)",
+    "bodySegment": "마름근 (Rhomboid Major & Minor) — 등 척추(T2~T5)에서 어깨뼈(견갑골) 안쪽 경계까지",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_3",
+    "bodyRegion": "thoracic"
+  },
+  {
+    "file": "AL-arm-lines.md",
+    "cat": "AnatomyTrains",
+    "categoryKey": "category_anatomy_trains",
+    "nameKo": "팔 경선",
+    "nameEn": "Arm Lines",
+    "abbrev": "AL",
+    "bodyRegionRaw": "팔 전체 + 어깨·목·가슴 연결부",
+    "bodySegment": "앞 표재 팔 경선(SFAL) / 앞 심부 팔 경선(DFAL) / 뒤 표재 팔 경선(SBAL) / 뒤 심부 팔 경선(DBAL) — 4개 통합",
+    "purposeTags": [],
+    "targetTags": [],
+    "symptomTags": [],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_5",
+    "bodyRegion": "full_spine"
+  },
+  {
+    "file": "DFL-deep-front-line.md",
+    "cat": "AnatomyTrains",
+    "categoryKey": "category_anatomy_trains",
+    "nameKo": "심부 전면 경선",
+    "nameEn": "Deep Front Line",
+    "abbrev": "DFL",
+    "bodyRegionRaw": "발 안쪽 → 무릎 안쪽 → 허벅지 안쪽 → 골반 바닥 → 내장 근막 → 횡격막 → 척추 앞 → 목 앞 깊은 층",
+    "bodySegment": "후경골근·장지굴근 → 슬와근 → 내전근군 → 골반기저근 → 장요근 → 횡격막 → 대요근·소요근 → 전종인대 → 경추 심부굴곡근",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement",
+      "stabilization",
+      "proprioception"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "post_surgical",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_5",
+    "bodyRegion": "full_spine"
+  },
+  {
+    "file": "FL-functional-lines.md",
+    "cat": "AnatomyTrains",
+    "categoryKey": "category_anatomy_trains",
+    "nameKo": "기능선",
+    "nameEn": "Functional Lines",
+    "abbrev": "FL",
+    "bodyRegionRaw": "어깨 → 몸통 대각선 → 반대쪽 허벅지 / 상지-하지 연결 전체",
+    "bodySegment": "앞 기능선(FFL): 대흉근 → 복직근 → 반대쪽 내전근 / 뒤 기능선(BFL): 광배근 → 천결절인대 → 반대쪽 햄스트링",
+    "purposeTags": [],
+    "targetTags": [],
+    "symptomTags": [],
+    "absContraTags": [
+      "fracture",
+      "malignancy"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_5",
+    "bodyRegion": "full_spine"
+  },
+  {
+    "file": "LL-lateral-line.md",
+    "cat": "AnatomyTrains",
+    "categoryKey": "category_anatomy_trains",
+    "nameKo": "측면 경선",
+    "nameEn": "Lateral Line",
+    "abbrev": "LL",
+    "bodyRegionRaw": "전신 옆면 — 발 바깥쪽 / 종아리 바깥 / 허벅지 바깥 / 허리 옆 / 갈비뼈 옆 / 목 옆",
+    "bodySegment": "비골근 → 장경인대·IT band → 대퇴근막장근(TFL) → 복사근 → 늑간근 → 흉쇄유돌근·판상근",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement",
+      "stabilization",
+      "proprioception"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "malignancy"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_5",
+    "bodyRegion": "full_spine"
+  },
+  {
+    "file": "SBL-superficial-back-line.md",
+    "cat": "AnatomyTrains",
+    "categoryKey": "category_anatomy_trains",
+    "nameKo": "후면 표재 경선",
+    "nameEn": "Superficial Back Line",
+    "abbrev": "SBL",
+    "bodyRegionRaw": "전신 — 발바닥 / 발뒤꿈치 / 종아리 뒤 / 허벅지 뒤 / 천골 / 허리 / 등 / 뒤통수",
+    "bodySegment": "족저근막 → 비복근·가자미근 → 햄스트링 → 천결절인대 → 척추기립근 → 판상근 → 두피건막",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement",
+      "proprioception"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "malignancy"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_5",
+    "bodyRegion": "full_spine"
+  },
+  {
+    "file": "SFL-superficial-front-line.md",
+    "cat": "AnatomyTrains",
+    "categoryKey": "category_anatomy_trains",
+    "nameKo": "전면 표재 경선",
+    "nameEn": "Superficial Front Line",
+    "abbrev": "SFL",
+    "bodyRegionRaw": "전신 앞면 — 발등 / 정강이 앞 / 허벅지 앞 / 복부 / 가슴 / 목 앞",
+    "bodySegment": "발등 단신근 → 전경골근 → 대퇴직근·대퇴사두근 → 복직근 → 흉골근·흉쇄유돌근",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement",
+      "proprioception"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "post_surgical",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "malignancy"
+    ],
+    "relContraTags": [
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_3",
+    "bodyRegion": "full_spine"
+  },
+  {
+    "file": "SL-spiral-line.md",
+    "cat": "AnatomyTrains",
+    "categoryKey": "category_anatomy_trains",
+    "nameKo": "나선 경선",
+    "nameEn": "Spiral Line",
+    "abbrev": "SL",
+    "bodyRegionRaw": "전신 — 두개골 → 어깨 → 가슴 → 반대쪽 골반 → 무릎 → 발 (대각선 나선 경로)",
+    "bodySegment": "판상근(두부) → 능형근 → 전거근 → 외복사근 → 반대쪽 내복사근 → 장경인대 → 전경골근 → 비골근 → 족저근막 → 다시 상행",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement",
+      "stabilization",
+      "proprioception"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "malignancy"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_5",
+    "bodyRegion": "full_spine"
+  },
+  {
+    "file": "cervical-flexion-lateral.md",
+    "cat": "MDT",
+    "categoryKey": "category_mdt",
+    "nameKo": "목 굴곡·측방 방향 선호 운동 (앞으로 숙이기 + 옆으로 굽히기)",
+    "nameEn": "MDT Cervical Flexion and Lateral Principle",
+    "abbrev": "MDT-CFL",
+    "bodyRegionRaw": "cervical (목 척추)",
+    "bodySegment": "C1–C4 (상위 목 척추, 굴곡 선호 빈도 높음), 측방은 전 분절 가능",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain"
+    ],
+    "absContraTags": [
+      "vbi_risk",
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_2b",
+    "bodyRegion": "cervical"
+  },
+  {
+    "file": "cervical-retraction-extension.md",
+    "cat": "MDT",
+    "categoryKey": "category_mdt",
+    "nameKo": "목 후퇴·신전 방향 선호 운동 (턱 당기기 + 뒤로 젖히기)",
+    "nameEn": "MDT Cervical Retraction and Extension",
+    "abbrev": "MDT-CRE",
+    "bodyRegionRaw": "cervical (목 척추)",
+    "bodySegment": "C3–C7 (중·하위 목 척추, 경추 후관절 및 디스크 주요 분절)",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement",
+      "neurodynamics"
+    ],
+    "targetTags": [
+      "acute",
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain",
+      "radicular_pain"
+    ],
+    "absContraTags": [
+      "vbi_risk",
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis"
+    ],
+    "evidenceLevel": "level_1b",
+    "bodyRegion": "cervical"
+  },
+  {
+    "file": "lumbar-extension-principle.md",
+    "cat": "MDT",
+    "categoryKey": "category_mdt",
+    "nameKo": "허리 신전 방향 선호 운동 (뒤로 젖히기 방향)",
+    "nameEn": "MDT Lumbar Extension Principle",
+    "abbrev": "MDT-LE",
+    "bodyRegionRaw": "lumbar (허리 척추)",
+    "bodySegment": "L1–L5, L5–S1 (특정 분절 없이 전체 허리에 적용)",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement",
+      "neurodynamics"
+    ],
+    "targetTags": [
+      "acute",
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "radicular_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis"
+    ],
+    "evidenceLevel": "level_1b",
+    "bodyRegion": "lumbar"
+  },
+  {
+    "file": "lumbar-flexion-principle.md",
+    "cat": "MDT",
+    "categoryKey": "category_mdt",
+    "nameKo": "허리 굴곡 방향 선호 운동 (앞으로 굽히기 방향)",
+    "nameEn": "MDT Lumbar Flexion Principle",
+    "abbrev": "MDT-LF",
+    "bodyRegionRaw": "lumbar (허리 척추)",
+    "bodySegment": "L1–L5, L5–S1 (특히 상위 허리 분절에서 굴곡 선호 빈도 높음)",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement",
+      "neurodynamics"
+    ],
+    "targetTags": [
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain",
+      "radicular_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis"
+    ],
+    "evidenceLevel": "level_2b",
+    "bodyRegion": "lumbar"
+  },
+  {
+    "file": "lumbar-lateral-shift-correction.md",
+    "cat": "MDT",
+    "categoryKey": "category_mdt",
+    "nameKo": "허리 측방 이동 교정 (옆으로 치우침 교정)",
+    "nameEn": "MDT Lumbar Lateral Shift Correction",
+    "abbrev": "MDT-LLS",
+    "bodyRegionRaw": "lumbar (허리 척추)",
+    "bodySegment": "L4–L5, L5–S1 (측방 이동이 가장 빈번한 분절)",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement",
+      "neurodynamics"
+    ],
+    "targetTags": [
+      "acute",
+      "subacute",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain",
+      "radicular_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [],
+    "evidenceLevel": "level_2b",
+    "bodyRegion": "lumbar"
+  },
+  {
+    "file": "cervical-anterior-tender-points.md",
+    "cat": "SCS",
+    "categoryKey": "category_scs",
+    "nameKo": "목 앞쪽 통증점 카운터스트레인",
+    "nameEn": "Cervical Anterior Tender Points — Strain-Counterstrain",
+    "abbrev": "CA SCS",
+    "bodyRegionRaw": "cervical",
+    "bodySegment": "C1-C7 전방",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "acute",
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain"
+    ],
+    "absContraTags": [
+      "vbi_risk",
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_4",
+    "bodyRegion": "cervical"
+  },
+  {
+    "file": "cervical-posterior-tender-points.md",
+    "cat": "SCS",
+    "categoryKey": "category_scs",
+    "nameKo": "목 뒤쪽 통증점 카운터스트레인",
+    "nameEn": "Cervical Posterior Tender Points — Strain-Counterstrain",
+    "abbrev": "CP SCS",
+    "bodyRegionRaw": "cervical",
+    "bodySegment": "C1-C7 후방",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "acute",
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain"
+    ],
+    "absContraTags": [
+      "vbi_risk",
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_4",
+    "bodyRegion": "cervical"
+  },
+  {
+    "file": "hip-shoulder-tender-points.md",
+    "cat": "SCS",
+    "categoryKey": "category_scs",
+    "nameKo": "엉덩이·어깨 통증점 카운터스트레인",
+    "nameEn": "Hip & Shoulder Tender Points — Strain-Counterstrain",
+    "abbrev": "HS SCS",
+    "bodyRegionRaw": "hip / shoulder",
+    "bodySegment": "엉덩이관절(Hip Joint), 어깨관절(Glenohumeral Joint), 견봉쇄골관절(AC Joint)",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "acute",
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_4",
+    "bodyRegion": "hip"
+  },
+  {
+    "file": "lumbar-anterior-tender-points.md",
+    "cat": "SCS",
+    "categoryKey": "category_scs",
+    "nameKo": "허리 앞쪽 통증점 카운터스트레인",
+    "nameEn": "Lumbar Anterior Tender Points — Strain-Counterstrain",
+    "abbrev": "LA SCS",
+    "bodyRegionRaw": "lumbar",
+    "bodySegment": "L1-L5 전방",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "acute",
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_4",
+    "bodyRegion": "lumbar"
+  },
+  {
+    "file": "lumbar-posterior-tender-points.md",
+    "cat": "SCS",
+    "categoryKey": "category_scs",
+    "nameKo": "허리 뒤쪽 통증점 카운터스트레인",
+    "nameEn": "Lumbar Posterior Tender Points — Strain-Counterstrain",
+    "abbrev": "LP SCS",
+    "bodyRegionRaw": "lumbar",
+    "bodySegment": "L1-L5 후방",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "acute",
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_4",
+    "bodyRegion": "lumbar"
+  },
+  {
+    "file": "sacral-iliac-tender-points.md",
+    "cat": "SCS",
+    "categoryKey": "category_scs",
+    "nameKo": "엉치뼈·골반 통증점 카운터스트레인",
+    "nameEn": "Sacral & Iliac Tender Points — Strain-Counterstrain",
+    "abbrev": "SI SCS",
+    "bodyRegionRaw": "sacrum / pelvis",
+    "bodySegment": "엉치뼈(천골, Sacrum), 엉덩이관절(천장관절, Sacroiliac Joint), 골반뼈(장골, Ilium)",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "acute",
+      "subacute",
+      "chronic",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_4",
+    "bodyRegion": "sacroiliac"
+  },
+  {
+    "file": "thoracic-rib-tender-points.md",
+    "cat": "SCS",
+    "categoryKey": "category_scs",
+    "nameKo": "등·갈비뼈 통증점 카운터스트레인",
+    "nameEn": "Thoracic & Rib Tender Points — Strain-Counterstrain",
+    "abbrev": "T/Rib SCS",
+    "bodyRegionRaw": "thoracic",
+    "bodySegment": "T1-T12, Rib 1-12",
+    "purposeTags": [
+      "pain_relief",
+      "rom_improvement"
+    ],
+    "targetTags": [
+      "acute",
+      "subacute",
+      "chronic",
+      "post_surgical",
+      "hypomobile"
+    ],
+    "symptomTags": [
+      "movement_pain",
+      "rest_pain"
+    ],
+    "absContraTags": [
+      "fracture",
+      "instability",
+      "malignancy",
+      "neurological_deficit"
+    ],
+    "relContraTags": [
+      "osteoporosis",
+      "inflammation_acute"
+    ],
+    "evidenceLevel": "level_4",
+    "bodyRegion": "thoracic"
+  }
+]

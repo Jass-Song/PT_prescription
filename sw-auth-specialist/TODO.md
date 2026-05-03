@@ -10,6 +10,7 @@
 
 ## 🔄 진행 중 / 미완료 작업
 
+- [x] [2026-05-03] [C-1] Supabase Auth 소셜 로그인 백엔드 구현 — Google + Kakao OAuth callback.js, providers.js, OAUTH-FRONTEND-GUIDE.md 생성 완료 (2026-05-03)
 - [ ] [2026-04-28] SUPABASE_SERVICE_ROLE_KEY 보안 검토 — embed-techniques.js가 서버사이드 전용인지 확인 (클라이언트 노출 불가)
 - [ ] [미정] SaaS 유료 플랜 도입 시 JWT 기반 사용자 인증 아키텍처 설계
 - [ ] [미정] api/recommend.js userToken 검증 로직 강화 검토

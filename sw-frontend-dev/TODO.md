@@ -12,8 +12,8 @@
 
 - [x] [2026-04-28] index.html — renderTechniqueCard 카드 섹션 순서 변경 완료
   - 변경 후: 환자반응확인 → 시술방법 → 목표구조물
-- [ ] [미정] Shoulder/Knee/Hip/Ankle 신규 기법 카드 UI 표시 확인 (body_segment 필드 활용)
-- [ ] [미정] 하이브리드 추천 결과 UI 반영 확인 (벡터 점수 시각화 여부 검토)
+- [x] [미정] Shoulder/Knee/Hip/Ankle 신규 기법 카드 UI 표시 확인 — index.html:1725~1728 4개 부위 모두 포함 확인 (2026-05-02)
+- [x] [미정] 하이브리드 추천 결과 UI 반영 확인 — 벡터 점수 UI 미노출로 결정, 내부 처리만 (2026-05-02)
 
 ---
 

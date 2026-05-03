@@ -14,7 +14,7 @@
 - [x] [2026-04-28] embed-techniques.js 실행 완료 — technique_embeddings 180개 적재 완료
 - [x] [2026-04-28] recommend.js d_neural 503 버그 픽스 — fetchActiveTechniques null/[] 반환 분리
 - [x] [2026-05-01] 9개 컨디션 시나리오 하이브리드 추천 결과 검증 — 9/9 통과 (정확일치 2 + 통과 4 + 부분통과 3). SCENARIO-VERIFICATION.md 매트릭스 갱신.
-- [ ] [2026-05-01] 카테고리 다양성 강제 로직 추가 — 시나리오 9에서 PNE ×3 클러스터링 발견. selectTopTechniquesGlobally 또는 LLM 프롬프트 단에서 동일 카테고리 최대 N개 제한 검토
+- [x] [2026-05-01] 카테고리 다양성 강제 로직 추가 — recommend.js:598~630 maxPerCategory 파라미터 구현 확인, "카테고리당 최대 1" 다양성 강제 동작 확인 (2026-05-02)
 
 ---
 
