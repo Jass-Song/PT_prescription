@@ -1546,9 +1546,17 @@
         <label class="form-label" style="display:block;font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;">이메일</label>
         <input type="email" id="signupEmail" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;outline:none;transition:border-color 0.15s;" placeholder="example@email.com" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'" />
       </div>
-      <div class="form-group" style="margin-bottom:4px;">
+      <div class="form-group" style="margin-bottom:12px;">
         <label class="form-label" style="display:block;font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;">비밀번호</label>
         <input type="password" id="signupPassword" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;outline:none;transition:border-color 0.15s;" placeholder="8자 이상" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'" />
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label class="form-label" style="display:block;font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;">소속 기관 <span style="font-weight:400;color:var(--text-secondary);">(선택)</span></label>
+        <input type="text" id="signupInstitution" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;outline:none;transition:border-color 0.15s;" placeholder="병원/클리닉명" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'" />
+      </div>
+      <div class="form-group" style="margin-bottom:4px;">
+        <label class="form-label" style="display:block;font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;">경력 연수 <span style="font-weight:400;color:var(--text-secondary);">(선택)</span></label>
+        <input type="number" id="signupYears" min="0" max="40" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;outline:none;transition:border-color 0.15s;" placeholder="예: 3" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'" />
       </div>
       <div id="signupError" class="auth-error" style="display:none;"></div>
       <button class="btn-primary" id="btnSignup" onclick="doSignup()" style="margin-top:16px;">회원가입 신청</button>
@@ -2092,6 +2100,17 @@
     }
 
     currentAccessToken = data.session?.access_token || null;
+
+    const institution = document.getElementById('signupInstitution').value.trim() || null;
+    const _years = parseInt(document.getElementById('signupYears').value, 10);
+    const yearsExp = (!isNaN(_years) && _years >= 0) ? _years : null;
+    if (data.session && (institution !== null || yearsExp !== null)) {
+      await supabaseClient
+        .from('user_profiles')
+        .update({ institution, years_experience: yearsExp })
+        .eq('id', data.user.id);
+    }
+
     goScreen('screenPending');
     btn.disabled = false;
     btn.textContent = '회원가입 신청';
