@@ -907,6 +907,76 @@
     }
     .cat-chip.selected .cat-freq { background: #bfdbfe; color: var(--primary); }
 
+    /* ── Pillar 선택 (한국 도수치료 3박자) ── */
+    .pillar-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .pillar-chip {
+      position: relative;
+      background: var(--surface); border: 2px solid var(--border);
+      border-radius: 12px; padding: 14px 10px;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      cursor: pointer; transition: all 0.15s ease;
+    }
+    .pillar-chip:hover { border-color: var(--primary); }
+    .pillar-chip.selected { border-color: var(--primary); background: var(--primary-light); }
+    .pillar-chip .pillar-icon { font-size: 1.4rem; }
+    .pillar-chip .pillar-label { font-weight: 700; color: var(--text); font-size: 0.92rem; }
+    .pillar-chip .pillar-desc { font-size: 0.7rem; color: var(--text-secondary); text-align: center; line-height: 1.2; }
+    .pillar-chip .pillar-rank {
+      position: absolute; top: 6px; right: 6px;
+      width: 22px; height: 22px; border-radius: 50%;
+      background: var(--primary); color: #fff;
+      font-size: 0.78rem; font-weight: 700;
+      display: none; align-items: center; justify-content: center;
+    }
+    .pillar-chip.selected .pillar-rank { display: flex; }
+
+    /* ── Pillar 결과 카드 헤더 + related list ── */
+    .pillar-block { border-left: 4px solid var(--primary); padding-left: 4px; }
+    .pillar-title { display: flex; align-items: center; gap: 8px; }
+    .pillar-rank-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 24px; height: 24px; border-radius: 50%;
+      background: var(--primary); color: #fff;
+      font-size: 0.78rem; font-weight: 700;
+    }
+    .pillar-auto-badge {
+      margin-left: 8px; padding: 2px 8px; border-radius: 10px;
+      background: #fef3c7; color: #92400e;
+      font-size: 0.7rem; font-weight: 600;
+    }
+    .pillar-subtitle {
+      margin-left: 4px; color: var(--text-secondary);
+      font-size: 0.875rem; font-weight: 500;
+    }
+    .pillar-related-wrap { margin-top: 8px; }
+    .pillar-related-details { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
+    .pillar-related-summary {
+      cursor: pointer; padding: 4px 0;
+      font-size: 0.875rem; font-weight: 600; color: var(--text-secondary);
+      list-style: none;
+    }
+    .pillar-related-summary::-webkit-details-marker { display: none; }
+    .pillar-related-summary::before { content: '▶ '; font-size: 0.7rem; transition: transform 0.15s ease; display: inline-block; }
+    .pillar-related-details[open] .pillar-related-summary::before { transform: rotate(90deg); }
+    .pillar-related-list {
+      list-style: none; padding: 8px 0 0; margin: 0;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .pillar-related-item {
+      padding: 10px 12px; background: var(--background);
+      border-radius: 8px; border: 1px solid var(--border);
+    }
+    .rel-name-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .rel-name { font-weight: 600; color: var(--text); font-size: 0.92rem; }
+    .rel-cat { font-size: 0.78rem; color: var(--text-secondary); }
+    .btn-rel-catinfo {
+      border: none; background: var(--primary-light); color: var(--primary);
+      border-radius: 6px; padding: 2px 8px; font-size: 0.78rem; cursor: pointer;
+      margin-left: auto;
+    }
+    .btn-rel-catinfo:hover { background: var(--primary); color: #fff; }
+    .rel-muscles { margin-top: 6px; font-size: 0.82rem; color: var(--text-secondary); line-height: 1.4; }
+
     .cat-slot-label { font-size: 0.75rem; color: var(--text-secondary); margin: 14px 0 6px; }
     .cat-slot-row { display: flex; flex-wrap: wrap; gap: 8px; min-height: 32px; }
     .cat-slot-item {
@@ -1679,14 +1749,44 @@
        2.5단계 — 세부 카테고리 선택
   ══════════════════════════════ -->
   <div class="screen" id="screenCat">
-    <div class="patient-heading">어떤 기법을 쓰실 건가요?</div>
-    <div class="patient-subhead">최대 2가지 선택 후 추천 받기</div>
+    <div class="patient-heading">이번 세션 어디에 집중하시겠어요?</div>
+    <div class="patient-subhead">3박자 중 원하는 것을 선택하세요 (다중·우선순위 클릭 순)</div>
 
-    <div class="section-card">
-      <div id="cat-picker-area"></div>
-      <div class="cat-slot-label">선택된 기법 (<span id="cat-count">0</span>/2)</div>
-      <div class="cat-slot-row" id="cat-slots-area"></div>
+    <!-- ── Pillar 선택 (한국 도수치료 3박자) ── -->
+    <div class="section-card" id="pillar-section">
+      <div class="cat-slot-label" style="margin-top:0">치료 그룹 (다중 선택 가능)</div>
+      <div class="pillar-grid" id="pillar-grid">
+        <button class="pillar-chip" data-pillar="joint" onclick="togglePillar('joint')">
+          <div class="pillar-icon">🔧</div>
+          <div class="pillar-label">관절 가동</div>
+          <div class="pillar-desc">Maitland · Mulligan · MDT</div>
+          <div class="pillar-rank" id="pillar-rank-joint"></div>
+        </button>
+        <button class="pillar-chip" data-pillar="soft_tissue" onclick="togglePillar('soft_tissue')">
+          <div class="pillar-icon">💆</div>
+          <div class="pillar-label">연부조직</div>
+          <div class="pillar-desc">MFR · ART · CTM · TrP · SCS</div>
+          <div class="pillar-rank" id="pillar-rank-soft_tissue"></div>
+        </button>
+        <button class="pillar-chip" data-pillar="exercise" onclick="togglePillar('exercise')">
+          <div class="pillar-icon">🏃</div>
+          <div class="pillar-label">운동</div>
+          <div class="pillar-desc">저항 · 자체중량 · 신경근</div>
+          <div class="pillar-rank" id="pillar-rank-exercise"></div>
+        </button>
+      </div>
+      <div class="cat-slot-label" id="pillar-summary" style="margin-top:14px;display:none"></div>
     </div>
+
+    <!-- 기존 카테고리 픽커는 advanced 옵션으로 (접기) -->
+    <details class="section-card" id="cat-advanced" style="margin-top:12px">
+      <summary style="cursor:pointer;padding:8px;font-size:0.875rem;color:var(--text-secondary)">고급: 특정 기법 카테고리 직접 선택 (선택사항)</summary>
+      <div style="margin-top:10px">
+        <div id="cat-picker-area"></div>
+        <div class="cat-slot-label">선택된 기법 (<span id="cat-count">0</span>/2)</div>
+        <div class="cat-slot-row" id="cat-slots-area"></div>
+      </div>
+    </details>
 
     <div style="padding: 0 0 8px; display: flex; gap: 8px;">
       <button class="btn-secondary" style="margin-top:0;flex:1" onclick="goScreen('screen2')">← 이전</button>
@@ -1808,6 +1908,98 @@
     category_ex_aerobic:         { label: '유산소',       icon: '🏃', group: '운동 처방',  desc: '지구력·심폐 기능 향상 운동' },
     category_ex_bodyweight:      { label: '자체중량',     icon: '🏃', group: '운동 처방',  desc: '맨몸으로 하는 기능적 근력 강화 운동' },
   };
+
+  // ── Pillar 메타 (한국 도수치료 3박자) ──
+  // 사용자가 [4] 단계에서 선택. 카테고리 자동 파생 + focusPillars 우선순위 전송.
+  const PILLAR_META = {
+    joint: {
+      label: '관절 가동',
+      label_en: 'Joint Mobilization',
+      icon: '🔧',
+      categories: ['category_joint_mobilization', 'category_mulligan', 'category_mdt'],
+    },
+    soft_tissue: {
+      label: '연부조직',
+      label_en: 'Soft Tissue',
+      icon: '💆',
+      categories: [
+        'category_mfr', 'category_art', 'category_ctm', 'category_deep_friction',
+        'category_trigger_point', 'category_anatomy_trains', 'category_scs',
+      ],
+    },
+    exercise: {
+      label: '운동',
+      label_en: 'Exercise',
+      icon: '🏃',
+      categories: ['category_ex_resistance', 'category_ex_bodyweight', 'category_ex_neuromuscular', 'category_ex_aerobic'],
+    },
+  };
+
+  // 선택된 pillars (클릭 순서로 우선순위 결정)
+  let selectedPillars = [];
+
+  function togglePillar(pillarKey) {
+    const idx = selectedPillars.indexOf(pillarKey);
+    if (idx >= 0) {
+      selectedPillars.splice(idx, 1);
+    } else {
+      selectedPillars.push(pillarKey);
+    }
+    refreshPillarUI();
+    refreshSubmitButton();
+  }
+
+  function refreshPillarUI() {
+    document.querySelectorAll('.pillar-chip').forEach(chip => {
+      const key = chip.dataset.pillar;
+      const rank = selectedPillars.indexOf(key);
+      chip.classList.toggle('selected', rank >= 0);
+      const rankEl = document.getElementById(`pillar-rank-${key}`);
+      if (rankEl) rankEl.textContent = rank >= 0 ? (rank + 1) : '';
+    });
+    const summary = document.getElementById('pillar-summary');
+    if (summary) {
+      if (selectedPillars.length === 0) {
+        summary.style.display = 'none';
+      } else {
+        summary.style.display = 'block';
+        summary.textContent = '선택 순서 (우선순위): ' +
+          selectedPillars.map((k, i) => `${i+1}. ${PILLAR_META[k].label}`).join('  ·  ');
+      }
+    }
+    // ── Pillar 필터 (B안): advanced picker 라벨·카테고리 갱신 ──
+    const advSummary = document.querySelector('#cat-advanced > summary');
+    if (advSummary) {
+      if (selectedPillars.length > 0) {
+        const labels = selectedPillars.map(k => PILLAR_META[k].label).join('·');
+        advSummary.textContent = `고급: ${labels} 그룹 안에서 특정 카테고리 선택 (선택사항)`;
+      } else {
+        advSummary.textContent = '고급: 특정 기법 카테고리 직접 선택 (선택사항)';
+      }
+    }
+    // pillar 변경 시 advanced picker도 다시 그려서 필터링 적용
+    if (document.getElementById('cat-picker-area')) {
+      renderCatPicker();
+    }
+  }
+
+  // pillar에서 카테고리 자동 파생 (advanced 직접 선택 없을 때 사용)
+  function categoriesFromPillars() {
+    const cats = new Set();
+    for (const k of selectedPillars) {
+      for (const c of (PILLAR_META[k]?.categories || [])) cats.add(c);
+    }
+    return Array.from(cats);
+  }
+
+  function refreshSubmitButton() {
+    const btn = document.getElementById('btn-cat-submit');
+    if (!btn) return;
+    // pillar 1+ 선택했거나 advanced 카테고리 1+ 선택했으면 활성화
+    const hasPillar = selectedPillars.length > 0;
+    const hasAdvCat = (typeof selectedCategories !== 'undefined') && selectedCategories.length > 0;
+    btn.disabled = !(hasPillar || hasAdvCat);
+  }
 
   /* ══════════════════════════════════════
      SESSION HISTORY (localStorage)
@@ -2374,23 +2566,42 @@
   ══════════════════════════════════════ */
   function goScreenCat() {
     selectedCategories = [];
+    selectedPillars = [];
     goScreen('screenCat');
     renderCatPicker();
+    refreshPillarUI();
+    refreshSubmitButton();
   }
 
   function renderCatPicker() {
     const saved = loadSettings();
     if (!saved) { goScreen('screen1'); return; }
 
-    const availableCats = [
+    let availableCats = [
       ...(saved.mt || []).flatMap(g => MT_GROUP_TO_CATS[g] || []),
       ...(saved.ex || []).flatMap(g => EX_GROUP_TO_CATS[g] || []),
     ];
+
+    // ── Pillar 필터 (B안): pillar 선택 시 해당 pillar 카테고리만 노출 ──
+    if (selectedPillars.length > 0) {
+      const pillarCats = new Set(categoriesFromPillars());
+      availableCats = availableCats.filter(k => pillarCats.has(k));
+      // pillar에 없는 advanced 선택은 자동 해제
+      selectedCategories = selectedCategories.filter(k => pillarCats.has(k));
+    }
 
     selectedCategories = selectedCategories.filter(k => availableCats.includes(k));
 
     const area = document.getElementById('cat-picker-area');
     area.innerHTML = '';
+
+    // 빈 상태 안내 (pillar 필터 결과가 0)
+    if (availableCats.length === 0 && selectedPillars.length > 0) {
+      area.innerHTML = '<p style="color:var(--text-secondary);font-size:0.85rem;padding:8px">선택한 그룹에 사용 가능한 카테고리가 설정되어 있지 않습니다. 설정에서 카테고리를 활성화하세요.</p>';
+      renderCatSlots();
+      updateCatSubmitBtn();
+      return;
+    }
 
     const groupOrder = [];
     const groupMap = {};
@@ -2458,16 +2669,19 @@
   }
 
   function updateCatSubmitBtn() {
-    const btn = document.getElementById('btn-cat-submit');
-    if (btn) btn.disabled = selectedCategories.length === 0;
+    // pillar 또는 카테고리 어느 쪽이든 선택되어 있으면 활성화
+    refreshSubmitButton();
   }
 
   /* ══════════════════════════════════════
      RECOMMENDATION LOGIC (AI)
   ══════════════════════════════════════ */
   async function submitRecommend() {
+    const pillarSummary = selectedPillars.length > 0
+      ? ' · 집중: ' + selectedPillars.map(p => PILLAR_META[p].label).join(' → ')
+      : '';
     document.getElementById('combo-label').textContent =
-      `${REGION_LABEL[selectedRegion]} · ${STAGE_LABEL[selectedStage]} · ${SYMPTOM_LABEL[selectedSymptom]}`;
+      `${REGION_LABEL[selectedRegion]} · ${STAGE_LABEL[selectedStage]} · ${SYMPTOM_LABEL[selectedSymptom]}${pillarSummary}`;
 
     goScreen3();
     setRecLoading(true);
@@ -2481,21 +2695,25 @@
     };
 
     try {
-      // 카테고리별 병렬 API 호출 → 각각 3개씩 추천 (refreshCategory와 동일 방식)
-      const responses = await Promise.all(
-        selectedCategories.map(catKey =>
-          fetch('/api/recommend', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentAccessToken}` },
-            body: JSON.stringify({ ...basePayload, selectedCategories: [catKey] }),
-          })
-        )
-      );
+      // ── Pillar 기반 단일 호출 (신규) vs 카테고리 병렬 호출 (legacy) 분기 ──
+      const usePillarMode = selectedPillars.length > 0;
 
-      const results = await Promise.all(responses.map(async res => {
+      if (usePillarMode) {
+        // 신규: pillar 1회 호출 → recommendations[] 반환
+        const submitCategories = selectedCategories.length > 0
+          ? selectedCategories
+          : categoriesFromPillars();
+        const res = await fetch('/api/recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentAccessToken}` },
+          body: JSON.stringify({
+            ...basePayload,
+            selectedCategories: submitCategories,
+            focusPillars: selectedPillars,
+          }),
+        });
         if (!res.ok) {
-          let detail = '';
-          let status = res.status;
+          let detail = ''; let status = res.status;
           try { const j = await res.json(); detail = j.error || ''; } catch {}
           const err = new Error(detail || `HTTP ${status}`);
           err.status = status;
@@ -2503,20 +2721,52 @@
         }
         const data = await res.json();
         if (data.error) throw new Error(data.error);
-        return data;
-      }));
+        setRecLoading(false);
+        renderAIResult(data);
+      } else {
+        // Legacy: 카테고리별 병렬 API 호출 → 각각 3개씩 추천
+        const responses = await Promise.all(
+          selectedCategories.map(catKey =>
+            fetch('/api/recommend', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentAccessToken}` },
+              body: JSON.stringify({ ...basePayload, selectedCategories: [catKey] }),
+            })
+          )
+        );
 
-      // 카테고리별 결과 병합
-      const merged = {
-        manualTherapy:        results.flatMap(r => r.manualTherapy || []),
-        exercise:             results.flatMap(r => r.exercise || []),
-        relatedManualTherapy: results.flatMap(r => r.relatedManualTherapy || []),
-        clinicalNote:         results.map(r => r.clinicalNote).filter(Boolean).join(' | '),
-        selectedCategories,
-      };
+        const results = await Promise.all(responses.map(async res => {
+          if (!res.ok) {
+            let detail = '';
+            let status = res.status;
+            try { const j = await res.json(); detail = j.error || ''; } catch {}
+            const err = new Error(detail || `HTTP ${status}`);
+            err.status = status;
+            throw err;
+          }
+          const data = await res.json();
+          if (data.error) throw new Error(data.error);
+          return data;
+        }));
 
-      setRecLoading(false);
-      renderAIResult(merged);
+        // 카테고리별 결과 병합
+        // recommendations[]는 legacy 모드에서도 사용 — 카테고리당 1 카드 (primary + related)
+        // rank를 카테고리 순서대로 재부여
+        const mergedRecs = results.flatMap((r, ri) =>
+          (r.recommendations || []).map(rec => ({ ...rec, rank: ri + 1 }))
+        );
+        const merged = {
+          manualTherapy:        results.flatMap(r => r.manualTherapy || []),
+          exercise:             results.flatMap(r => r.exercise || []),
+          relatedManualTherapy: results.flatMap(r => r.relatedManualTherapy || []),
+          recommendations:      mergedRecs,
+          clinicalNote:         results.map(r => r.clinicalNote).filter(Boolean).join(' | '),
+          selectedCategories,
+        };
+
+        setRecLoading(false);
+        renderAIResult(merged);
+      }
     } catch (err) {
       setRecLoading(false);
       if (err.status === 429) {
@@ -2609,6 +2859,99 @@
       relatedMT.forEach((item, idx) => renderTechniqueCard(item, idx, false, relCardList));
       area.appendChild(relSec);
     }
+  }
+
+  /* ══════════════════════════════════════
+     PILLAR RECOMMENDATIONS RENDERING (new shape)
+     recommendations[] = [{ pillar, pillarLabel, rank, primary, related }]
+  ══════════════════════════════════════ */
+  function renderPillarRecommendations(result) {
+    const area = document.getElementById('cat-sections-area');
+    area.innerHTML = '';
+
+    const recs = result.recommendations || [];
+    const pillarIcon = { joint: '🔧', soft_tissue: '💆', exercise: '🏃', adjunct: '⚡' };
+
+    // 같은 pillar에 카드가 여러 개 있는지 (legacy 카테고리별 호출 시 발생) → 부제 표시
+    const pillarCounts = recs.reduce((m, r) => { m[r.pillar] = (m[r.pillar] || 0) + 1; return m; }, {});
+
+    recs.forEach((rec, i) => {
+      const isEX = rec.pillar === 'exercise';
+      const isAdjunct = rec.pillar === 'adjunct';
+      const icon = pillarIcon[rec.pillar] || '📋';
+      const autoBadge = rec.auto
+        ? '<span class="pillar-auto-badge">자동</span>'
+        : '';
+      // 같은 pillar에 여러 카드(legacy 모드)면 카테고리 이름을 부제로
+      const catLabelSubtitle = (pillarCounts[rec.pillar] > 1 && rec.primary?.categoryInfo?.name_ko)
+        ? `<span class="pillar-subtitle">· ${rec.primary.categoryInfo.name_ko}</span>`
+        : '';
+
+      const section = document.createElement('div');
+      section.className = 'rec-block pillar-block';
+      section.innerHTML = `
+        <div class="rec-block-title pillar-title">
+          <span class="pillar-rank-badge">${i + 1}</span>
+          <span class="icon">${icon}</span>${rec.pillarLabel || rec.pillar}${catLabelSubtitle}${autoBadge}
+        </div>
+        <div class="cat-card-list pillar-primary"></div>
+        <div class="pillar-related-wrap"></div>
+      `;
+
+      // Primary card — 기존 renderTechniqueCard 재사용
+      const primaryList = section.querySelector('.pillar-primary');
+      if (rec.primary) {
+        renderTechniqueCard(rec.primary, 0, isEX, primaryList);
+      } else {
+        primaryList.innerHTML = '<div class="no-rec">대표 추천 없음.</div>';
+      }
+
+      // Related list — 같은 그룹의 다른 후보 (compact 형식)
+      const relWrap = section.querySelector('.pillar-related-wrap');
+      const related = Array.isArray(rec.related) ? rec.related : [];
+      if (related.length > 0) {
+        const detailsEl = document.createElement('details');
+        detailsEl.className = 'pillar-related-details';
+        detailsEl.innerHTML = `
+          <summary class="pillar-related-summary">
+            🔗 같은 그룹 관련 기법 ${related.length}개 보기
+          </summary>
+          <ul class="pillar-related-list"></ul>
+        `;
+        const ul = detailsEl.querySelector('.pillar-related-list');
+        related.forEach(rel => {
+          const catLabel = rel.categoryInfo?.name_ko || rel.categoryInfo?.category_key || '';
+          const muscles = Array.isArray(rel.applicableMuscles) && rel.applicableMuscles.length > 0
+            ? rel.applicableMuscles
+                .slice(0, 4)
+                .map(m => typeof m === 'string' ? m : (m.muscle_ko || ''))
+                .filter(Boolean)
+                .join(' · ')
+            : '';
+          const muscleHtml = muscles ? `<div class="rel-muscles">🎯 ${sanitizeTerms(muscles)}</div>` : '';
+          const catInfoAttr = rel.categoryInfo
+            ? `data-catinfo='${JSON.stringify(rel.categoryInfo).replace(/'/g, "&apos;")}'`
+            : '';
+          const catBtn = rel.categoryInfo
+            ? `<button class="btn-rel-catinfo" onclick="showCategoryModal(this)" ${catInfoAttr}>📖</button>`
+            : '';
+          const li = document.createElement('li');
+          li.className = 'pillar-related-item';
+          li.innerHTML = `
+            <div class="rel-name-row">
+              <span class="rel-name">${sanitizeTerms(rel.name_ko || rel.technique || rel.techniqueId)}</span>
+              <span class="rel-cat">${catLabel ? `(${catLabel})` : ''}</span>
+              ${catBtn}
+            </div>
+            ${muscleHtml}
+          `;
+          ul.appendChild(li);
+        });
+        relWrap.appendChild(detailsEl);
+      }
+
+      area.appendChild(section);
+    });
   }
 
   function renderTechniqueCard(item, idx, isEX, container) {
@@ -2879,7 +3222,12 @@
       symptom: SYMPTOM_LABEL[selectedSymptom]|| '',
     };
 
-    renderCategoryResults(result);
+    // recommendations[] (신규 pillar 형식) 우선, 없으면 legacy renderCategoryResults
+    if (Array.isArray(result.recommendations) && result.recommendations.length > 0) {
+      renderPillarRecommendations(result);
+    } else {
+      renderCategoryResults(result);
+    }
 
     // ── Clinical Note ──
     const noteWrap = document.getElementById('clinical-note-wrap');

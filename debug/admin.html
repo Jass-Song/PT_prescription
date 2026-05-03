@@ -424,10 +424,48 @@
     </div>
   </div>
 
+  <!-- ═══ 등급별 한도 ═══ -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">⚙️ 등급별 일일 한도</span>
+      <span class="sub" id="tier-limits-status"></span>
+    </div>
+    <div class="card-body">
+      <div id="tier-limits-wrap">
+        <div class="empty-state">로딩 중...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 사용자 등급 관리 ═══ -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">👥 사용자 등급 관리</span>
+      <span class="sub" id="user-tiers-status"></span>
+    </div>
+    <div class="card-body">
+      <!-- 등급별 필터 버튼 -->
+      <div id="tier-filter-bar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+        <div class="empty-state" style="font-size:0.85rem">필터 로딩 중...</div>
+      </div>
+
+      <!-- 필터링된 사용자 목록 -->
+      <div id="user-tiers-wrap">
+        <div class="empty-state">로딩 중...</div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
 const API_BASE = window.location.origin;
+
+// ── 인증 토큰 helper (init에서 발견된 토큰을 전역 보관) ──
+let _adminToken = null;
+function getAuthHeaders() {
+  return _adminToken ? { Authorization: `Bearer ${_adminToken}` } : {};
+}
 
 // ── 유틸 ──────────────────────────────────────────────────────────────────
 
@@ -633,14 +671,35 @@ function showDashboard() {
 }
 
 async function init() {
-  // 세션에서 토큰 추출
-  const raw = localStorage.getItem('supabase_session');
+  // ── 세션에서 토큰 추출 ──
+  // Supabase JS SDK는 localStorage에 'sb-{projectRef}-auth-token' 키로 저장
+  // 다양한 형식 지원: 직접 access_token / session 래핑 / 배열 형식 [access_token, ...]
   let token = null;
-  if (raw) {
+  for (const key of Object.keys(localStorage)) {
+    if (!key.startsWith('sb-') || !key.includes('auth-token')) continue;
+    const raw = localStorage.getItem(key);
+    if (!raw) continue;
     try {
-      const session = JSON.parse(raw);
-      token = session?.access_token || session?.session?.access_token || null;
+      const parsed = JSON.parse(raw);
+      // 케이스 1: 직접 access_token 필드
+      if (parsed?.access_token) { token = parsed.access_token; break; }
+      // 케이스 2: session 래핑
+      if (parsed?.session?.access_token) { token = parsed.session.access_token; break; }
+      // 케이스 3: 배열 [access_token, refresh_token, ...]
+      if (Array.isArray(parsed) && typeof parsed[0] === 'string' && parsed[0].startsWith('eyJ')) {
+        token = parsed[0]; break;
+      }
     } catch (_) {}
+  }
+  // 폴백: legacy 키
+  if (!token) {
+    const legacy = localStorage.getItem('supabase_session');
+    if (legacy) {
+      try {
+        const session = JSON.parse(legacy);
+        token = session?.access_token || session?.session?.access_token || null;
+      } catch (_) {}
+    }
   }
 
   if (!token) {
@@ -655,6 +714,7 @@ async function init() {
   showGate('데이터 로딩 중...', '', '');
 
   try {
+    _adminToken = token; // 등급 관리 fetch에서도 사용
     const res = await fetch(`${API_BASE}/api/admin`, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -699,6 +759,10 @@ async function init() {
     renderFeedback(generalFeedback);
     renderErrors(recentErrors);
 
+    // ── 등급 관리 데이터 ──
+    loadTierLimits();
+    loadUserTiers();
+
     document.getElementById('updated-at').textContent =
       '업데이트: ' + new Date().toLocaleTimeString('ko-KR', { hour12: false });
 
@@ -708,6 +772,195 @@ async function init() {
       err.message,
       '<a href="javascript:location.reload()">다시 시도</a>'
     );
+  }
+}
+
+// ── 등급별 한도 ──
+async function loadTierLimits() {
+  const wrap = document.getElementById('tier-limits-wrap');
+  const status = document.getElementById('tier-limits-status');
+  try {
+    const res = await fetch(`${API_BASE}/api/admin?type=tier_limits`, { headers: getAuthHeaders() });
+    if (!res.ok) { wrap.innerHTML = '<div class="empty-state">조회 실패</div>'; return; }
+    const rows = await res.json();
+    if (!Array.isArray(rows) || rows.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">등급 데이터 없음 (마이그레이션 046 실행 확인)</div>';
+      return;
+    }
+    status.textContent = `${rows.length} 등급`;
+    wrap.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:0.92rem">
+        <thead><tr style="background:#f1f5f9">
+          <th style="padding:8px;text-align:left">등급</th>
+          <th style="padding:8px;text-align:left">설명</th>
+          <th style="padding:8px;text-align:right">일일 한도</th>
+          <th style="padding:8px"></th>
+        </tr></thead>
+        <tbody>${rows.map(r => `
+          <tr style="border-top:1px solid #e2e8f0">
+            <td style="padding:8px;font-weight:600">${r.tier}</td>
+            <td style="padding:8px;color:#64748b">${r.description || ''}</td>
+            <td style="padding:8px;text-align:right">
+              <input type="number" id="tl-${r.tier}" value="${r.daily_limit}" min="0" style="width:90px;padding:4px;border:1px solid #cbd5e1;border-radius:4px;text-align:right" />
+            </td>
+            <td style="padding:8px;text-align:right">
+              <button onclick="saveTierLimit('${r.tier}')" style="padding:4px 10px;background:#059669;color:#fff;border:none;border-radius:4px;cursor:pointer">저장</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } catch (e) {
+    wrap.innerHTML = `<div class="empty-state">오류: ${e.message}</div>`;
+  }
+}
+
+async function saveTierLimit(tier) {
+  const input = document.getElementById(`tl-${tier}`);
+  const val = parseInt(input.value, 10);
+  if (!Number.isFinite(val) || val < 0) { alert('0 이상 정수 입력'); return; }
+  try {
+    const res = await fetch(`${API_BASE}/api/admin?type=tier_limit&tier=${encodeURIComponent(tier)}`, {
+      method: 'PATCH',
+      headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ daily_limit: val }),
+    });
+    if (!res.ok) { alert('저장 실패: ' + res.status); return; }
+    alert(`${tier} 한도 저장됨 (최대 5분 캐시 후 반영)`);
+    loadTierLimits();
+  } catch (e) { alert('오류: ' + e.message); }
+}
+
+// ── 사용자 등급 관리 (필터 + 인라인 편집) ──
+let _allUserTiers = [];      // 전체 사용자 목록 (캐시)
+let _currentTierFilter = 'admin'; // 기본 필터: admin (등급 부여된 사용자만 우선 표시)
+const TIER_OPTIONS = ['beta', 'pro', 'admin'];
+const TIER_COLORS = {
+  beta:  { bg: '#f1f5f9', fg: '#475569' },
+  pro:   { bg: '#dbeafe', fg: '#1e40af' },
+  admin: { bg: '#fee2e2', fg: '#991b1b' },
+};
+
+async function loadUserTiers() {
+  const wrap = document.getElementById('user-tiers-wrap');
+  const status = document.getElementById('user-tiers-status');
+  try {
+    const res = await fetch(`${API_BASE}/api/admin?type=tiers`, { headers: getAuthHeaders() });
+    if (!res.ok) { wrap.innerHTML = '<div class="empty-state">조회 실패</div>'; return; }
+    const rows = await res.json();
+    _allUserTiers = Array.isArray(rows) ? rows : [];
+    const counts = _allUserTiers.reduce((m, r) => { m[r.tier] = (m[r.tier] || 0) + 1; return m; }, {});
+    status.textContent = Object.entries(counts).map(([t, c]) => `${t}: ${c}`).join(' · ');
+    renderTierFilterBar(counts);
+    renderUserTierList();
+  } catch (e) {
+    wrap.innerHTML = `<div class="empty-state">오류: ${e.message}</div>`;
+  }
+}
+
+function renderTierFilterBar(counts) {
+  const bar = document.getElementById('tier-filter-bar');
+  const total = _allUserTiers.length;
+  const filters = [
+    { key: 'all', label: '전체', count: total },
+    ...TIER_OPTIONS.map(t => ({ key: t, label: t, count: counts[t] || 0 })),
+  ];
+  bar.innerHTML = filters.map(f => {
+    const active = (_currentTierFilter === f.key);
+    const color = f.key === 'all' ? { bg: '#e2e8f0', fg: '#334155' } : TIER_COLORS[f.key];
+    return `<button onclick="applyTierFilter('${f.key}')"
+      style="padding:8px 14px;border:1px solid ${active ? '#2563eb' : '#cbd5e1'};
+             background:${active ? '#2563eb' : '#fff'};
+             color:${active ? '#fff' : '#334155'};
+             border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;
+             display:flex;align-items:center;gap:6px">
+      <span>${f.label}</span>
+      <span style="padding:1px 8px;border-radius:10px;background:${active ? 'rgba(255,255,255,0.2)' : color.bg};color:${active ? '#fff' : color.fg};font-size:0.78rem">${f.count}</span>
+    </button>`;
+  }).join('');
+}
+
+function applyTierFilter(filter) {
+  _currentTierFilter = filter;
+  renderTierFilterBar(_allUserTiers.reduce((m, r) => { m[r.tier] = (m[r.tier] || 0) + 1; return m; }, {}));
+  renderUserTierList();
+}
+
+function renderUserTierList() {
+  const wrap = document.getElementById('user-tiers-wrap');
+  let rows = _allUserTiers;
+  if (_currentTierFilter !== 'all') {
+    rows = rows.filter(r => r.tier === _currentTierFilter);
+  }
+  if (rows.length === 0) {
+    wrap.innerHTML = `<div class="empty-state">${_currentTierFilter === 'all' ? '등록된 사용자가 없습니다.' : `${_currentTierFilter} 등급 사용자가 없습니다.`}</div>`;
+    return;
+  }
+  wrap.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:0.85rem">
+      <thead><tr style="background:#f1f5f9">
+        <th style="padding:8px;text-align:left">이메일</th>
+        <th style="padding:8px;text-align:center">현재 등급</th>
+        <th style="padding:8px;text-align:right">등급 변경일</th>
+        <th style="padding:8px;text-align:left">새 등급으로 변경</th>
+      </tr></thead>
+      <tbody>${rows.map(r => {
+        const color = TIER_COLORS[r.tier] || TIER_COLORS.beta;
+        const otherTiers = TIER_OPTIONS.filter(t => t !== r.tier);
+        return `
+        <tr style="border-top:1px solid #e2e8f0">
+          <td style="padding:8px">
+            <div style="font-weight:500">${r.email || '<span style="color:#94a3b8">unknown</span>'}</div>
+            <div style="font-family:monospace;font-size:0.72rem;color:#94a3b8">${r.user_id}</div>
+          </td>
+          <td style="padding:8px;text-align:center">
+            <span style="padding:3px 12px;border-radius:12px;background:${color.bg};color:${color.fg};font-weight:700">${r.tier}</span>
+          </td>
+          <td style="padding:8px;text-align:right;color:#475569;font-size:0.82rem">${(r.tier_updated_at||'').slice(0,10) || '—'}</td>
+          <td style="padding:8px">
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              ${otherTiers.map(t => `<button onclick="changeUserTier('${r.user_id}','${t}', this)"
+                style="padding:5px 12px;border:1px solid ${TIER_COLORS[t].fg};background:${TIER_COLORS[t].bg};color:${TIER_COLORS[t].fg};border-radius:6px;cursor:pointer;font-weight:600;font-size:0.78rem">
+                → ${t}
+              </button>`).join('')}
+            </div>
+          </td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table>`;
+}
+
+async function changeUserTier(userId, newTier, btn) {
+  const userRow = _allUserTiers.find(r => r.user_id === userId);
+  const email = userRow?.email || userId.slice(0,8);
+  const oldTier = userRow?.tier || '?';
+  if (!confirm(`${email}\n\n${oldTier} → ${newTier} 으로 변경할까요?`)) return;
+  if (btn) { btn.disabled = true; btn.textContent = '저장 중...'; }
+  try {
+    const res = await fetch(`${API_BASE}/api/admin?type=user_tier&user_id=${encodeURIComponent(userId)}`, {
+      method: 'PATCH',
+      headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tier: newTier }),
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      alert(`변경 실패 (${res.status}): ${errText.slice(0,200)}`);
+      return;
+    }
+    // 캐시 갱신 후 재렌더
+    if (userRow) {
+      userRow.tier = newTier;
+      userRow.tier_updated_at = new Date().toISOString();
+    }
+    const counts = _allUserTiers.reduce((m, r) => { m[r.tier] = (m[r.tier] || 0) + 1; return m; }, {});
+    document.getElementById('user-tiers-status').textContent =
+      Object.entries(counts).map(([t, c]) => `${t}: ${c}`).join(' · ');
+    renderTierFilterBar(counts);
+    renderUserTierList();
+  } catch (e) {
+    alert('오류: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; }
   }
 }
 
