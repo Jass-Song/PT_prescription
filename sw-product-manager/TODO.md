@@ -11,8 +11,8 @@
 ## 🔄 진행 중 / 미완료 작업
 
 - [ ] [2026-04-28] pgvector 하이브리드 추천 배포 후 9개 컨디션 시나리오 검증 계획 수립
-- [ ] [미정] Shoulder/Knee/Hip/Ankle 118개 기법 추가 → PRODUCT_SPEC.md 업데이트
 - [ ] [미정] 퍼블릭 배포 전 초보 PT 대상 베타 테스트 계획 수립
+- [x] 2026-05-03 PRODUCT_SPEC.md 현행화 — 코드베이스 분석 후 docs/specs/PRODUCT_SPEC.md 업데이트 완료 (2026-05-03)
 
 ---
 
