@@ -62,7 +62,7 @@ async function getUserDailyLimit(userId, userToken) {
 // 오류가 추천 응답을 막지 않도록 catch 필수
 async function logSessionUsage({ userId, region, acuity, symptom, categories, resultCount, responseMs }) {
   const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gnusyjnviugpofvaicbv.supabase.co';
-  const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+  const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
   if (!SUPABASE_URL || !SUPABASE_KEY) return;
   await fetch(`${SUPABASE_URL}/rest/v1/session_logs`, {
     method: 'POST',
