@@ -89,6 +89,7 @@ export default async function handler(req, res) {
     notes:               notes    || null,
     outcome:             outcome  || null,
     indication_accuracy: indication_accuracy != null ? Math.round(indication_accuracy) : null,
+    was_ai_recommended:  true,
   };
 
   const response = await fetch(`${SUPABASE_URL}/rest/v1/ratings`, {
