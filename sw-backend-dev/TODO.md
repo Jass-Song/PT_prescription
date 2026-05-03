@@ -12,13 +12,14 @@
 
 ### ⭐ 다음 작업 (NEXT) — MVP 분석 측정 인프라
 
-- [ ] **[NEXT-1][high] Migration 049 — focus_pillars 로깅**
+- [ ] **[NEXT-1][high] Migration 051 — focus_pillars 로깅**
   - `recommendation_logs.focus_pillars TEXT[]` 컬럼 추가
   - `api/recommend.js`에서 INSERT 시 focus_pillars 저장
   - 영향 범위: 작음 (Migration 1 + recommend.js 1줄)
+  - ⚠️ 049/050 은 PR #31 에서 ratings 효과 컬럼 + recommendation_weight 트리거로 사용됨
 
 - [ ] **[NEXT-2][high] 클라이언트 이벤트 로깅**
-  - Migration 050 — `client_events` 테이블 (id, user_id, event_type, payload jsonb, created_at) + RLS
+  - Migration 052 — `client_events` 테이블 (id, user_id, event_type, payload jsonb, created_at) + RLS
   - `api/telemetry.js` — POST 엔드포인트 (fire-and-forget, 인증 필요)
   - `index.html` — 6개 hook: card_expand, card_feedback_click, refresh_category, star_rating_submit, session_start, pillar_select
   - 영향 범위: ~200줄 추가
