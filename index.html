@@ -97,6 +97,35 @@
       color: var(--text-secondary);
       margin-bottom: 14px;
     }
+    .section-card.collapsible .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      cursor: pointer;
+    }
+    .section-card.collapsible .section-header .section-title {
+      margin-bottom: 14px;
+    }
+    .section-card.collapsed .section-header .section-title {
+      margin-bottom: 0;
+    }
+    .section-summary {
+      display: none;
+      background: var(--primary-light);
+      color: var(--primary);
+      border-radius: 999px;
+      padding: 4px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      max-width: 70%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .section-card.collapsed .section-summary { display: inline-block; }
+    .section-card.collapsed .choice-grid,
+    .section-card.collapsed .choice-grid-3 { display: none; }
     .section-title .badge {
       display: inline-block;
       background: var(--primary-light);
@@ -1622,20 +1651,29 @@
     </div>
 
     <!-- 부위 -->
-    <div class="section-card">
-      <div class="section-title">부위</div>
+    <div class="section-card collapsible" id="card-region">
+      <div class="section-header" onclick="toggleSection('region')">
+        <div class="section-title">부위</div>
+        <div class="section-summary" id="summary-region"></div>
+      </div>
       <div class="choice-grid" id="region-grid"></div>
     </div>
 
     <!-- 시기 -->
-    <div class="section-card">
-      <div class="section-title">시기</div>
+    <div class="section-card collapsible" id="card-stage">
+      <div class="section-header" onclick="toggleSection('stage')">
+        <div class="section-title">시기</div>
+        <div class="section-summary" id="summary-stage"></div>
+      </div>
       <div class="choice-grid-3" id="stage-grid"></div>
     </div>
 
     <!-- 증상 패턴 -->
-    <div class="section-card">
-      <div class="section-title">증상 패턴</div>
+    <div class="section-card collapsible" id="card-symptom">
+      <div class="section-header" onclick="toggleSection('symptom')">
+        <div class="section-title">증상 패턴</div>
+        <div class="section-summary" id="summary-symptom"></div>
+      </div>
       <div class="choice-grid-3" id="symptom-grid"></div>
     </div>
 
@@ -2404,6 +2442,39 @@
     });
   }
 
+  const SECTION_ORDER = ['region', 'stage', 'symptom'];
+  function _sectionData(key) {
+    return key === 'region' ? REGIONS : key === 'stage' ? STAGES : SYMPTOMS;
+  }
+  function _sectionValue(key) {
+    return key === 'region' ? selectedRegion : key === 'stage' ? selectedStage : selectedSymptom;
+  }
+  function collapseSection(key) {
+    const card = document.getElementById('card-' + key);
+    if (!card) return;
+    const opt = _sectionData(key).find(o => o.id === _sectionValue(key));
+    const label = opt ? opt.label.replace(/\n/g, ' ') : '';
+    document.getElementById('summary-' + key).textContent = label;
+    card.classList.add('collapsed');
+  }
+  function expandSection(key) {
+    const card = document.getElementById('card-' + key);
+    if (card) card.classList.remove('collapsed');
+  }
+  function toggleSection(key) {
+    const card = document.getElementById('card-' + key);
+    if (card && card.classList.contains('collapsed')) expandSection(key);
+  }
+  function advanceFrom(key) {
+    const next = SECTION_ORDER
+      .slice(SECTION_ORDER.indexOf(key) + 1)
+      .find(k => !_sectionValue(k));
+    const target = next
+      ? document.getElementById('card-' + next)
+      : document.getElementById('btn-recommend');
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   function selectRegion(id) {
     selectedRegion = id;
     REGIONS.forEach(o => {
@@ -2412,6 +2483,8 @@
     });
     updateStepDots();
     checkRecommendBtn();
+    collapseSection('region');
+    advanceFrom('region');
   }
 
   function selectStage(id) {
@@ -2422,6 +2495,8 @@
     });
     updateStepDots();
     checkRecommendBtn();
+    collapseSection('stage');
+    advanceFrom('stage');
   }
 
   function selectSymptom(id) {
@@ -2434,6 +2509,8 @@
     });
     updateStepDots();
     checkRecommendBtn();
+    collapseSection('symptom');
+    advanceFrom('symptom');
   }
 
   function updateStepDots() {
@@ -3439,6 +3516,7 @@
       const c = document.getElementById('p-' + o.id);
       if (c) c.className = 'choice-card';
     });
+    SECTION_ORDER.forEach(expandSection);
     updateStepDots();
     checkRecommendBtn();
     goScreen('screen2');
