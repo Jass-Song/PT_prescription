@@ -32,7 +32,57 @@
       "Bash(ls -la .env.*.tmp)",
       "Bash(rm -f .env.prod.tmp .env.dev.tmp .env.preview.tmp)",
       "Bash(curl *)",
-      "Skill(update-config)"
+      "Skill(update-config)",
+      "Bash(gh pr create --title 'feat: C-1/C-2/C-3 Auth & 평가 UI — OAuth 백엔드, 가입 플로우, 별점 평가' --body ' *)",
+      "Bash(gh pr *)",
+      "Bash(git fetch *)",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); try{const j=JSON.parse\\(d\\); const todos=j.todos||[]; todos.filter\\(t=>t.id&&\\(t.id.includes\\('C4'\\)||t.id.includes\\('C-4'\\)||t.id.includes\\('B2'\\)||t.id.includes\\('B-2'\\)\\)\\).forEach\\(t=>console.log\\(JSON.stringify\\(t,null,2\\)\\)\\)}catch\\(e\\){console.log\\('parse error',e.message,d.slice\\(0,200\\)\\)}\")",
+      "Bash(curl -s http://34.47.91.197:3131/api/state)",
+      "Bash(node -e \"const j=require\\('C:/tmp/board_state.json'\\); const todos=j.todos||[]; todos.forEach\\(t=>{ if\\(t.id&&\\(t.id.includes\\('C4'\\)||t.id.includes\\('C-4'\\)||t.id.includes\\('B2'\\)||t.id.includes\\('B-2'\\)||t.id.includes\\('20260502'\\)||t.id.includes\\('20260503'\\)\\)\\) console.log\\(t.id,t.status,t.title\\);}\\)\")",
+      "Bash(git cherry-pick *)",
+      "Bash(050\" | head -5 && ls \"C:\\\\project\\\\PT\\\\KMovement Optimism\\\\pt-prescription\\\\saas\\\\scripts\\\\\")",
+      "Bash(node -e \"require\\('dotenv'\\).config\\({path:'.env'}\\); console.log\\('VOYAGE_API_KEY:', process.env.VOYAGE_API_KEY ? '설정됨' : '없음'\\); console.log\\('SUPABASE_URL:', process.env.SUPABASE_URL ? '설정됨' : '없음'\\); console.log\\('SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? '설정됨' : '없음'\\);\")",
+      "Bash(node -e \"const fs=require\\('fs'\\); const env=fs.existsSync\\('.env'\\) ? '있음' : '없음'; console.log\\('.env 파일:', env\\);\")",
+      "Bash(node saas/scripts/embed-techniques.js --only-new)",
+      "Bash(node -e \"require\\('dotenv'\\).config\\({path:'.env'}\\); console.log\\(Object.keys\\(process.env\\).filter\\(k=>k.includes\\('VOYAGE'\\)||k.includes\\('SUPABASE'\\)\\)\\)\")",
+      "Bash(node -r dotenv/config saas/scripts/embed-techniques.js --only-new)",
+      "Bash(node -e \"process.stdin.resume\\(\\); let d=''; process.stdin.on\\('data',c=>d+=c\\); process.stdin.on\\('end',\\(\\)=>{ try{ const j=JSON.parse\\(d\\); console.log\\('PR #'+j.number+' ['+j.state+']:', j.title\\); console.log\\('Branch:', j.headRefName\\); console.log\\('MergedAt:', j.mergedAt||'미머지'\\); console.log\\('Files:', \\(j.files||[]\\).map\\(f=>f.path\\).join\\('\\\\n  '\\)\\); }catch\\(e\\){console.log\\(d\\);} }\\)\")"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"process.stdout.write(JSON.stringify({hookSpecificOutput:{hookEventName:'PostToolUse',additionalContext:'🚨 보드 즉시 업데이트 필수: 작업 시작했으면 active, 방금 완료했으면 done — curl로 지금 당장 처리. 나중에 몰아서 하지 말 것. 절대 예외 없음.'}}))\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"process.stdout.write(JSON.stringify({hookSpecificOutput:{hookEventName:'UserPromptSubmit',additionalContext:'🚨🚨🚨 에이전트 위임 절대 원칙 🚨🚨🚨\\n쟈르스는 산출물을 직접 작성하지 않는다. 예외 없음.\\n✅ 허용: 보드 업데이트, 일일로그, 에이전트 프롬프트 작성, 사용자 보고\\n❌ 금지: 슬라이드·스크립트·쇼노트·SEO·카드뉴스 등 콘텐츠 직접 작성\\n\\n작업 시작 전 순서:\\n1. 보드 active (curl)\\n2. Agent() 서브에이전트 spawn\\n3. 완료 후 보드 done (curl)\\n\\n지금 받은 요청이 콘텐츠/파일 수정이면 → 무조건 에이전트 위임.'}}))\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -Command \"Write-Output '{\\\"systemMessage\\\": \\\"⚠️ [PT Prescription 세션 종료 체크리스트]\\\\n\\\\n1. ✅ 보드 업데이트 완료? (http://34.47.91.197:3131)\\\\n2. ✅ 에이전트 LOG 기록 완료? (pt-prescription/<agent>/LOG-YYYY-MM.md)\\\\n3. ✅ PR 생성/머지 상태 최신?\\\\n4. ✅ 완료된 todos done 처리?\\\"}'\"",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   }
 }
