@@ -763,5 +763,63 @@ INSERT INTO technique_tags (tag_type, tag_key, label_ko, label_en, sort_order) V
 ('contraindication', 'neurological_deficit','신경학적 결손','Neuro Deficit',  7);
 
 -- ============================================================
+-- N. TERM_GLOSSARY — 한국어 PT 용어 표준화 단일 진실 소스
+-- ============================================================
+-- 시드 데이터는 saas/migrations/052-term-glossary.sql 단독 책임 (여기 미포함).
+-- 정의는 마이그 052 와 동기화. 변경 시 양쪽 모두 갱신할 것.
+-- 단일 진실 소스: pt-prescription/docs/clinical-terminology-audit-2026-05-05.md §6
+-- 설계 문서: saas/docs/term-glossary-design.md
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS term_glossary (
+  id                       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  original_ko              TEXT NOT NULL,
+  replacement_ko           TEXT,
+  english                  TEXT,
+  category                 TEXT NOT NULL CHECK (category IN (
+                             'posture','movement','examination','anatomy',
+                             'depth','foreign','expression','preserved'
+                           )),
+  body_region              TEXT,
+  disambiguation_pattern   TEXT,
+  is_preserved             BOOLEAN NOT NULL DEFAULT false,
+  status                   TEXT NOT NULL DEFAULT 'active'
+                             CHECK (status IN ('active','review','deprecated')),
+  frequency                INTEGER,
+  evidence_url             TEXT,
+  notes                    TEXT,
+  created_at               TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at               TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (original_ko, body_region)
+);
+
+CREATE INDEX IF NOT EXISTS idx_term_glossary_original_active
+  ON term_glossary(original_ko) WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS idx_term_glossary_category
+  ON term_glossary(category);
+CREATE INDEX IF NOT EXISTS idx_term_glossary_preserved
+  ON term_glossary(is_preserved) WHERE is_preserved = true;
+
+CREATE OR REPLACE FUNCTION fn_touch_term_glossary_updated_at()
+RETURNS trigger AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_term_glossary_updated_at ON term_glossary;
+CREATE TRIGGER trg_term_glossary_updated_at
+  BEFORE UPDATE ON term_glossary
+  FOR EACH ROW EXECUTE FUNCTION fn_touch_term_glossary_updated_at();
+
+ALTER TABLE term_glossary ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "term_glossary_select_all" ON term_glossary;
+CREATE POLICY "term_glossary_select_all"
+  ON term_glossary FOR SELECT
+  USING (true);
+
+-- ============================================================
 -- END OF SCHEMA
 -- ============================================================
