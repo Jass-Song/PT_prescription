@@ -104,3 +104,87 @@ DB 영향:
 **Status**: 🔲 대기중
 
 ---
+
+## [2026-05-05] [sw-lead] — Track B Phase 3: api/history.js 후처리 + 클라이언트 TERM_REPLACEMENTS 제거
+
+**Priority**: medium
+**Team**: software (Track B 마무리)
+**Background**:
+Track B Phase 2까지 production 적용 완료 (term_glossary 123 row + api/recommend.js 후처리). 그러나 api/history.js 가 applyGlossary 미적용 상태이고, 클라이언트 index.html 의 TERM_REPLACEMENTS 24건 + sanitizeTerms 14건 호출이 아직 살아있음. 단일 진실 소스 원칙 위반 — 단 history 응답이 raw 한자어로 반환되는 한 클라이언트 sanitize를 즉시 제거할 수 없음.
+
+**To-do**:
+1. api/history.js 수정 (sw-backend-dev) — applyGlossary 통합 — 대상 필드: recentLogs[].recommended_techniques, likedTechniques[].name_ko, likedTechniques[].category_name 등
+2. index.html 수정 (sw-frontend-dev) — TERM_REPLACEMENTS 배열 + sanitizeTerms 함수 + 14건 호출 모두 제거 또는 String() 통과로 교체
+3. 회귀 검증 — 추천 결과 / 이력 화면 / 모달 모두 한자어가 한글표준+영문 형태로 정상 표시되는지
+
+**Related files**:
+- `api/history.js`
+- `api/_term_glossary.js` (재사용)
+- `index.html` (TERM_REPLACEMENTS line 3288~3302, sanitizeTerms line 3303~3308, 호출 14건)
+
+**Expected timing**: 2026-05-06 ~ 5-08 (1~2시간)
+**Status**: 🔲 대기중
+
+---
+
+## [2026-05-05] [sw-lead] — Track C: 평가 타이밍 재설계 (다음 세션 진입 시 필수 모달)
+
+**Priority**: high
+**Team**: software
+**Background**:
+현재 인라인 별점 평가는 추천 받자마자 노출되어 PT 임상 워크플로 (추천 → 시술 → 효과 평가) 와 어긋남. 사용자가 환자에게 시술해 본 후에야 추천의 효과를 판단 가능 → 평가는 다음 세션 진입 시가 자연스러움. 또한 ratings 테이블에 recommendation_log_id FK가 없어 "어느 추천에 대한 평가인지" 매칭 불가 — AI 피드백 루프 미완성.
+
+대표님 결정 (2026-05-05):
+- 다음 세션 진입 시 필수 모달 (검색 차단)
+- 인라인 별점 유지하되 약화
+- 14일 만료
+- 카드별 outcome 6라디오 + accuracy 1~5 + 메모 + "이거 시술 안 했어요" 스킵 버튼
+
+**To-do**:
+1. DB 마이그 051 작성 (sw-db-architect) — recommendation_logs.evaluation_status·evaluated_at 컬럼 / ratings.recommendation_log_id·recommended_technique_index FK / RLS update_own / 트리거 (ratings INSERT 시 status='rated') / pending 인덱스
+2. Backend (sw-backend-dev) — recommend.js 가 recommendation_log_id 응답 반환 / feedback.js 페이로드에 FK 추가 / api/pending-evaluations.js 신규 엔드포인트 (14일 윈도우)
+3. Frontend (sw-frontend-dev) — pending-eval-overlay 모달 마크업 / loadSavedSettingsAndNavigate 검색 차단 가드 / 인라인 별점 약화 / feedback POST 페이로드 FK 추가
+4. 단계 출시: Day 0 마이그+Backend (모달 미노출, 데이터 매칭만) → Day 2 모니터링 → Day 3+ Frontend 모달 활성화
+
+**Related files**:
+- `saas/migrations/051-recommendation-evaluation.sql` (신규)
+- `api/recommend.js`, `api/feedback.js`
+- `api/pending-evaluations.js` (신규)
+- `index.html` (모달 마크업 line 1564 직후, loadSavedSettingsAndNavigate line 2219, .inline-feedback-section line 1334~1450)
+
+**Plan 파일** (참고): `/root/.claude/plans/come-to-think-of-distributed-riddle.md` (Track C 섹션)
+
+**Expected timing**: 2026-05-08 ~ 5-12 (2~3일)
+**Status**: 🔲 대기중
+
+---
+
+## [2026-05-05] [sw-lead] — Track D: 추천 알고리즘 조정 (디테일·다양성)
+
+**Priority**: medium
+**Team**: software
+**Background**:
+대표님 관찰 (2026-05-05):
+1. 추천 받은 기법 디테일 부족 — 시술 시 즉시 적용하기 어려움
+2. "같은 그룹 다른 기법 보기" 가 명칭만 나오고 추가 정보 없음 — 사용자가 명칭만 보고 선택하기 어려움
+
+향후 평가 데이터 (Track C 완료 후) 기반으로 가중치 공식·LLM 프롬프트·필터·다양성 정책 튜닝 필요. Track C 가 완료되어야 평가가 정확히 매칭되고, 그 데이터로 알고리즘 의미 있는 조정 가능.
+
+**To-do**:
+1. 요구사항 정리 — "디테일 부족" 의 구체 사례 수집 (PT 베타 사용자 피드백 기반)
+2. "다른 기법 보기" UX 보강 — 명칭 + 카테고리 + 별점 + 짧은 설명 1줄
+3. 가중치 공식 검토 (Migration 050b — 별점 20% / 정확도 30% / 활성도 20% / 효과 30%) — 데이터 적은 기법(activity_30d=0)이 너무 낮게 나오는지 / 별점 후한 기법만 반복되는지
+4. LLM 프롬프트 추가 규칙 — 환자 안전성 우선 / 신참 PT 친화 기법 우선 / 최신 근거 기반
+5. (선택) PT 경력별 난이도 매칭 — 초보 vs 숙련 — 도입 의향 검토
+
+**Related files**:
+- `api/recommend.js` (LLM 프롬프트 line 1134~1180, 가중치 적용 로직)
+- `saas/migrations/050b-fix-trigger-security-and-outcome-ratio.sql` (가중치 공식)
+- `index.html` (다른 기법 보기 UI 라인 식별 필요)
+
+**Dependencies**: Track C 완료 후 시작 권장 (recommendation_log_id ↔ rating 매칭 정확해진 후)
+
+**Expected timing**: 2026-05-13 ~ 5-15 (1~2일)
+**Status**: 🔲 대기중
+
+---
