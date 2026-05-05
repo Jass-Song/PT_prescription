@@ -171,5 +171,57 @@ FROM   term_glossary;
 
 
 -- ============================================================
+-- 마이그 053 보충 검증 (053-term-glossary-supplement.sql 적용 후)
+-- ============================================================
+
+
+-- ----------------------------------------------------------------
+-- 11) phrase 매핑 존재 확인 — "신장 자세" / "단축 자세"
+-- ----------------------------------------------------------------
+-- 기대: 2 row. "신장 자세"는 "신장(→ 늘리기)"과 prefix 충돌 — applyGlossary
+-- 길이 내림차순 정렬 보강(sw-backend-dev) 후에야 정확 매칭됨.
+
+SELECT '11. phrase 매핑 (신장 자세 / 단축 자세, 기대 2 row)' AS check_label,
+       original_ko, replacement_ko, english, category, notes
+FROM   term_glossary
+WHERE  original_ko IN ('신장 자세','단축 자세')
+  AND  body_region IS NULL
+ORDER  BY original_ko;
+
+
+-- ----------------------------------------------------------------
+-- 12) 외측 매핑 = '바깥쪽' 확인 (053 UPDATE — §6-1 "가쪽" → "바깥쪽")
+-- ----------------------------------------------------------------
+
+SELECT '12. 외측 매핑 (기대 replacement_ko=바깥쪽)' AS check_label,
+       original_ko, replacement_ko, english, notes
+FROM   term_glossary
+WHERE  original_ko = '외측'
+  AND  body_region IS NULL;
+
+
+-- ----------------------------------------------------------------
+-- 13) 반좌위 매핑 = '상체를 45도 올린 자세' 확인 (053 UPDATE — 반와위와 통일)
+-- ----------------------------------------------------------------
+
+SELECT '13. 반좌위 매핑 (기대 replacement_ko=상체를 45도 올린 자세)' AS check_label,
+       original_ko, replacement_ko, english, notes
+FROM   term_glossary
+WHERE  original_ko = '반좌위'
+  AND  body_region IS NULL;
+
+
+-- ----------------------------------------------------------------
+-- 14) 전체 row 카운트 (마이그 053 적용 후)
+-- ----------------------------------------------------------------
+-- 기대: 89 (052) + 34 (053 INSERT) = 123.
+-- 053 UPDATE 2건은 row 수에 영향 없음.
+
+SELECT '14. 전체 row 카운트 (053 적용 후, 기대 123)' AS check_label,
+       COUNT(*) AS total_rows
+FROM   term_glossary;
+
+
+-- ============================================================
 -- END OF VERIFICATION
 -- ============================================================
