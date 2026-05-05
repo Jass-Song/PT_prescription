@@ -76,11 +76,22 @@ async function _fetchGlossary() {
   }
   const rows = await res.json();
 
+  // phrase 길이 우선 정렬 (내림차순) — prefix 충돌 자동 해결.
+  // 예: '신장 자세'(2단어 phrase) 가 '신장'(단어) 보다 먼저 매칭되어야 함.
+  // JavaScript Map 은 insertion order 를 보장하므로 정렬된 순서로 set.
+  // is_preserved / disambiguation 배열도 동일 정렬 적용 (예: 'TrP-deep' vs 'TrP').
+  const sortedRows = (Array.isArray(rows) ? rows : [])
+    .slice()
+    .sort(
+      (a, b) =>
+        String(b.original_ko || '').length - String(a.original_ko || '').length
+    );
+
   const byKey = new Map();
   const preservedTokens = [];
   const disambRows = [];
 
-  for (const row of Array.isArray(rows) ? rows : []) {
+  for (const row of sortedRows) {
     const region = row.body_region || '*';
     byKey.set(`${row.original_ko}::${region}`, row);
     if (row.is_preserved) preservedTokens.push(row);
@@ -259,7 +270,15 @@ export function _debugCacheState() {
 // 6) 약어 보존 검증:
 //    applyGlossary('CTM 시작 전 ART 적용')
 //      → 'CTM 시작 전 ART 적용' (변경 없음)
+// 7) phrase 길이 우선 정렬 검증:
+//    applyGlossary('근육 신장 자세 유지')
+//      → '근육 늘어난 자세 유지' (NOT '근육 늘리기 자세 유지')
+// 8) 단축/신장 자세 검증:
+//    applyGlossary('견갑거근 단축 자세에서 시작')
+//      → '견갑거근 짧아진 자세에서 시작'
+//    applyGlossary('근막 신장 자세 유지')
+//      → '근막 늘어난 자세 유지'
 //
-// 주의: 위 출력 예시는 DB 시드 (saas/migrations/052) 의 replacement_ko 와
+// 주의: 위 출력 예시는 DB 시드 (saas/migrations/052·053) 의 replacement_ko 와
 // english 컬럼에 의해 결정된다. 부위별 정확한 매핑은 design doc §3 참조.
 // ============================================================
