@@ -428,3 +428,108 @@ PNF·MET·FRC·NMR은 0회 — 데이터에 부재.
 ```
 
 총 31개 마이그레이션 검토. 실제 한자어·외국어가 농축된 핵심 데이터 INSERT 파일은 **8개** (013, 019-shoulder, 020, 021-hip, 022-ankle, 002, 008, 038).
+
+---
+
+## 6. 결정 확정 (대표님 2026-05-05)
+
+> 본 §6은 대표님 2026-05-05 결정 사항 정리 — sw-db-architect가 term_glossary 시드 INSERT 시 단일 진실 소스로 사용
+
+### 6-1. 동음이의어·핵심 술어 (한글표준(영어))
+
+| 원어 | 표준 | 영어 | 비고 |
+|------|------|------|------|
+| 회내 | 엎침 | Pronation | |
+| 회외 | 뒤침 | Supination | |
+| 활주 | 미끄러짐 | Gliding | |
+| 압박 | 압박 (또는 누름) | Compression | |
+| 신전 | 폄 | Extension | |
+| 신장 (의미 1) | 늘리기 | Stretching | "신장(콩팥)" 패턴은 치환 제외 |
+| 종말감 | 관절 끝 느낌 | end feel | |
+| 견인 | 견인 | Traction | 보존 (한글 그대로) |
+| 트리거포인트 | 통증유발점 | trigger point | |
+| 이완 | 풀림 | relaxation | |
+| 가동성/가동범위 | 가동범위 | ROM | 통일 |
+| 회전근개 | 회전근개 | rotator cuff | 보존 |
+| 오십견 | 오십견 | Frozen shoulder | 보존 (KMO 두려움 회피 평가 별도 보류) |
+| 동결견 | 오십견 | Frozen shoulder | 동의어 통일 |
+| 환측 | 아픈 쪽 | painful side | |
+| 두측 | 머리 쪽 | cranial | |
+| 미측 | 꼬리 쪽 | caudal | |
+| 근위 | 몸쪽 | proximal | |
+| 원위 | 먼쪽 | distal | |
+| 상측 | 위쪽 | Superior | |
+| 하측 | 아래쪽 | Inferior | |
+| 내측 | 안쪽 | Medial | |
+| 외측 | 가쪽 | Lateral | |
+| 전측 / 전방 | 앞쪽 | Anterior | 두 표기 모두 매핑 |
+| 후측 / 후방 | 뒤쪽 | Posterior | 두 표기 모두 매핑 |
+
+### 6-2. 움직임 계열 통일 (확정)
+
+| 원어 | 표준 | 영어 |
+|------|------|------|
+| 굴곡 | 굽힘 | Flexion |
+| 신전 | 폄 | Extension |
+| 외전 | 벌림 | Abduction |
+| 내전 | 모음 | Adduction |
+| 외회전 | 가쪽돌림 | External rotation |
+| 내회전 | 안쪽돌림 | Internal rotation |
+| 측굴 | 옆굽힘 | Lateral flexion |
+| 거상 | 들어올림 | Elevation |
+| 회선 | 휘돌림 | Circumduction |
+| 신연 | 늘임 | Distraction |
+| 회내 | 엎침 | Pronation |
+| 회외 | 뒤침 | Supination |
+| 배측굴곡 | 발등굽힘 | Dorsiflexion |
+| 족저굴곡 | 발바닥굽힘 | Plantarflexion |
+
+### 6-3. 한글 해부 표준 12쌍 (한글 계열 채택 확정)
+
+| 한자 (구표기) | 한글 (표준) | 영어 |
+|--------------|------------|------|
+| 극상근 | 가시위근 | Supraspinatus |
+| 극하근 | 가시아래근 | Infraspinatus |
+| 비복근 | 장딴지근 | Gastrocnemius |
+| 슬개골 | 무릎뼈 | Patella |
+| 종골 | 발꿈치뼈 | Calcaneus |
+| 늑골 | 갈비뼈 | Rib |
+| 이상근 | 궁둥구멍근 | Piriformis |
+| 장요근 | 엉덩허리근 | Iliopsoas |
+| 요방형근 | 허리네모근 | Quadratus lumborum |
+| 척골신경 | 자신경 | Ulnar nerve |
+| 대퇴근막장근 | 넙다리근막긴장근 | Tensor fasciae latae |
+| 슬와 | 오금 | Popliteal fossa |
+| 극돌기 | 가시돌기 | Spinous process |
+
+### 6-4. 자세 추가 등록 (preemptive — 현재 DB에 없으나 PT 임상 표준)
+
+| 원어 | 표준 | 영어 |
+|------|------|------|
+| 슬흉위 | 무릎-가슴 자세 | Knee-chest |
+| 반좌위 | 등받이 세워 앉기 | Semi-Fowler |
+| 장좌위 | 다리 뻗고 앉기 | Long sitting |
+| 단좌위 | 걸터앉기 | Short sitting |
+| 사위 | 사선 옆 누움 | Sims |
+| 부복위 | 기대 누움 | (Recumbent) |
+| 4점지지 / 사점지지 | 네발기기 | Quadruped |
+| 굴슬위 | 무릎 굽혀 누움 | Hook lying |
+
+### 6-5. 동음이의어 처리 규칙
+
+- **신장**: 기본은 "늘리기(Stretching)" 매핑. 단 정규식 `신장\s*\(콩팥\)` 또는 `신장\s*통증` 패턴은 치환 제외 (콩팥 의미)
+- **활주**: "미끄러짐(Gliding)" 매핑. 단 "혈관 활주" 등 비-PT 맥락은 추후 검토
+- **압박**: "압박(Compression)" 매핑. "압박골절" 등 병태 표현은 보존
+- **이완**: "풀림(relaxation)" 기본. 단 "이완대기·이완 효과" 같은 시술 흐름 표현은 자연스러운 한국어 유지
+
+### 6-6. 보류 항목 (별도 결정 대기)
+
+- **Zuggriff** (21회) — CTM 원전·표준 자료 검토 후 재결정
+- **Grundaufbau** (1회) — 위와 동일
+- **외래어 정착어 검토 미완**: glide(24), barrier(12), Mobilization(19) — 정착 vs 풀이 추후
+- **KMO 두려움 회피 표현 정책** — 오십견 외 추가 후보 (방사통 등) 별도 가이드로
+
+### 6-7. 보존 정책 명시
+
+- **기법 약어 14종** (CTM/MFR/SNAG/NAG/Mulligan/Maitland/Cyriax/ART/MDT/IASTM/TrP/SCS/DTFM/DFM): `term_glossary.is_preserved=true`
+- **표준 영어 약어 8종** (ROM/SLR/ASIS/PSIS/MRI/CT/VAS/NRS/TMJ): 동일

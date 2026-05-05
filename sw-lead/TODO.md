@@ -30,9 +30,24 @@
 
 ### 📅 2026-05-05 D-Day 출시일
 - [x] PR #44 머지 (사용량 배지 + 3단계 로딩 가시화)
-- [ ] D-Day 모니터링 런북·베이스라인 로그 — sw-qa-tester 위임
-- [ ] 베타 테스터에게 URL/계정 발송 (Supabase Auth 계정 생성 → is_allowed=true → ManyChat DM #3)
-- [ ] 첫날 errors.html / admin.html 모니터링
+- [x] PR #45 머지 (별점 정렬 + 모니터링 인프라) — Track A 5건 main 반영 (cd6d4f4)
+- [x] D-Day 모니터링 런북·베이스라인 로그 — sw-qa-tester 완료
+- [ ] 베타 테스터 발송 (Supabase Auth 계정 + ManyChat DM #3) — 대표님 직접
+- [ ] 첫날 errors.html / admin.html 모니터링 — sw-devops monitor.sh 자동화 가능
+
+### 📅 2026-05-05 ~ Track B 용어 표준화
+- [x] [2026-05-05] techniques 테이블 전수 audit (sw-clinical-translator) — 175건 / 7 카테고리
+- [x] [2026-05-05] 대표님 결정 부록 §6 추가 (사용자 결정 ~80건 + 계열 통일 14건 + 한글 해부 12쌍 + 자세 추가 8건)
+- [ ] term_glossary 테이블 마이그레이션 (sw-db-architect) — `saas/migrations/052-term-glossary.sql` (예정)
+- [ ] 시드 데이터 INSERT (audit §6 부록 기반)
+- [ ] 서버 후처리 함수 + 메모리 캐시 (sw-backend-dev) — 콜드 스타트 1회 SELECT, TTL 1시간
+- [ ] 클라이언트 sanitize 제거 (sw-frontend-dev) — index.html `TERM_REPLACEMENTS` 24건 → 서버 후처리 일임
+- [ ] Zuggriff·Grundaufbau 결정 — 대표님 CTM 자료 검토 후 (보류)
+
+### 🟡 보류 (다음 세션 이후)
+- [ ] Track C: 평가 타이밍 재설계 — 다음 세션 진입 시 필수 모달 + mig 051. 플랜 파일 `/root/.claude/plans/come-to-think-of-distributed-riddle.md`
+- [ ] Track D: 추천 알고리즘 조정 — 디테일 부족·"다른 기법 보기" 명칭만 있음 등 관찰. Track B/C 후 재논의
+- [ ] 보드 서버(`34.47.91.197:3131`) 복구 점검 — sw-devops 위임 후보
 
 ### 🟡 토론 대기 (출시 후, 베타 데이터 수집 후)
 - [ ] 가시위근/극상근 동의어 중복 제거 (데이터 정규화)
