@@ -4,6 +4,7 @@
 
 import { verifyToken } from './_auth.js';
 import { logServerError } from './_logger.js';
+import { applyGlossary } from './_term_glossary.js';
 
 // ── KST 자정 시각 (UTC로 환산) ──
 // Vercel 서버는 UTC 동작. 한국 사용자 기준 자정 리셋 보장.
@@ -835,6 +836,67 @@ function formatTechniqueForPrompt(t, groupLabel) {
   ].filter(Boolean).join('\n');
 }
 
+// ── term_glossary 후처리 (LLM 응답 직후, 클라이언트 직렬화 직전) ──
+// 한자/외래어/옛 표기를 한글 표준으로 자동 치환 (saas/migrations/052-term-glossary.sql).
+// 처리 대상: manualTherapy[] 텍스트 6필드 + clinicalNote + recommendation_reason.
+// bodyRegion: currentSession.region 또는 manualTherapy[].region. 없으면 null(글로벌).
+// 모든 필드를 Promise.all 로 병렬 처리 — 캐시 hit 시 ~0ms / cold ~50-100ms (단발).
+async function applyGlossaryToResult(result, sessionRegion) {
+  if (!result || typeof result !== 'object') return;
+
+  const apply = (text, region) =>
+    applyGlossary(text, { bodyRegion: region || null }).catch(err => {
+      console.warn('[term_glossary] 후처리 실패:', err.message);
+      return text;
+    });
+
+  const tasks = [];
+
+  // manualTherapy 항목별 텍스트 필드
+  const mtItems = Array.isArray(result.manualTherapy) ? result.manualTherapy : [];
+  for (const item of mtItems) {
+    const region = item.region || sessionRegion || null;
+    const TEXT_FIELDS = [
+      'technique', 'movement', 'therapistHands', 'patientPosition',
+      'patientFeedback', 'clinicalNote',
+    ];
+    for (const f of TEXT_FIELDS) {
+      if (typeof item[f] === 'string' && item[f].length > 0) {
+        tasks.push(apply(item[f], region).then(v => { item[f] = v; }));
+      }
+    }
+    // steps[].instruction (있으면)
+    if (Array.isArray(item.steps)) {
+      for (const step of item.steps) {
+        if (step && typeof step.instruction === 'string' && step.instruction.length > 0) {
+          tasks.push(apply(step.instruction, region).then(v => { step.instruction = v; }));
+        }
+      }
+    }
+  }
+
+  // 동일 처리: relatedManualTherapy (있으면)
+  const relMt = Array.isArray(result.relatedManualTherapy) ? result.relatedManualTherapy : [];
+  for (const item of relMt) {
+    const region = item.region || sessionRegion || null;
+    for (const f of ['technique', 'movement', 'therapistHands', 'patientPosition', 'patientFeedback', 'clinicalNote']) {
+      if (typeof item[f] === 'string' && item[f].length > 0) {
+        tasks.push(apply(item[f], region).then(v => { item[f] = v; }));
+      }
+    }
+  }
+
+  // 최상위 텍스트 필드
+  if (typeof result.clinicalNote === 'string' && result.clinicalNote.length > 0) {
+    tasks.push(apply(result.clinicalNote, sessionRegion).then(v => { result.clinicalNote = v; }));
+  }
+  if (typeof result.recommendation_reason === 'string' && result.recommendation_reason.length > 0) {
+    tasks.push(apply(result.recommendation_reason, sessionRegion).then(v => { result.recommendation_reason = v; }));
+  }
+
+  await Promise.all(tasks);
+}
+
 export default async function handler(req, res) {
   const t0 = Date.now();
   const startTime = t0; // usage 로깅용 응답시간 측정 시작점
@@ -958,6 +1020,11 @@ export default async function handler(req, res) {
       selectedCategories: ['category_anatomy_trains'],
       sessionSummary: { region, acuity, symptom, selectedCategories: ['category_anatomy_trains'] },
     };
+
+    // term_glossary 후처리 — 한자/외래어 → 한글 표준 (응답 직렬화 직전)
+    await applyGlossaryToResult(atResponse, region).catch(err =>
+      console.warn('[term_glossary] AT 후처리 실패:', err.message)
+    );
 
     logRecommendationSession(user.id, userToken, {
       region, acuity, symptom, selectedCategories: ['category_anatomy_trains'], result: atResponse,
@@ -1377,6 +1444,12 @@ techniqueId는 [MT-XXX] 또는 [EX-XXX] ID를 그대로 복사.`;
       selectedCategories,
       focusPillars,
     };
+
+    // term_glossary 후처리 — LLM 응답 한자/외래어를 한글 표준으로 일괄 치환
+    // (logging 직전 — 로그된 결과도 표준 한글로 일치)
+    await applyGlossaryToResult(result, region).catch(err =>
+      console.warn('[term_glossary] 후처리 실패:', err.message)
+    );
 
     logRecommendationSession(user.id, userToken, {
       region, acuity, symptom, selectedCategories, result,
