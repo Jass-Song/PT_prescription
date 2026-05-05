@@ -73,3 +73,34 @@
 **Status**: 대기중
 
 ---
+
+## [2026-05-05] [sw-lead] — Zuggriff·Grundaufbau 한국어 매핑 결정 + DB 정제
+
+**Priority**: medium
+**Team**: software (Track B 후속)
+**Background**:
+Track B 용어 표준화에서 audit §6-6 (보류) 항목으로 분리. CTM(결합조직마사지) 핵심 손기법 두 가지의 정확한 한국어 풀이가 필요한데, 한국 PT 표준 술어가 정착돼 있지 않고 audit 시 임시 풀이("당김 손기법"·"기저 스트로크")는 정확성·자연스러움 부족. 대표님이 CTM 원전(Bindegewebsmassage 교과서·KPTA 가이드 등) 직접 검토 후 결정 예정.
+
+DB 영향:
+- `techniques` 테이블 마이그레이션 013 (CTM 10건) — direction / technique_steps(jsonb) / clinical_notes 컬럼에 Zuggriff 21회 + Grundaufbau 1회 등장
+- term_glossary 테이블에는 시드 INSERT 안 됨 (마이그 052 §6-6 제외)
+
+**To-do**:
+1. CTM 원전 자료 검토 후 확정 한국어 매핑 결정 — 단어형(예: "잡아당기기") vs 풀이형(예: "피부 잡고 당기는 동작")
+2. term_glossary 시드 추가 마이그레이션 작성 (saas/migrations/053-term-glossary-german-ctm.sql 후보)
+   - INSERT row 2건 (Zuggriff / Grundaufbau)
+   - body_region = NULL (글로벌)
+   - english = 'Zug grip' / 'Grundaufbau (basic build-up)'
+   - status = 'active'
+3. 또는 DB 원문 정제 — 마이그 013 INSERT문의 외래어를 한국어로 직접 치환 (마이그 053으로 UPDATE)
+4. sw-clinical-translator 에 검토 위임 가능 (대표님 결정 input 필요)
+
+**Related files**:
+- `saas/migrations/013-cervical-lumbar-techniques.sql` (라인 177~996, CTM 10건)
+- `docs/clinical-terminology-audit-2026-05-05.md` (§6-6)
+- `saas/migrations/052-term-glossary.sql` (확장 대상)
+
+**Expected timing**: 2026-05-06 (내일)
+**Status**: 🔲 대기중
+
+---
