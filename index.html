@@ -3396,6 +3396,13 @@
     return { ok, warn };
   }
 
+  // TODO(2026-05-06+): api/history.js 후처리(applyGlossary) 적용 후 제거
+  // 현재 Track B Phase 3 (sw-frontend-dev, 2026-05-05) 점검 결과:
+  //   - api/recommend.js: applyGlossaryToResult 적용 → 추천 응답은 서버에서 표준화
+  //   - api/history.js: 후처리 미적용 → 이력 응답이 raw 한자어 가능성
+  // 따라서 클라이언트 보정(sanitizeTerms)이 history 화면(name_ko 등)에서 여전히 필요.
+  // sw-backend-dev 가 history.js 에 applyGlossary 적용 후 본 블록과 모든 호출 제거 가능.
+  // 단일 진실 소스: saas/migrations/052-term-glossary.sql / saas/docs/term-glossary-design.md
   const TERM_REPLACEMENTS = [
     ['앙와위', '등 대고 눕기'], ['양와위', '등 대고 눕기'],
     ['측와위', '옆으로 눕기'], ['복와위', '엎드려 눕기'],
