@@ -8,6 +8,19 @@
 -- Author : sw-db-architect
 -- Date   : 2026-05-06
 -- ============================================================
+-- 실행 전제 (중요):
+--   055a → 055b 두 마이그레이션 모두 commit 된 상태에서 실행할 것.
+--   055a 적용 직후 같은 세션에서 본 검증을 곧바로 실행하면 PG 55P04
+--   `unsafe use of new enum value` 에러가 발생할 수 있음.
+--
+--   권장 운영 절차 (Supabase SQL 에디터):
+--     1) 새 쿼리 창에서 saas/migrations/055a-outcome-not-used-enum.sql 실행 → commit.
+--     2) 새 쿼리 창에서 saas/migrations/055b-outcome-not-used-stats.sql 실행 → commit.
+--     3) 새 쿼리 창에서 본 verify-055.sql 실행.
+--
+--   psql -f 사용 시 statement-level auto-commit 으로 안전하나, 여전히
+--   055a 와 055b 는 별도 파일 호출 (두 번의 -f) 로 분리할 것.
+-- ============================================================
 -- 검증 항목 (총 6):
 --   1. rating_outcome ENUM 7 값 + 'not_used' 포함
 --   2. fn_refresh_technique_stats SECURITY DEFINER + 본문에 'not_used' 제외 패턴

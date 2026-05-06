@@ -1,69 +1,28 @@
--- Migration 055: outcome_enum 7번째 값 'not_used' 추가 + weight 영향 0
 -- ============================================================
--- 배경 (대표님 결정 2026-05-06):
---   PT 가 AI 추천을 받았지만 실제로 시술하지 않은 케이스를 추적해야 한다.
---   기존 6 분류(excellent/good/moderate/poor/no_effect/adverse) 는 모두
---   "시술 후 효과" 신호 — "안 썼다" 는 별도 차원. 이를 outcome 에 7 번째
---   값으로 추가하되, **가중치(weight) 산식에는 영향 0** 으로 둔다.
---   이유: not_used 행은 effectiveness 신호가 아니므로 분모/분자 어느 쪽도
---         아니다. weight 는 실제로 사용된 기법의 효과 평균이어야 함.
+-- 055b — technique_stats.not_used_count 컬럼 + 함수 + 일괄 재계산
+-- ============================================================
+-- 전제: 055a 가 이미 실행·commit 되어 rating_outcome 에 'not_used' 등록됨.
+--       같은 쿼리 창에서 055a + 055b 함께 실행 시 PG 55P04 발생.
 --
--- 단일 신호 = ratings.outcome (rating_outcome ENUM 7 분류, 054 → 055)
---   excellent / good / moderate / poor / no_effect / adverse / not_used
---
--- 변경 요약:
---   1. rating_outcome ENUM 에 'not_used' 추가 (멱등, IF NOT EXISTS).
---   2. fn_refresh_technique_stats() — 054 공식 유지하되 evaluated 분모/분자
---      에서 outcome != 'not_used' 명시 필터.
---        - excellent+good 비율 분자: 그대로 (not_used 안 들어옴)
---        - 분모: outcome IS NOT NULL AND outcome != 'not_used'
---        - adverse 비율 분모도 동일
---        - 활성도(20%) 는 모든 row(not_used 포함) 카운트 — "활동량" 자체는
---          not_used 도 활동임. 다만 effectiveness 평가가 아닐 뿐.
---          (대표님 사양: weight 영향 0 → 분모/분자에서만 제외, 활성도는 유지)
---          ※ 본 마이그는 보수적으로 "not_used 도 활성도에는 카운트" 채택.
---   3. technique_stats.not_used_count INT 컬럼 추가 (정보 추적용).
---      weight 계산에 사용 안 함. 추후 use rate 분석/PT 신뢰도 분석용.
---   4. 기존 ratings 데이터에 not_used 없음 → technique_stats 일괄 재계산
---      결과 054 와 동일 (변화 없음). 그러나 트리거 함수 갱신 후 한 번 더
---      재집계해 not_used_count 컬럼을 채움.
+-- 본 파일은 'not_used' 참조를 포함:
+--   1) technique_stats.not_used_count 컬럼 추가
+--   2) fn_refresh_technique_stats() — outcome != 'not_used' 분모/분자 제외
+--   3) technique_stats 일괄 재계산 (not_used_count 채움 + weight 갱신)
 --
 -- 멱등:
---   - ALTER TYPE ADD VALUE IF NOT EXISTS — 재실행 안전 (PG 12+).
+--   - ADD COLUMN IF NOT EXISTS — 재실행 안전.
 --   - CREATE OR REPLACE FUNCTION — 재실행 안전.
---   - ALTER TABLE ADD COLUMN IF NOT EXISTS — 재실행 안전.
---   - UPDATE technique_stats — 멱등 (동일 입력에 동일 결과).
+--   - UPDATE technique_stats — 동일 입력에 동일 결과 (멱등).
 --
 -- 의존:
---   - migration 054 (단일 신호 모델, fn_refresh_technique_stats 70/20/10).
---   - migration 050 (technique_stats 테이블, 트리거 등록).
---
--- 주의:
---   - PostgreSQL: ALTER TYPE ADD VALUE 는 동일 트랜잭션 내에서 그 값을
---     비교문(WHERE outcome = 'not_used' 등) 에 즉시 사용 불가.
---   - 본 마이그는 트랜잭션을 둘로 나누어 실행한다:
---       (a) ENUM 값 추가 (단독 트랜잭션)
---       (b) 함수/컬럼/UPDATE (별도 트랜잭션)
---     Supabase SQL 에디터에서 한 번에 붙여넣어도 PG 가 statement-level
---     auto-commit 으로 처리 — 문제 없음. psql -f 실행 시도 동일.
---   - 안전을 위해 전체 파일을 두 번 실행해도 같은 결과 (멱등 보장).
+--   - 055a (ENUM 'not_used' 등록).
+--   - 050 (technique_stats 테이블 + 트리거 fn_refresh_technique_stats 등록).
+--   - 054 (단일 신호 모델 70/20/10 공식).
 -- ============================================================
 
 
 -- ----------------------------------------------------------------
--- 1. rating_outcome ENUM 에 'not_used' 추가 (멱등)
--- ----------------------------------------------------------------
--- ALTER TYPE ADD VALUE 는 트랜잭션 블록 내에서 IF NOT EXISTS 만으로 멱등.
--- DO 블록 내에서 실행 시 특수 케이스 처리가 필요 — 직접 ALTER TYPE 사용.
-
-ALTER TYPE rating_outcome ADD VALUE IF NOT EXISTS 'not_used';
-
-COMMENT ON TYPE rating_outcome IS
-  '055 단일 신호 모델 (7 분류): excellent / good / moderate / poor / no_effect / adverse / not_used. not_used 는 PT 가 추천을 받았으나 미시술. weight 산식에서 effectiveness 분모/분자 제외 (영향 0). 활성도 카운트에는 포함.';
-
-
--- ----------------------------------------------------------------
--- 2. technique_stats.not_used_count 컬럼 추가 (멱등)
+-- 1. technique_stats.not_used_count 컬럼 추가 (멱등)
 -- ----------------------------------------------------------------
 -- weight 계산에 사용 안 함. 정보 추적용 (use rate, PT 신뢰도 분석).
 
@@ -81,7 +40,7 @@ WHERE not_used_count IS NULL;
 
 
 -- ----------------------------------------------------------------
--- 3. fn_refresh_technique_stats() — outcome != 'not_used' 필터 추가
+-- 2. fn_refresh_technique_stats() — outcome != 'not_used' 필터 추가
 -- ----------------------------------------------------------------
 -- 054 공식 유지: outcome ratio (70%) + 활성도 (20%) + adverse penalty (10%)
 -- 변경: effectiveness 분모/분자 에서 outcome != 'not_used' 명시 제외.
@@ -184,7 +143,7 @@ COMMENT ON FUNCTION fn_refresh_technique_stats() IS
 
 
 -- ----------------------------------------------------------------
--- 4. 기존 technique_stats 일괄 재계산 (not_used_count 채움 + weight 재집계)
+-- 3. 기존 technique_stats 일괄 재계산 (not_used_count 채움 + weight 재집계)
 -- ----------------------------------------------------------------
 -- 기존 ratings 데이터에 not_used 없음 → weight 값 자체는 054 와 동일 결과.
 -- 그러나 not_used_count 컬럼이 신설됐으므로 한 번 재집계 (모두 0 채움).
@@ -226,12 +185,8 @@ COMMENT ON COLUMN public.ratings.outcome IS
 
 
 -- ----------------------------------------------------------------
--- 5. 검증 쿼리 (참고; 정규 검증은 saas/scripts/verify-055.sql)
+-- 4. 검증 쿼리 (참고; 정규 검증은 saas/scripts/verify-055.sql)
 -- ----------------------------------------------------------------
--- SELECT enumlabel FROM pg_enum
---   WHERE enumtypid = 'rating_outcome'::regtype ORDER BY enumsortorder;
--- 기대: 7 row, 마지막 값 'not_used'
---
 -- SELECT proname, prosecdef FROM pg_proc WHERE proname = 'fn_refresh_technique_stats';
 -- 기대: prosecdef = true
 --
