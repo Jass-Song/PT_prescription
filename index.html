@@ -2130,7 +2130,7 @@
 
     <div style="padding: 0 0 8px;">
       <button class="btn-primary" id="btn-retry" style="display:none" onclick="submitRecommend()">다시 시도</button>
-      <button class="btn-secondary" onclick="goScreen2()">다시 입력</button>
+      <button class="btn-secondary" onclick="handleNextPatient()">다음 환자 추천 받기</button>
     </div>
   </div>
 
@@ -3985,6 +3985,34 @@
     updateStepDots();
     checkRecommendBtn();
     goScreen('screen2');
+  }
+
+  // "다음 환자 추천 받기" 버튼 핸들러
+  // — 명시적 "다음 환자 시작" 의도 신호. pending-evaluation 모달 트리거.
+  // — flag OFF 또는 pending 0이면 기존 reset 로직(goScreen2)만 실행.
+  // — 검증 실패는 fail-open: 다음 환자 흐름 진입 허용.
+  async function handleNextPatient() {
+    if (PENDING_EVAL_MODAL_ENABLED && currentAccessToken) {
+      try {
+        const res = await fetch('/api/history?type=pending', {
+          headers: { 'Authorization': `Bearer ${currentAccessToken}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const pending = Array.isArray(data.pending) ? data.pending : [];
+          if (pending.length > 0) {
+            await showPendingEvalModal(pending);
+            // 모달 닫힌 후 다음 환자 흐름 계속
+          }
+        }
+      } catch (err) {
+        console.warn('[pending-eval] 조회 실패, 다음 환자 흐름 진입:', err && err.message);
+        // fail-open — 검증 실패해도 다음 환자 진입 허용
+      }
+    }
+
+    // 다음 환자 흐름 진입 (기존 reset/goScreen 로직 그대로)
+    goScreen2();
   }
 
   function goScreen3() { goScreen('screen3'); }
