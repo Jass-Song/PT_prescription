@@ -1,5 +1,16 @@
 // PT 처방 도우미 — 이력 조회 API
-// GET /api/history → 최근 추천 이력 + 별 3개 이상 평가 기법
+// GET /api/history                  → 최근 추천 이력 + "좋아요" 평가 기법 (recentLogs + likedTechniques)
+// GET /api/history?type=pending     → 14일 내 evaluation_status='pending' 추천 로그 (최대 20건, { pending: [...] })
+// GET /api/history?type=recent      → 위 기본(생략) 동작과 동일
+//
+// 통합 배경 (2026-05-06 핫픽스):
+//   Vercel Hobby 플랜의 12 Serverless Functions 한도 초과로 인해
+//   별도 엔드포인트였던 api/pending-evaluations.js 의 로직을 본 파일로 통합.
+//   클라이언트 호환성을 위해 응답 shape 은 유지 ({ pending: [...] } vs { recentLogs, likedTechniques }).
+//
+// pending 분기 마이그 의존:
+//   - recommendation_logs.evaluation_status (마이그 051: enum pending/rated/expired/skipped)
+//   - 14일 경과 pending → expired (expire_old_pending_evaluations() 함수, 별도 cron)
 
 import { verifyToken } from './_auth.js';
 import { applyGlossary } from './_term_glossary.js';
@@ -80,6 +91,45 @@ async function applyGlossaryToHistoryResponse(payload) {
   if (tasks.length > 0) await Promise.all(tasks);
 }
 
+// ── pending 분기 전용 후처리 (구 api/pending-evaluations.js 에서 통합) ──
+// 처리 대상:
+//   - log.symptom                              → bodyRegion=log.region
+//   - log.recommended_techniques[].name        → bodyRegion=log.region
+//   - log.recommended_techniques[].category_key (한글 섞일 가능성 대비)
+async function applyGlossaryToPendingResponse(list) {
+  if (!Array.isArray(list) || list.length === 0) return;
+
+  const apply = (text, region) =>
+    applyGlossary(text, { bodyRegion: region || null }).catch(err => {
+      console.warn('[term_glossary] pending 후처리 실패:', err.message);
+      return text;
+    });
+
+  const tasks = [];
+  for (const log of list) {
+    if (!log || typeof log !== 'object') continue;
+    const region = log.region || null;
+
+    if (typeof log.symptom === 'string' && log.symptom.length > 0) {
+      tasks.push(apply(log.symptom, region).then(v => { log.symptom = v; }));
+    }
+
+    if (Array.isArray(log.recommended_techniques)) {
+      for (const item of log.recommended_techniques) {
+        if (!item || typeof item !== 'object') continue;
+        if (typeof item.name === 'string' && item.name.length > 0) {
+          tasks.push(apply(item.name, region).then(v => { item.name = v; }));
+        }
+        if (typeof item.category_key === 'string' && item.category_key.length > 0) {
+          tasks.push(apply(item.category_key, region).then(v => { item.category_key = v; }));
+        }
+      }
+    }
+  }
+
+  if (tasks.length > 0) await Promise.all(tasks);
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -91,11 +141,50 @@ export default async function handler(req, res) {
   const { user, error: authError } = await verifyToken(req);
   if (authError) return res.status(401).json({ error: authError });
 
+  if (!SUPABASE_KEY) {
+    return res.status(500).json({ error: 'Supabase 설정 오류' });
+  }
+
   const userToken = (req.headers['authorization'] || '').split(' ')[1];
   const authHeaders = {
     'apikey': SUPABASE_KEY,
     'Authorization': `Bearer ${userToken}`,
   };
+
+  // ?type=pending → 평가 대기 추천 조회 (구 /api/pending-evaluations 통합)
+  // 그 외 (생략 / type=recent) → 기존 history (recentLogs + likedTechniques)
+  const type = (req.query && req.query.type) || 'recent';
+
+  if (type === 'pending') {
+    try {
+      // 14일 윈도우 (마이그 051 expire_old_pending_evaluations 와 동일 기간)
+      const sinceIso = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+      const url = `${SUPABASE_URL}/rest/v1/recommendation_logs` +
+        `?user_id=eq.${user.id}` +
+        `&evaluation_status=eq.pending` +
+        `&created_at=gte.${encodeURIComponent(sinceIso)}` +
+        `&select=id,region,acuity,symptom,recommended_techniques,created_at` +
+        `&order=created_at.desc&limit=20`;
+
+      const response = await fetch(url, { headers: authHeaders });
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error('[history?type=pending] Supabase error:', response.status, errText);
+        return res.status(502).json({ error: 'pending evaluations 조회 실패' });
+      }
+
+      const pendingLogs = await response.json();
+      const list = Array.isArray(pendingLogs) ? pendingLogs : [];
+
+      // term_glossary 후처리 — 한자/외래어를 한글 표준으로 자동 치환
+      await applyGlossaryToPendingResponse(list);
+
+      return res.status(200).json({ pending: list });
+    } catch (e) {
+      console.error('[history?type=pending GET]', e.message);
+      return res.status(500).json({ error: 'pending evaluations 로드 실패' });
+    }
+  }
 
   try {
     const [logsRes, ratingsRes] = await Promise.all([

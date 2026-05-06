@@ -2460,7 +2460,7 @@
     // 실패 시 fail-open (검색 진입 허용) — 백엔드 장애 시 사용자 경험 보호.
     if (PENDING_EVAL_MODAL_ENABLED && currentAccessToken) {
       try {
-        const res = await fetch('/api/pending-evaluations', {
+        const res = await fetch('/api/history?type=pending', {
           headers: { 'Authorization': `Bearer ${currentAccessToken}` },
         });
         if (res.ok) {
