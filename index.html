@@ -1494,6 +1494,228 @@
       color: #059669;
       font-weight: 500;
     }
+
+    /* ── Inline star rating: 약화 (Track C) ──
+       별점은 더 이상 노출하지 않음 (모달이 메인 평가 경로).
+       outcome/accuracy/notes/actions 는 카드 렌더링 시 즉시 노출. */
+    .inline-star-rating { display: none !important; }
+
+    /* ══════════════════════════════════════
+       Pending Evaluation Modal (Track C)
+       다음 환자 진입 시점에 직전 환자 시술 결과를 평가받는 필수 모달.
+       z-index: 1050 (welcome 1100 보다 낮음, cat 1000 보다 높음).
+    ══════════════════════════════════════ */
+    .pending-eval-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.58);
+      z-index: 1050;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .pending-eval-overlay.open { display: flex; }
+    .pending-eval-modal {
+      background: #fff;
+      border-radius: 20px 20px 0 0;
+      width: 100%;
+      max-width: 480px;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 0 0 24px;
+      animation: slideUp 0.25s ease;
+      display: flex;
+      flex-direction: column;
+    }
+    .pending-eval-header {
+      position: sticky;
+      top: 0;
+      background: #fff;
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid #f1f5f9;
+      z-index: 1;
+    }
+    .pending-eval-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin: 0 0 4px;
+    }
+    .pending-eval-sub {
+      font-size: 0.78rem;
+      color: #64748b;
+      line-height: 1.5;
+      margin: 0;
+    }
+    .pending-eval-body {
+      padding: 12px 16px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .pending-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 14px 14px 12px;
+    }
+    .pending-card.collapsed { opacity: 0.6; }
+    .pending-card-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-bottom: 6px;
+    }
+    .pending-meta-chip {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 2px 9px;
+      border-radius: 10px;
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+    .pending-card-when {
+      font-size: 0.72rem;
+      color: #64748b;
+      margin-bottom: 10px;
+    }
+    .pending-tech-block {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    .pending-tech-block:last-child { margin-bottom: 0; }
+    .pending-tech-block.skipped { background: #f1f5f9; opacity: 0.7; }
+    .pending-tech-block.rated { background: #ecfdf5; border-color: #a7f3d0; }
+    .pending-tech-name {
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: #1a1a2e;
+      margin-bottom: 8px;
+    }
+    .pending-tech-cat {
+      font-size: 0.72rem;
+      color: #64748b;
+      font-weight: 400;
+      margin-left: 4px;
+    }
+    .pending-tech-status {
+      display: none;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: #059669;
+    }
+    .pending-tech-block.rated .pending-tech-status,
+    .pending-tech-block.skipped .pending-tech-status {
+      display: block;
+    }
+    .pending-tech-block.skipped .pending-tech-status { color: #64748b; }
+    .pending-tech-block.rated .pending-tech-form,
+    .pending-tech-block.skipped .pending-tech-form { display: none; }
+
+    .pending-fb-label {
+      font-size: 0.74rem;
+      color: #64748b;
+      margin-bottom: 5px;
+      display: block;
+    }
+    .pending-fb-outcome {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 6px;
+      margin-bottom: 10px;
+    }
+    .pending-fb-outcome label {
+      font-size: 0.74rem;
+      padding: 4px 9px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      cursor: pointer;
+      background: #fff;
+      transition: background 0.12s, border-color 0.12s, color 0.12s;
+      color: var(--text-secondary);
+      user-select: none;
+    }
+    .pending-fb-outcome input[type="radio"] { display: none; }
+    .pending-fb-outcome label.selected {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .pending-fb-accuracy {
+      display: grid;
+      grid-template-columns: auto repeat(5, 1fr) auto;
+      gap: 4px;
+      align-items: center;
+      font-size: 0.72rem;
+      margin-bottom: 10px;
+    }
+    .pending-fb-accuracy .acc-edge { color: var(--text-secondary); white-space: nowrap; }
+    .pending-fb-accuracy label {
+      padding: 4px 0;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      cursor: pointer;
+      background: #fff;
+      text-align: center;
+      transition: background 0.12s, border-color 0.12s, color 0.12s;
+      color: var(--text-secondary);
+    }
+    .pending-fb-accuracy input[type="radio"] { display: none; }
+    .pending-fb-accuracy label.selected {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .pending-fb-notes {
+      width: 100%;
+      font-size: 0.78rem;
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      resize: none;
+      margin-bottom: 8px;
+      box-sizing: border-box;
+      font-family: inherit;
+      color: var(--text);
+    }
+    .pending-fb-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+    .pending-btn-save {
+      font-size: 0.8rem;
+      padding: 6px 16px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.15s;
+    }
+    .pending-btn-save:hover { background: #155da8; }
+    .pending-btn-save:disabled { opacity: 0.6; cursor: default; }
+    .pending-btn-skip {
+      font-size: 0.78rem;
+      padding: 6px 12px;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: background 0.15s;
+    }
+    .pending-btn-skip:hover { background: #f1f5f9; }
+    .pending-eval-empty {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 0.88rem;
+      padding: 24px 16px;
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
@@ -1650,6 +1872,23 @@
     <div class="welcome-foot">
       문의·버그·아이디어는 <strong>헤더의 💬 피드백</strong> 으로 언제든지<br>
       일일 한도: 20회 · 베타 4주 운영 예정
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════
+     Pending Evaluation Modal (Track C)
+     직전 환자 시술 결과 평가 — 다음 환자 진입 전 노출.
+     필수 모달(닫기 버튼 없음). 모든 카드 평가/스킵 후 자동 닫힘.
+══════════════════════════════ -->
+<div class="pending-eval-overlay" id="pending-eval-overlay" aria-hidden="true">
+  <div class="pending-eval-modal" role="dialog" aria-labelledby="pending-eval-title">
+    <div class="pending-eval-header">
+      <h3 class="pending-eval-title" id="pending-eval-title">직전 환자 시술 평가</h3>
+      <p class="pending-eval-sub">환자 정보 보호를 위해 평가 후에 다음 환자로 진행할 수 있어요.</p>
+    </div>
+    <div class="pending-eval-body" id="pending-eval-body">
+      <!-- renderPendingCard()로 동적 렌더링 -->
     </div>
   </div>
 </div>
@@ -2157,6 +2396,15 @@
   let categoryFrequency  = {}; // category_key → 사용 횟수 (DB에서 로드)
 
   /* ══════════════════════════════════════
+     FEATURE FLAGS
+  ══════════════════════════════════════ */
+  // Track C — pending-evaluation modal (직전 환자 시술 평가).
+  // 활성화: 콘솔에서 localStorage.setItem('pt_feature_pending_eval', 'true') 입력 후 새로고침.
+  const PENDING_EVAL_MODAL_ENABLED =
+    (typeof localStorage !== 'undefined' &&
+     localStorage.getItem('pt_feature_pending_eval') === 'true');
+
+  /* ══════════════════════════════════════
      SUPABASE AUTH
   ══════════════════════════════════════ */
   let supabaseClient = null;
@@ -2266,6 +2514,28 @@
   }
 
   async function loadSavedSettingsAndNavigate() {
+    // ── Track C: pending-evaluation 차단 가드 ──
+    // 다음 환자(=다음 세션) 진입 시점에 직전 환자 시술 결과 평가가 남아 있으면 모달 노출.
+    // 실패 시 fail-open (검색 진입 허용) — 백엔드 장애 시 사용자 경험 보호.
+    if (PENDING_EVAL_MODAL_ENABLED && currentAccessToken) {
+      try {
+        const res = await fetch('/api/pending-evaluations', {
+          headers: { 'Authorization': `Bearer ${currentAccessToken}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const pending = Array.isArray(data.pending) ? data.pending : [];
+          if (pending.length > 0) {
+            await showPendingEvalModal(pending);
+            // 모달이 닫힌 뒤에도 검색 차단 유지 — 흐름 종료.
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('[pending-eval] 조회 실패, 검색 진입 허용:', err && err.message);
+      }
+    }
+
     // DB에서 설정 + 카테고리 빈도 로드 (크로스 디바이스 동기화)
     if (currentAccessToken) {
       try {
@@ -3264,6 +3534,12 @@
       <p class="inline-feedback-done" style="display:none">✓ 피드백 감사합니다</p>`;
     card.appendChild(feedbackSection);
 
+    // Track C — FK 부착 (DOM data attr + context 동시 전달)
+    feedbackSection.dataset.recommendationLogId = currentRecommendationLogId || '';
+    feedbackSection.dataset.techniqueIndex      = (item.recommended_technique_index != null)
+      ? String(item.recommended_technique_index)
+      : '';
+
     // 이벤트 바인딩
     initFeedbackSection(feedbackSection, {
       technique: item.technique,
@@ -3271,6 +3547,10 @@
       region:    currentSession.region  || null,
       acuity:    currentSession.acuity  || null,
       symptom:   currentSession.symptom || null,
+      recommendation_log_id:        currentRecommendationLogId || null,
+      recommended_technique_index:  (item.recommended_technique_index != null)
+                                      ? item.recommended_technique_index
+                                      : null,
     });
   }
 
@@ -3438,6 +3718,9 @@
       saveSessionHistory(result.sessionSummary);
     }
 
+    // Track C — pending-evaluation FK용 (인라인 피드백이 ratings INSERT 시 사용)
+    currentRecommendationLogId = result.recommendation_log_id || null;
+
     // 피드백 모달에서 사용할 세션 컨텍스트 저장
     currentSession = {
       region:  REGION_LABEL[selectedRegion]  || '',
@@ -3544,6 +3827,8 @@
      SESSION CONTEXT (인라인 피드백 섹션이 사용)
   ══════════════════════════════════════ */
   let currentSession    = {};
+  // Track C — 현재 화면 추천의 recommendation_logs.id (FK)
+  let currentRecommendationLogId = null;
 
   /* ══════════════════════════════════════
      일반 피드백 (헤더)
@@ -3793,8 +4078,9 @@
      INLINE FEEDBACK STAR RATING
   ══════════════════════════════════════ */
   function initFeedbackSection(sectionEl, context) {
-    // context: { technique, category, region, acuity, symptom }
-    const stars        = sectionEl.querySelectorAll('.inline-star-btn');
+    // context: { technique, category, region, acuity, symptom,
+    //            recommendation_log_id, recommended_technique_index }
+    // Track C: 별점 약화 — outcome/accuracy/notes/actions 를 초기 노출.
     const notes        = sectionEl.querySelector('.inline-feedback-notes');
     const actions      = sectionEl.querySelector('.inline-feedback-actions');
     const doneMsg      = sectionEl.querySelector('.inline-feedback-done');
@@ -3802,31 +4088,18 @@
     const accuracyWrap = sectionEl.querySelector('.inline-fb-accuracy-wrap');
     const outcomeLabels  = sectionEl.querySelectorAll('.inline-fb-outcome label');
     const accuracyLabels = sectionEl.querySelectorAll('.inline-fb-accuracy label');
-    let selectedRating   = 0;
     let selectedOutcome  = null;
     let selectedAccuracy = null;
 
-    // 호버 효과 (별점)
-    stars.forEach(btn => {
-      btn.addEventListener('mouseenter', () => {
-        const val = +btn.dataset.value;
-        stars.forEach(s => s.classList.toggle('hovered', +s.dataset.value <= val));
-      });
-      btn.addEventListener('mouseleave', () => {
-        stars.forEach(s => {
-          s.classList.remove('hovered');
-          s.classList.toggle('selected', +s.dataset.value <= selectedRating);
-        });
-      });
-      btn.addEventListener('click', () => {
-        selectedRating = +btn.dataset.value;
-        stars.forEach(s => s.classList.toggle('selected', +s.dataset.value <= selectedRating));
-        outcomeWrap.style.display  = 'block';
-        accuracyWrap.style.display = 'block';
-        notes.style.display        = 'block';
-        actions.style.display      = 'flex';
-      });
-    });
+    // 약화된 prompt + outcome/accuracy/notes/actions 초기 노출
+    const promptEl = sectionEl.querySelector('.inline-feedback-prompt');
+    if (promptEl) {
+      promptEl.textContent = '이 추천이 도움됐다면 다음 환자 진입 시 평가해주세요 (지금 평가도 가능)';
+    }
+    if (outcomeWrap)  outcomeWrap.style.display  = 'block';
+    if (accuracyWrap) accuracyWrap.style.display = 'block';
+    if (notes)        notes.style.display        = 'block';
+    if (actions)      actions.style.display      = 'flex';
 
     // outcome 라디오 (단일 선택)
     outcomeLabels.forEach(lbl => {
@@ -3856,22 +4129,25 @@
       });
     });
 
-    sectionEl.querySelector('.inline-btn-skip').addEventListener('click', () => {
-      actions.style.display      = 'none';
-      notes.style.display        = 'none';
-      outcomeWrap.style.display  = 'none';
-      accuracyWrap.style.display = 'none';
-      selectedRating = 0;
-      selectedOutcome = null;
-      selectedAccuracy = null;
-      stars.forEach(s => s.classList.remove('selected', 'hovered'));
-      outcomeLabels.forEach(l => l.classList.remove('selected'));
-      accuracyLabels.forEach(l => l.classList.remove('selected'));
-    });
+    const skipBtn = sectionEl.querySelector('.inline-btn-skip');
+    if (skipBtn) {
+      skipBtn.addEventListener('click', () => {
+        // 인라인 스킵: 입력만 초기화 (모달 평가는 다음 세션 진입 시 가능).
+        selectedOutcome = null;
+        selectedAccuracy = null;
+        outcomeLabels.forEach(l => l.classList.remove('selected'));
+        accuracyLabels.forEach(l => l.classList.remove('selected'));
+        if (notes) notes.value = '';
+      });
+    }
 
     const submitBtn = sectionEl.querySelector('.inline-btn-submit');
     submitBtn.addEventListener('click', async () => {
-      if (!selectedRating) return;
+      // 별점이 사라졌으므로 outcome 또는 accuracy 중 하나라도 입력돼야 의미 있음.
+      if (!selectedOutcome && !selectedAccuracy && !(notes && notes.value.trim())) {
+        showToast('효과 분류 또는 적합도를 선택해주세요.');
+        return;
+      }
       submitBtn.disabled     = true;
       submitBtn.textContent  = '저장 중...';
       try {
@@ -3882,22 +4158,26 @@
             'Authorization': `Bearer ${currentAccessToken}`,
           },
           body: JSON.stringify({
-            technique:           context.technique,
-            category:            context.category,
-            region:              context.region  || null,
-            acuity:              context.acuity  || null,
-            symptom:             context.symptom || null,
-            rating:              selectedRating,
-            outcome:             selectedOutcome,
-            indication_accuracy: selectedAccuracy,
-            notes:               notes.value.trim() || null,
+            technique:                    context.technique,
+            category:                     context.category,
+            region:                       context.region  || null,
+            acuity:                       context.acuity  || null,
+            symptom:                      context.symptom || null,
+            rating:                       0, // Track C: 별점 약화 — 0 으로 통일
+            outcome:                      selectedOutcome,
+            indication_accuracy:          selectedAccuracy,
+            notes:                        (notes && notes.value.trim()) || null,
+            recommendation_log_id:        context.recommendation_log_id || null,
+            recommended_technique_index:  (context.recommended_technique_index != null)
+                                            ? context.recommended_technique_index
+                                            : null,
           }),
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        notes.style.display        = 'none';
-        actions.style.display      = 'none';
-        outcomeWrap.style.display  = 'none';
-        accuracyWrap.style.display = 'none';
+        if (notes)        notes.style.display        = 'none';
+        if (actions)      actions.style.display      = 'none';
+        if (outcomeWrap)  outcomeWrap.style.display  = 'none';
+        if (accuracyWrap) accuracyWrap.style.display = 'none';
         doneMsg.style.display      = 'block';
       } catch (err) {
         console.error('인라인 피드백 저장 실패:', err);
@@ -3906,6 +4186,283 @@
         showToast('피드백 저장에 실패했습니다. 다시 시도해주세요.');
       }
     });
+  }
+
+  /* ══════════════════════════════════════
+     PENDING EVALUATION MODAL (Track C)
+     다음 환자(=다음 세션) 진입 시점에 직전 환자 시술 결과 평가.
+     필수 모달(닫기 버튼 없음). 모든 카드의 모든 기법이
+     평가(rated) 또는 스킵(skipped) 상태가 되면 자동 닫힘.
+  ══════════════════════════════════════ */
+  let _pendingEvalResolver = null;
+  let _pendingEvalState    = []; // [{ logId, techniques: [{ index, status: 'pending'|'rated'|'skipped' }] }]
+
+  const OUTCOME_LABELS_KO = {
+    excellent: '매우 효과적',
+    good:      '효과적',
+    moderate:  '보통',
+    poor:      '효과 미미',
+    no_effect: '효과 없음',
+    adverse:   '부작용',
+  };
+
+  function _formatPendingWhen(iso) {
+    if (!iso) return '';
+    try {
+      const dt = new Date(iso);
+      const diffMs = Date.now() - dt.getTime();
+      const mins = Math.max(1, Math.round(diffMs / 60000));
+      if (mins < 60) return `${mins}분 전`;
+      const hrs = Math.round(mins / 60);
+      if (hrs < 24) return `${hrs}시간 전`;
+      const days = Math.round(hrs / 24);
+      return `${days}일 전`;
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function _escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function showPendingEvalModal(pendingList) {
+    return new Promise((resolve) => {
+      _pendingEvalResolver = resolve;
+      _pendingEvalState = (pendingList || []).map(log => ({
+        logId: log.id,
+        techniques: (Array.isArray(log.recommended_techniques) ? log.recommended_techniques : [])
+          .map((_, i) => ({ index: i + 1, status: 'pending' })),
+      }));
+
+      const body = document.getElementById('pending-eval-body');
+      const overlay = document.getElementById('pending-eval-overlay');
+      if (!body || !overlay) {
+        // 마크업 누락 — fail-open
+        _pendingEvalResolver = null;
+        resolve();
+        return;
+      }
+      body.innerHTML = '';
+
+      if (!pendingList || pendingList.length === 0) {
+        // 안전장치: 비어 있으면 즉시 닫고 resolve
+        _pendingEvalResolver = null;
+        resolve();
+        return;
+      }
+
+      pendingList.forEach(log => {
+        body.appendChild(renderPendingCard(log));
+      });
+
+      overlay.classList.add('open');
+      overlay.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    });
+  }
+
+  function renderPendingCard(log) {
+    const card = document.createElement('div');
+    card.className = 'pending-card';
+    card.dataset.logId = log.id;
+
+    const meta = [
+      log.region  ? `<span class="pending-meta-chip">${_escapeHtml(log.region)}</span>`  : '',
+      log.acuity  ? `<span class="pending-meta-chip">${_escapeHtml(log.acuity)}</span>`  : '',
+      log.symptom ? `<span class="pending-meta-chip">${_escapeHtml(log.symptom)}</span>` : '',
+    ].filter(Boolean).join('');
+    const whenStr = _formatPendingWhen(log.created_at);
+    const techList = Array.isArray(log.recommended_techniques) ? log.recommended_techniques : [];
+
+    card.innerHTML = `
+      <div class="pending-card-meta">${meta}</div>
+      ${whenStr ? `<div class="pending-card-when">추천: ${_escapeHtml(whenStr)}</div>` : ''}
+      <div class="pending-tech-list"></div>
+    `;
+    const techWrap = card.querySelector('.pending-tech-list');
+
+    techList.forEach((tech, idx) => {
+      const techIndex = idx + 1; // 1-based (recommend.js 와 동일 규칙)
+      const block = document.createElement('div');
+      block.className = 'pending-tech-block';
+      block.dataset.techniqueIndex = String(techIndex);
+
+      const catLabel = tech.category_key
+        ? `<span class="pending-tech-cat">(${_escapeHtml(tech.category_key)})</span>`
+        : '';
+
+      block.innerHTML = `
+        <div class="pending-tech-name">${_escapeHtml(tech.name || '—')}${catLabel}</div>
+        <div class="pending-tech-status"></div>
+        <div class="pending-tech-form">
+          <span class="pending-fb-label">효과 분류</span>
+          <div class="pending-fb-outcome" role="radiogroup" aria-label="효과 분류 선택">
+            ${Object.keys(OUTCOME_LABELS_KO).map(k =>
+              `<label data-outcome="${k}">${OUTCOME_LABELS_KO[k]}</label>`
+            ).join('')}
+          </div>
+          <span class="pending-fb-label">적응증 적합도 (1=부적합 ↔ 5=적합)</span>
+          <div class="pending-fb-accuracy" role="radiogroup" aria-label="적응증 적합도 선택">
+            <span class="acc-edge">부적합</span>
+            <label data-accuracy="1">1</label>
+            <label data-accuracy="2">2</label>
+            <label data-accuracy="3">3</label>
+            <label data-accuracy="4">4</label>
+            <label data-accuracy="5">5</label>
+            <span class="acc-edge">적합</span>
+          </div>
+          <textarea class="pending-fb-notes" placeholder="메모 (선택사항, 최대 200자)" maxlength="200" rows="2"></textarea>
+          <div class="pending-fb-actions">
+            <button type="button" class="pending-btn-skip">이거 시술 안 했어요</button>
+            <button type="button" class="pending-btn-save">저장</button>
+          </div>
+        </div>
+      `;
+
+      // 상태 바인딩
+      let selOutcome  = null;
+      let selAccuracy = null;
+      const outLabels = block.querySelectorAll('.pending-fb-outcome label');
+      const accLabels = block.querySelectorAll('.pending-fb-accuracy label');
+      const notesEl   = block.querySelector('.pending-fb-notes');
+      const saveBtn   = block.querySelector('.pending-btn-save');
+      const skipBtn   = block.querySelector('.pending-btn-skip');
+      const statusEl  = block.querySelector('.pending-tech-status');
+
+      outLabels.forEach(lbl => {
+        lbl.addEventListener('click', () => {
+          const v = lbl.dataset.outcome;
+          if (selOutcome === v) {
+            selOutcome = null;
+            lbl.classList.remove('selected');
+          } else {
+            selOutcome = v;
+            outLabels.forEach(l => l.classList.toggle('selected', l === lbl));
+          }
+        });
+      });
+      accLabels.forEach(lbl => {
+        lbl.addEventListener('click', () => {
+          const v = +lbl.dataset.accuracy;
+          if (selAccuracy === v) {
+            selAccuracy = null;
+            lbl.classList.remove('selected');
+          } else {
+            selAccuracy = v;
+            accLabels.forEach(l => l.classList.toggle('selected', l === lbl));
+          }
+        });
+      });
+
+      skipBtn.addEventListener('click', () => {
+        markPendingSkipped(log.id, techIndex);
+        block.classList.add('skipped');
+        statusEl.textContent = '시술 안 함 — 평가 생략';
+        closePendingEvalIfDone();
+      });
+
+      saveBtn.addEventListener('click', async () => {
+        if (!selOutcome && !selAccuracy) {
+          showToast('효과 분류 또는 적합도를 선택해주세요.');
+          return;
+        }
+        saveBtn.disabled = true;
+        saveBtn.textContent = '저장 중...';
+        try {
+          await submitPendingEval(log.id, techIndex, {
+            technique: tech.name,
+            category:  tech.category_key || null,
+            region:    log.region  || null,
+            acuity:    log.acuity  || null,
+            symptom:   log.symptom || null,
+            outcome:             selOutcome,
+            indication_accuracy: selAccuracy,
+            notes:               (notesEl.value || '').trim() || null,
+          });
+          block.classList.add('rated');
+          statusEl.textContent = '✓ 평가 완료';
+          closePendingEvalIfDone();
+        } catch (err) {
+          console.error('[pending-eval] 저장 실패:', err);
+          saveBtn.disabled = false;
+          saveBtn.textContent = '저장';
+          showToast('저장에 실패했습니다. 다시 시도해주세요.');
+        }
+      });
+
+      techWrap.appendChild(block);
+    });
+
+    return card;
+  }
+
+  async function submitPendingEval(logId, techniqueIndex, payload) {
+    const res = await fetch('/api/feedback', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentAccessToken}`,
+      },
+      body: JSON.stringify({
+        technique:                    payload.technique,
+        category:                     payload.category,
+        region:                       payload.region,
+        acuity:                       payload.acuity,
+        symptom:                      payload.symptom,
+        rating:                       0, // 별점 약화
+        outcome:                      payload.outcome,
+        indication_accuracy:          payload.indication_accuracy,
+        notes:                        payload.notes,
+        recommendation_log_id:        logId,
+        recommended_technique_index:  techniqueIndex,
+      }),
+    });
+    if (!res.ok) {
+      let detail = '';
+      try { const j = await res.json(); detail = j.error || ''; } catch {}
+      throw new Error(detail || `HTTP ${res.status}`);
+    }
+    // 로컬 state 업데이트
+    const logState = _pendingEvalState.find(s => s.logId === logId);
+    if (logState) {
+      const t = logState.techniques.find(x => x.index === techniqueIndex);
+      if (t) t.status = 'rated';
+    }
+    return res.json().catch(() => ({}));
+  }
+
+  function markPendingSkipped(logId, techniqueIndex) {
+    // DB 호출 없음 — 클라이언트 로컬 처리만.
+    const logState = _pendingEvalState.find(s => s.logId === logId);
+    if (logState) {
+      const t = logState.techniques.find(x => x.index === techniqueIndex);
+      if (t) t.status = 'skipped';
+    }
+  }
+
+  function closePendingEvalIfDone() {
+    const allDone = _pendingEvalState.every(s =>
+      s.techniques.length === 0 ||
+      s.techniques.every(t => t.status === 'rated' || t.status === 'skipped')
+    );
+    if (!allDone) return;
+
+    const overlay = document.getElementById('pending-eval-overlay');
+    if (overlay) {
+      overlay.classList.remove('open');
+      overlay.setAttribute('aria-hidden', 'true');
+    }
+    document.body.style.overflow = '';
+    const resolver = _pendingEvalResolver;
+    _pendingEvalResolver = null;
+    _pendingEvalState = [];
+    if (typeof resolver === 'function') resolver();
   }
 </script>
 </body>
