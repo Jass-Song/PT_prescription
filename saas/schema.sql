@@ -763,6 +763,61 @@ INSERT INTO technique_tags (tag_type, tag_key, label_ko, label_en, sort_order) V
 ('contraindication', 'neurological_deficit','신경학적 결손','Neuro Deficit',  7);
 
 -- ============================================================
+-- M. RECOMMENDATION EVALUATION — 평가 타이밍 재설계 (Track C)
+-- ============================================================
+-- 마이그 051-recommendation-evaluation.sql 동기화.
+-- 트리거 함수 (update_evaluation_status_on_rating) 와 만료 함수
+-- (expire_old_pending_evaluations) 정의는 마이그 051 단독 책임 — 본
+-- schema.sql 에는 ENUM / 컬럼 / 인덱스 / RLS UPDATE 정책만.
+--
+-- 주의: 본 섹션의 ALTER TABLE 은 recommendation_logs (마이그 017) 와
+--       ratings (위 섹션 3) 가 이미 존재한다는 전제. schema.sql 을 처음
+--       부터 새로 적용하는 케이스에서는 문제 없음 (추가 컬럼).
+-- 단일 진실 소스: saas/migrations/051-recommendation-evaluation.sql
+-- 설계 문서: saas/docs/recommendation-evaluation-design.md
+-- ============================================================
+
+-- evaluation_status_enum 타입
+DO $$ BEGIN
+  CREATE TYPE evaluation_status_enum AS ENUM (
+    'pending',   -- 아직 평가 안 됨 (기본값)
+    'rated',     -- 1개 이상 카드 평가 완료 (트리거 자동 전환)
+    'expired',   -- 14일 경과 또는 베타 출시 이전 historical row
+    'skipped'    -- 사용자가 명시적으로 스킵 (UI 측에서 UPDATE)
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+-- recommendation_logs 컬럼 추가 (멱등)
+ALTER TABLE recommendation_logs
+  ADD COLUMN IF NOT EXISTS evaluation_status evaluation_status_enum
+    NOT NULL DEFAULT 'pending',
+  ADD COLUMN IF NOT EXISTS evaluated_at      TIMESTAMPTZ;
+
+-- ratings 컬럼 추가 (멱등) — ON DELETE SET NULL (CASCADE 금지: 평가 데이터 보존)
+ALTER TABLE ratings
+  ADD COLUMN IF NOT EXISTS recommendation_log_id      UUID
+    REFERENCES recommendation_logs(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS recommended_technique_index SMALLINT;
+
+-- 인덱스
+CREATE INDEX IF NOT EXISTS idx_rec_logs_pending_user
+  ON recommendation_logs (user_id, evaluation_status, created_at DESC);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ratings_rec_log_idx
+  ON ratings (recommendation_log_id, recommended_technique_index)
+  WHERE recommendation_log_id IS NOT NULL
+    AND recommended_technique_index IS NOT NULL;
+
+-- RLS UPDATE 정책 (recommendation_logs)
+DROP POLICY IF EXISTS "rec_logs_update_own" ON recommendation_logs;
+CREATE POLICY "rec_logs_update_own" ON recommendation_logs
+  FOR UPDATE
+  USING      (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- ============================================================
 -- N. TERM_GLOSSARY — 한국어 PT 용어 표준화 단일 진실 소스
 -- ============================================================
 -- 시드 데이터는 saas/migrations/052-term-glossary.sql 단독 책임 (여기 미포함).
