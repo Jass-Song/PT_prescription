@@ -40,24 +40,28 @@ export default async function handler(req, res) {
     recommendation_log_id, recommended_technique_index,
   } = req.body || {};
 
-  if (!technique || !rating) {
-    return res.status(400).json({ error: '필수 항목 누락: technique, rating' });
+  // 단일 신호 모델 (대표님 결정 2026-05-06):
+  //   - outcome: 핵심 신호 (필수, 6분류 ENUM)
+  //   - rating: deprecated — NULL 허용 (마이그 054 star_rating NOT NULL 제거)
+  //   - indication_accuracy: deprecated — NULL 허용 (기존 그대로)
+  if (!technique) {
+    return res.status(400).json({ error: '필수 항목 누락: technique' });
   }
-  if (typeof rating !== 'number' || rating < 1 || rating > 5) {
-    return res.status(400).json({ error: '평점은 1~5 사이의 정수여야 합니다' });
+  if (!outcome) {
+    return res.status(400).json({ error: '필수 항목 누락: outcome' });
   }
-
-  // outcome: rating_outcome ENUM 6값 중 하나 또는 null/undefined (선택)
+  // outcome 6분류 검증
   const VALID_OUTCOMES = ['excellent', 'good', 'moderate', 'poor', 'no_effect', 'adverse'];
-  if (outcome != null && !VALID_OUTCOMES.includes(outcome)) {
-    return res.status(400).json({ error: 'outcome 값이 유효하지 않습니다' });
+  if (!VALID_OUTCOMES.includes(outcome)) {
+    return res.status(400).json({ error: 'outcome은 excellent/good/moderate/poor/no_effect/adverse 중 하나여야 합니다' });
   }
-
-  // indication_accuracy: 1~5 또는 null/undefined (선택)
-  if (indication_accuracy != null) {
-    if (typeof indication_accuracy !== 'number' || indication_accuracy < 1 || indication_accuracy > 5) {
-      return res.status(400).json({ error: 'indication_accuracy 는 1~5 사이의 정수여야 합니다' });
-    }
+  // rating은 nullable 허용 (deprecated, 호환성)
+  if (rating != null && (typeof rating !== 'number' || rating < 1 || rating > 5)) {
+    return res.status(400).json({ error: 'rating(deprecated)은 NULL 또는 1~5 사이' });
+  }
+  // indication_accuracy nullable 유지 (deprecated)
+  if (indication_accuracy != null && (typeof indication_accuracy !== 'number' || indication_accuracy < 1 || indication_accuracy > 5)) {
+    return res.status(400).json({ error: 'indication_accuracy는 NULL 또는 1~5 사이' });
   }
 
   // recommended_technique_index: 1~10 또는 null/undefined (선택, 방어 코드)
@@ -105,10 +109,11 @@ export default async function handler(req, res) {
     region:              region   || null,
     acuity:              acuity   || null,
     symptom:             symptom  || null,
-    star_rating:         Math.round(rating),
+    // 마이그 054 — star_rating NOT NULL 제거. NULL INSERT 허용.
+    star_rating:         rating == null ? null : Math.round(rating),
     notes:               notes    || null,
-    outcome:             outcome  || null,
-    indication_accuracy: indication_accuracy != null ? Math.round(indication_accuracy) : null,
+    outcome:             outcome,
+    indication_accuracy: indication_accuracy == null ? null : Math.round(indication_accuracy),
     was_ai_recommended:  true,
     // 마이그 051 — 카드별 평가 매칭. 두 필드 모두 NULL 허용 (소급 호환).
     // INSERT 트리거가 recommendation_logs.evaluation_status='rated' 자동 갱신 (pending 한정).
@@ -134,7 +139,7 @@ export default async function handler(req, res) {
       http_status: response.status,
       request_path: '/api/feedback',
       user_id: user?.id ?? null,
-      context: { technique, star_rating: Math.round(rating), outcome, indication_accuracy },
+      context: { technique, star_rating: rating == null ? null : Math.round(rating), outcome, indication_accuracy },
     });
     return res.status(502).json({ error: '저장 실패' });
   }

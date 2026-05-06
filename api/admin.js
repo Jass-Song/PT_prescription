@@ -147,7 +147,7 @@ export default async function handler(req, res) {
         `${SUPABASE_URL}/rest/v1/ratings` +
         `?created_at=gte.${sevenDaysAgo}` +
         `&order=created_at.desc&limit=200` +
-        `&select=id,user_id,technique_label,category_key,region,acuity,star_rating,notes,created_at`,
+        `&select=id,user_id,technique_label,category_key,region,acuity,star_rating,outcome,indication_accuracy,notes,created_at`,
         { headers }
       ),
       fetch(

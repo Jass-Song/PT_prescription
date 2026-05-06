@@ -173,10 +173,13 @@ CREATE TABLE ratings (
   user_id           UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
 
   -- 핵심 평가
-  star_rating       SMALLINT NOT NULL CHECK (star_rating BETWEEN 1 AND 5),  -- 별점 1-5
-  outcome           rating_outcome,                   -- 효과 분류
+  -- star_rating: DEPRECATED 2026-05-06 (마이그 054). 단일 신호 모델 전환 — outcome 으로 대체.
+  -- NULL 허용 (1~5 OR NULL). 신규 INSERT NULL 권장. 역사 데이터 보존 목적 컬럼 유지.
+  star_rating       SMALLINT CHECK (star_rating IS NULL OR star_rating BETWEEN 1 AND 5),
+  outcome           rating_outcome,                   -- 효과 분류 (단일 핵심 신호 — 마이그 054)
 
   -- 적응증 적합도 피드백 (AI 추천 피드백 루프 핵심)
+  -- DEPRECATED 2026-05-06 (마이그 054). outcome 으로 통합. 역사 데이터 보존.
   indication_accuracy SMALLINT CHECK (indication_accuracy BETWEEN 1 AND 5),
   -- 1: 완전히 잘못된 추천 / 5: 완벽히 맞는 추천
   -- AI 추천으로 이 테크닉을 사용했는지 여부
@@ -420,18 +423,29 @@ END;
 $$;
 
 -- technique_stats 갱신 함수 (ratings INSERT/UPDATE 시 트리거)
+-- 마이그 054 (단일 신호 모델): outcome 70% + 활성도 20% + adverse penalty 10%.
+-- avg_star_rating / avg_indication_accuracy 컬럼은 보존하나 본 함수가 갱신하지 않음
+-- (역사 데이터 보존). SECURITY DEFINER (050b) + 새 가중치 공식 (054).
 CREATE OR REPLACE FUNCTION fn_refresh_technique_stats()
-RETURNS TRIGGER LANGUAGE plpgsql AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 DECLARE
   v_tech_id UUID;
 BEGIN
   -- INSERT/UPDATE: 새 technique_id, DELETE: 이전 technique_id
   v_tech_id := COALESCE(NEW.technique_id, OLD.technique_id);
 
+  -- ratings.technique_id NULL (Anatomy Trains/LLM 의역) 케이스 스킵
+  IF v_tech_id IS NULL THEN
+    RETURN NULL;
+  END IF;
+
   INSERT INTO technique_stats (
     technique_id,
     total_ratings,
-    avg_star_rating,
     excellent_count,
     good_count,
     moderate_count,
@@ -439,7 +453,6 @@ BEGIN
     no_effect_count,
     adverse_count,
     ai_recommended_count,
-    avg_indication_accuracy,
     recent_30d_avg_rating,
     recommendation_weight,
     updated_at
@@ -447,7 +460,6 @@ BEGIN
   SELECT
     v_tech_id,
     COUNT(*),
-    ROUND(AVG(star_rating), 2),
     COUNT(*) FILTER (WHERE outcome = 'excellent'),
     COUNT(*) FILTER (WHERE outcome = 'good'),
     COUNT(*) FILTER (WHERE outcome = 'moderate'),
@@ -455,23 +467,29 @@ BEGIN
     COUNT(*) FILTER (WHERE outcome = 'no_effect'),
     COUNT(*) FILTER (WHERE outcome = 'adverse'),
     COUNT(*) FILTER (WHERE was_ai_recommended = true),
-    ROUND(AVG(indication_accuracy) FILTER (WHERE indication_accuracy IS NOT NULL), 2),
-    ROUND(AVG(star_rating) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days'), 2),
-    -- 추천 가중치: 별점 20% + 적응증 정확도 30% + 최근 30일 활성도 20% + 효과 분류 30%
+    ROUND(AVG(star_rating) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days'
+                                     AND star_rating IS NOT NULL), 2),
+    -- 가중치 공식 (054): outcome 70% + 활성도 20% + adverse penalty 10%
     ROUND(
       LEAST(1.0, GREATEST(0.0,
-        (AVG(star_rating) / 5.0 * 0.20) +
-        (COALESCE(AVG(indication_accuracy) FILTER (WHERE indication_accuracy IS NOT NULL), 3) / 5.0 * 0.30) +
+        (COALESCE(
+          COUNT(*) FILTER (WHERE outcome IN ('excellent','good'))::FLOAT
+            / NULLIF(COUNT(*) FILTER (WHERE outcome IS NOT NULL), 0),
+          0.5
+        ) * 0.70) +
         (LEAST(COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days'), 20) / 20.0 * 0.20) +
-        ((COUNT(*) FILTER (WHERE outcome IN ('excellent','good'))::FLOAT / NULLIF(COUNT(*), 0)) * 0.30)
-      )),
+        ((1.0 - COALESCE(
+          COUNT(*) FILTER (WHERE outcome = 'adverse')::FLOAT
+            / NULLIF(COUNT(*) FILTER (WHERE outcome IS NOT NULL), 0),
+          0.0
+        )) * 0.10)
+      ))::NUMERIC,
     4),
     NOW()
   FROM ratings
   WHERE technique_id = v_tech_id
   ON CONFLICT (technique_id) DO UPDATE SET
     total_ratings             = EXCLUDED.total_ratings,
-    avg_star_rating           = EXCLUDED.avg_star_rating,
     excellent_count           = EXCLUDED.excellent_count,
     good_count                = EXCLUDED.good_count,
     moderate_count            = EXCLUDED.moderate_count,
@@ -479,10 +497,11 @@ BEGIN
     no_effect_count           = EXCLUDED.no_effect_count,
     adverse_count             = EXCLUDED.adverse_count,
     ai_recommended_count      = EXCLUDED.ai_recommended_count,
-    avg_indication_accuracy   = EXCLUDED.avg_indication_accuracy,
     recent_30d_avg_rating     = EXCLUDED.recent_30d_avg_rating,
     recommendation_weight     = EXCLUDED.recommendation_weight,
     updated_at                = NOW();
+    -- avg_star_rating / avg_indication_accuracy: SET 절에서 의도적 제외
+    -- (마이그 054 — 역사 데이터 보존, 본 함수 갱신 중단)
 
   RETURN NULL;
 END;
