@@ -50,7 +50,8 @@ CREATE TYPE rating_outcome AS ENUM (
   'moderate',     -- 보통
   'poor',         -- 효과 미미
   'no_effect',    -- 효과 없음
-  'adverse'       -- 부작용 발생
+  'adverse',      -- 부작용 발생
+  'not_used'      -- (마이그 055) PT 가 추천 받았으나 미시술. weight 영향 0.
 );
 
 -- ============================================================
@@ -234,6 +235,7 @@ CREATE TABLE technique_stats (
   poor_count            INT DEFAULT 0,
   no_effect_count       INT DEFAULT 0,
   adverse_count         INT DEFAULT 0,
+  not_used_count        INT DEFAULT 0,         -- (마이그 055) PT 가 추천 받았으나 미시술. weight 영향 0, 정보 추적용.
 
   -- AI 추천 정확도 통계
   ai_recommended_count  INT DEFAULT 0,
@@ -423,9 +425,10 @@ END;
 $$;
 
 -- technique_stats 갱신 함수 (ratings INSERT/UPDATE 시 트리거)
--- 마이그 054 (단일 신호 모델): outcome 70% + 활성도 20% + adverse penalty 10%.
+-- 마이그 055 (054 공식 유지 + not_used 분모/분자 제외):
+--   outcome 70% (분모: NOT NULL AND != 'not_used') + 활성도 20% + adverse 10%.
 -- avg_star_rating / avg_indication_accuracy 컬럼은 보존하나 본 함수가 갱신하지 않음
--- (역사 데이터 보존). SECURITY DEFINER (050b) + 새 가중치 공식 (054).
+-- (역사 데이터 보존). SECURITY DEFINER (050b) + 새 가중치 공식 (055).
 CREATE OR REPLACE FUNCTION fn_refresh_technique_stats()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -452,6 +455,7 @@ BEGIN
     poor_count,
     no_effect_count,
     adverse_count,
+    not_used_count,
     ai_recommended_count,
     recent_30d_avg_rating,
     recommendation_weight,
@@ -466,21 +470,24 @@ BEGIN
     COUNT(*) FILTER (WHERE outcome = 'poor'),
     COUNT(*) FILTER (WHERE outcome = 'no_effect'),
     COUNT(*) FILTER (WHERE outcome = 'adverse'),
+    COUNT(*) FILTER (WHERE outcome = 'not_used'),
     COUNT(*) FILTER (WHERE was_ai_recommended = true),
     ROUND(AVG(star_rating) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days'
                                      AND star_rating IS NOT NULL), 2),
-    -- 가중치 공식 (054): outcome 70% + 활성도 20% + adverse penalty 10%
+    -- 가중치 공식 (055 = 054 공식 유지 + not_used 분모/분자 제외):
+    --   outcome 70% + 활성도 20% + adverse penalty 10%
+    --   evaluated_count = COUNT(outcome IS NOT NULL AND outcome != 'not_used')
     ROUND(
       LEAST(1.0, GREATEST(0.0,
         (COALESCE(
           COUNT(*) FILTER (WHERE outcome IN ('excellent','good'))::FLOAT
-            / NULLIF(COUNT(*) FILTER (WHERE outcome IS NOT NULL), 0),
+            / NULLIF(COUNT(*) FILTER (WHERE outcome IS NOT NULL AND outcome != 'not_used'), 0),
           0.5
         ) * 0.70) +
         (LEAST(COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days'), 20) / 20.0 * 0.20) +
         ((1.0 - COALESCE(
           COUNT(*) FILTER (WHERE outcome = 'adverse')::FLOAT
-            / NULLIF(COUNT(*) FILTER (WHERE outcome IS NOT NULL), 0),
+            / NULLIF(COUNT(*) FILTER (WHERE outcome IS NOT NULL AND outcome != 'not_used'), 0),
           0.0
         )) * 0.10)
       ))::NUMERIC,
@@ -496,6 +503,7 @@ BEGIN
     poor_count                = EXCLUDED.poor_count,
     no_effect_count           = EXCLUDED.no_effect_count,
     adverse_count             = EXCLUDED.adverse_count,
+    not_used_count            = EXCLUDED.not_used_count,
     ai_recommended_count      = EXCLUDED.ai_recommended_count,
     recent_30d_avg_rating     = EXCLUDED.recent_30d_avg_rating,
     recommendation_weight     = EXCLUDED.recommendation_weight,

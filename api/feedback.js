@@ -50,10 +50,10 @@ export default async function handler(req, res) {
   if (!outcome) {
     return res.status(400).json({ error: '필수 항목 누락: outcome' });
   }
-  // outcome 6분류 검증
-  const VALID_OUTCOMES = ['excellent', 'good', 'moderate', 'poor', 'no_effect', 'adverse'];
+  // outcome 7분류 검증 (마이그 055 — 'not_used' 추가)
+  const VALID_OUTCOMES = ['excellent', 'good', 'moderate', 'poor', 'no_effect', 'adverse', 'not_used'];
   if (!VALID_OUTCOMES.includes(outcome)) {
-    return res.status(400).json({ error: 'outcome은 excellent/good/moderate/poor/no_effect/adverse 중 하나여야 합니다' });
+    return res.status(400).json({ error: 'outcome은 excellent/good/moderate/poor/no_effect/adverse/not_used 중 하나여야 합니다' });
   }
   // rating은 nullable 허용 (deprecated, 호환성)
   if (rating != null && (typeof rating !== 'number' || rating < 1 || rating > 5)) {
