@@ -303,7 +303,8 @@ SELECT
   END AS result,
   COUNT(*)                                                AS total_ratings,
   COUNT(*) FILTER (WHERE recommendation_log_id IS NULL)   AS null_log_id,
-  COUNT(*) FILTER (WHERE recommendation_log_id IS NOT NULL) AS not_null_log_id;
+  COUNT(*) FILTER (WHERE recommendation_log_id IS NOT NULL) AS not_null_log_id
+FROM   ratings;
 
 
 -- ============================================================
