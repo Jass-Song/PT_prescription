@@ -786,35 +786,49 @@ function aggregateApplicableMuscles(activeMT, category, regions) {
   return Array.from(seen.values());
 }
 
-// 추천 세션 로깅 (recommendation_logs 테이블, fire-and-forget)
+// 추천 세션 로깅 (recommendation_logs 테이블)
+// 마이그 051 이후 — 생성된 row id 를 응답으로 수집하여 클라이언트에 전달.
+// 클라이언트는 이 id를 카드별 평가 시 ratings.recommendation_log_id 로 동봉.
+// 반환: { id: string } (성공) | null (실패·SUPABASE_KEY 미설정·userId 부재 등)
+// 호출 측은 Promise를 await 하지 않고 .catch로 fire-and-forget 패턴을 유지하되,
+// 결과 id를 활용하려면 await 후 result.recommendation_log_id 에 부착.
 async function logRecommendationSession(userId, userToken, { region, acuity, symptom, selectedCategories, result, latencyMs }) {
   const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gnusyjnviugpofvaicbv.supabase.co';
   const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
-  if (!SUPABASE_KEY || !userId) return;
+  if (!SUPABASE_KEY || !userId) return null;
 
   const recommended = [
     ...(result.manualTherapy || []).map(t => ({ name: t.technique, category_key: t.categoryInfo?.category_key || null })),
     ...(result.exercise || []).map(t => ({ name: t.technique, category_key: t.categoryInfo?.category_key || null })),
   ];
 
-  await fetch(`${SUPABASE_URL}/rest/v1/recommendation_logs`, {
-    method: 'POST',
-    headers: {
-      'apikey': SUPABASE_KEY,
-      'Authorization': `Bearer ${userToken}`,
-      'Content-Type': 'application/json',
-      'Prefer': 'return=minimal',
-    },
-    body: JSON.stringify({
-      user_id: userId,
-      region,
-      acuity,
-      symptom,
-      selected_categories: selectedCategories,
-      recommended_techniques: recommended,
-      latency_ms: Number.isFinite(latencyMs) ? latencyMs : null,
-    }),
-  });
+  try {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/recommendation_logs`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${userToken}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation',
+      },
+      body: JSON.stringify({
+        user_id: userId,
+        region,
+        acuity,
+        symptom,
+        selected_categories: selectedCategories,
+        recommended_techniques: recommended,
+        latency_ms: Number.isFinite(latencyMs) ? latencyMs : null,
+      }),
+    });
+    if (!response.ok) return null;
+    const rows = await response.json();
+    const row = Array.isArray(rows) ? rows[0] : rows;
+    return row && row.id ? { id: row.id } : null;
+  } catch (e) {
+    console.error('[logRecommendationSession]', e.message);
+    return null;
+  }
 }
 
 // 기법 객체를 LLM 프롬프트용 텍스트 블록으로 변환
@@ -1026,10 +1040,20 @@ export default async function handler(req, res) {
       console.warn('[term_glossary] AT 후처리 실패:', err.message)
     );
 
-    logRecommendationSession(user.id, userToken, {
+    // 카드별 1-based 인덱스 부여 (AT 세션은 별도 — manualTherapy 만 채워짐)
+    (atResponse.manualTherapy || []).forEach((item, i) => {
+      item.recommended_technique_index = i + 1;
+    });
+
+    // 추천 로그 INSERT — 응답에서 id 수집 후 클라이언트로 전달.
+    // 마이그 051 이후 ratings.recommendation_log_id FK 매칭에 사용.
+    const atLogResult = await logRecommendationSession(user.id, userToken, {
       region, acuity, symptom, selectedCategories: ['category_anatomy_trains'], result: atResponse,
       latencyMs: Date.now() - t0,
-    }).catch(e => console.error('[logging AT]', e.message));
+    }).catch(e => { console.error('[logging AT]', e.message); return null; });
+    if (atLogResult && atLogResult.id) {
+      atResponse.recommendation_log_id = atLogResult.id;
+    }
 
     // fire-and-forget: 세션 단위 usage 로깅
     logSessionUsage({
@@ -1451,10 +1475,25 @@ techniqueId는 [MT-XXX] 또는 [EX-XXX] ID를 그대로 복사.`;
       console.warn('[term_glossary] 후처리 실패:', err.message)
     );
 
-    logRecommendationSession(user.id, userToken, {
+    // 카드별 1-based 통합 인덱스 부여 — manualTherapy → exercise → relatedManualTherapy 순.
+    // 클라이언트는 평가 시 recommended_technique_index 를 ratings 에 동봉.
+    // 같은 추천 세션 내에서 unique. AT 세션은 별도(앞서 1부터 새로 시작).
+    {
+      let idx = 1;
+      (result.manualTherapy || []).forEach(item => { item.recommended_technique_index = idx++; });
+      (result.exercise || []).forEach(item => { item.recommended_technique_index = idx++; });
+      (result.relatedManualTherapy || []).forEach(item => { item.recommended_technique_index = idx++; });
+    }
+
+    // 추천 로그 INSERT — 응답에서 id 수집 후 클라이언트로 전달.
+    // 마이그 051 이후 ratings.recommendation_log_id FK 매칭에 사용.
+    const logResult = await logRecommendationSession(user.id, userToken, {
       region, acuity, symptom, selectedCategories, result,
       latencyMs: Date.now() - t0,
-    }).catch(e => console.error('[logging]', e.message));
+    }).catch(e => { console.error('[logging]', e.message); return null; });
+    if (logResult && logResult.id) {
+      result.recommendation_log_id = logResult.id;
+    }
 
     // fire-and-forget: 세션 단위 usage 로깅
     logSessionUsage({

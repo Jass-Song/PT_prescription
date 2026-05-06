@@ -1,11 +1,14 @@
 // PT 처방 도우미 — 기법 별점 평가 저장 (ratings 테이블)
-// Input:  { technique, category, region, acuity, symptom, rating, notes, outcome, indication_accuracy }
+// Input:  { technique, category, region, acuity, symptom, rating, notes, outcome,
+//           indication_accuracy, recommendation_log_id?, recommended_technique_index? }
 // Output: { success: true }
 //
 // 동작:
 //   1) JWT 검증 → user_id
 //   2) techniques.name_ko 로 UUID 조회 (없으면 null — Anatomy Trains·LLM 의역 등)
 //   3) ratings 인서트 (user JWT 사용 → RLS auth.uid() = user_id 충족)
+//   4) 마이그 051 이후 recommendation_log_id (FK) + recommended_technique_index (1-based)
+//      두 필드는 NULL 허용. INSERT 트리거가 recommendation_logs.evaluation_status='rated' 자동 갱신.
 
 import { verifyToken } from './_auth.js';
 import { logServerError } from './_logger.js';
@@ -34,6 +37,7 @@ export default async function handler(req, res) {
     technique, category, region, acuity, symptom,
     rating, notes,
     outcome, indication_accuracy,
+    recommendation_log_id, recommended_technique_index,
   } = req.body || {};
 
   if (!technique || !rating) {
@@ -54,6 +58,22 @@ export default async function handler(req, res) {
     if (typeof indication_accuracy !== 'number' || indication_accuracy < 1 || indication_accuracy > 5) {
       return res.status(400).json({ error: 'indication_accuracy 는 1~5 사이의 정수여야 합니다' });
     }
+  }
+
+  // recommended_technique_index: 1~10 또는 null/undefined (선택, 방어 코드)
+  // 같은 추천 세션 내 카드 인덱스(1-based). 마이그 051 이후 NULL 허용.
+  if (recommended_technique_index != null) {
+    if (typeof recommended_technique_index !== 'number' ||
+        !Number.isInteger(recommended_technique_index) ||
+        recommended_technique_index < 1 || recommended_technique_index > 10) {
+      return res.status(400).json({ error: 'recommended_technique_index 는 1~10 사이의 정수여야 합니다' });
+    }
+  }
+
+  // recommendation_log_id: UUID 문자열 또는 null/undefined (선택)
+  // 형식 검증은 DB FK가 처리. 여기서는 타입만 점검.
+  if (recommendation_log_id != null && typeof recommendation_log_id !== 'string') {
+    return res.status(400).json({ error: 'recommendation_log_id 는 문자열이어야 합니다' });
   }
 
   // techniques.name_ko → UUID 조회 (없으면 null 폴백)
@@ -90,6 +110,10 @@ export default async function handler(req, res) {
     outcome:             outcome  || null,
     indication_accuracy: indication_accuracy != null ? Math.round(indication_accuracy) : null,
     was_ai_recommended:  true,
+    // 마이그 051 — 카드별 평가 매칭. 두 필드 모두 NULL 허용 (소급 호환).
+    // INSERT 트리거가 recommendation_logs.evaluation_status='rated' 자동 갱신 (pending 한정).
+    recommendation_log_id:        recommendation_log_id || null,
+    recommended_technique_index:  recommended_technique_index != null ? Math.round(recommended_technique_index) : null,
   };
 
   const response = await fetch(`${SUPABASE_URL}/rest/v1/ratings`, {
