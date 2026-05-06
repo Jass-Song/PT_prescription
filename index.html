@@ -893,7 +893,6 @@
       /* Card detail section */
       .card-section { padding: 10px 14px 4px; }
       .card-expand-btn-wrap { padding: 10px 14px; }
-      .inline-feedback-section { padding: 12px 14px 14px; }
 
       /* Choice grids */
       .choice-grid { grid-template-columns: 1fr; }
@@ -1380,91 +1379,6 @@
       white-space: nowrap; margin-top: 2px; transition: background 0.15s;
     }
     .btn-hist-trigger:hover { background: #e2e8f0; }
-
-    /* ── Inline Feedback (단일 신호: outcome only) ── */
-    .inline-feedback-section {
-      margin-top: 14px;
-      padding: 12px 20px 14px;
-      border-top: 1px solid var(--border);
-    }
-    .inline-feedback-prompt {
-      font-size: 0.78rem;
-      color: var(--text-secondary);
-      margin-bottom: 6px;
-    }
-    .inline-feedback-notes {
-      width: 100%;
-      font-size: 0.78rem;
-      padding: 6px 8px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      resize: none;
-      margin-bottom: 6px;
-      box-sizing: border-box;
-      font-family: inherit;
-      color: var(--text);
-    }
-    .inline-feedback-actions { display: flex; gap: 8px; }
-    .inline-btn-submit {
-      font-size: 0.78rem;
-      padding: 4px 14px;
-      background: var(--primary);
-      color: #fff;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-weight: 500;
-      transition: background 0.15s;
-    }
-    .inline-btn-submit:hover { background: #155da8; }
-    .inline-btn-submit:disabled { opacity: 0.6; cursor: default; }
-    .inline-btn-skip {
-      font-size: 0.78rem;
-      padding: 4px 10px;
-      background: none;
-      border: 1px solid var(--border);
-      border-radius: 5px;
-      cursor: pointer;
-      color: var(--text-secondary);
-      transition: background 0.15s;
-    }
-    .inline-btn-skip:hover { background: #f1f5f9; }
-    .inline-fb-extra {
-      margin-bottom: 8px;
-      padding: 8px 10px;
-      background: #f8fafc;
-      border-radius: 6px;
-    }
-    .inline-fb-extra-label {
-      font-size: 0.72rem;
-      color: var(--text-secondary);
-      margin-bottom: 4px;
-      display: block;
-    }
-    .inline-fb-outcome { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-bottom: 8px; }
-    .inline-fb-outcome label {
-      font-size: 0.72rem;
-      padding: 3px 8px;
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      cursor: pointer;
-      background: #fff;
-      transition: background 0.12s, border-color 0.12s, color 0.12s;
-      color: var(--text-secondary);
-      user-select: none;
-    }
-    .inline-fb-outcome input[type="radio"] { display: none; }
-    .inline-fb-outcome input[type="radio"]:checked + span,
-    .inline-fb-outcome label.selected {
-      background: var(--primary);
-      color: #fff;
-      border-color: var(--primary);
-    }
-    .inline-feedback-done {
-      font-size: 0.78rem;
-      color: #059669;
-      font-weight: 500;
-    }
 
     /* ══════════════════════════════════════
        Pending Evaluation Modal (Track C)
@@ -3432,48 +3346,9 @@
       </div>`;
     container.appendChild(card);
 
-    // ── 인라인 별점 피드백 섹션 삽입 ──
-    const feedbackSection = document.createElement('div');
-    feedbackSection.className = 'inline-feedback-section';
-    feedbackSection.innerHTML = `
-      <p class="inline-feedback-prompt">시술 후 효과를 평가해주세요 (다음 환자 진입 시에도 평가 가능)</p>
-      <div class="inline-fb-extra inline-fb-outcome-wrap">
-        <span class="inline-fb-extra-label">효과 분류</span>
-        <div class="inline-fb-outcome" role="radiogroup" aria-label="효과 분류 선택">
-          <label data-outcome="excellent">매우 효과적</label>
-          <label data-outcome="good">효과적</label>
-          <label data-outcome="moderate">보통</label>
-          <label data-outcome="poor">효과 미미</label>
-          <label data-outcome="no_effect">효과 없음</label>
-          <label data-outcome="adverse">부작용</label>
-        </div>
-      </div>
-      <textarea class="inline-feedback-notes" placeholder="메모 (선택사항, 최대 200자)" maxlength="200" rows="2"></textarea>
-      <div class="inline-feedback-actions">
-        <button class="inline-btn-submit">저장</button>
-        <button class="inline-btn-skip">건너뛰기</button>
-      </div>
-      <p class="inline-feedback-done" style="display:none">✓ 피드백 감사합니다</p>`;
-    card.appendChild(feedbackSection);
-
-    // Track C — FK 부착 (DOM data attr + context 동시 전달)
-    feedbackSection.dataset.recommendationLogId = currentRecommendationLogId || '';
-    feedbackSection.dataset.techniqueIndex      = (item.recommended_technique_index != null)
-      ? String(item.recommended_technique_index)
-      : '';
-
-    // 이벤트 바인딩
-    initFeedbackSection(feedbackSection, {
-      technique: item.technique,
-      category:  catKey,
-      region:    currentSession.region  || null,
-      acuity:    currentSession.acuity  || null,
-      symptom:   currentSession.symptom || null,
-      recommendation_log_id:        currentRecommendationLogId || null,
-      recommended_technique_index:  (item.recommended_technique_index != null)
-                                      ? item.recommended_technique_index
-                                      : null,
-    });
+    // 추천 카드는 정보 전용 — 평가는 pending-eval 모달에서만 받습니다.
+    // (인라인 평가 섹션 제거: 시술 전 평가가 임상적으로 무의미하므로
+    //  "다음 환자 추천 받기" 시점의 모달이 유일한 평가 인터페이스)
   }
 
   async function refreshCategory(btn) {
@@ -3640,8 +3515,9 @@
       saveSessionHistory(result.sessionSummary);
     }
 
-    // Track C — pending-evaluation FK용 (인라인 피드백이 ratings INSERT 시 사용)
-    currentRecommendationLogId = result.recommendation_log_id || null;
+    // recommendation_log_id / recommended_technique_index 는 응답에 포함되지만
+    // 클라이언트는 사용하지 않습니다. pending-eval 모달은 user_id 기반으로
+    // 백엔드가 직접 조회하므로 별도 보관 불필요.
 
     // 피드백 모달에서 사용할 세션 컨텍스트 저장
     currentSession = {
@@ -3746,11 +3622,9 @@
   }
 
   /* ══════════════════════════════════════
-     SESSION CONTEXT (인라인 피드백 섹션이 사용)
+     SESSION CONTEXT (pending-eval 모달이 사용)
   ══════════════════════════════════════ */
   let currentSession    = {};
-  // Track C — 현재 화면 추천의 recommendation_logs.id (FK)
-  let currentRecommendationLogId = null;
 
   /* ══════════════════════════════════════
      일반 피드백 (헤더)
@@ -4029,89 +3903,6 @@
       checkSaveBtn();
     }
     goScreen('screen1');
-  }
-
-  /* ══════════════════════════════════════
-     INLINE FEEDBACK (단일 신호: outcome only)
-  ══════════════════════════════════════ */
-  function initFeedbackSection(sectionEl, context) {
-    // context: { technique, category, region, acuity, symptom,
-    //            recommendation_log_id, recommended_technique_index }
-    // 단일 신호 모델: outcome 6라디오 + 메모 textarea 만 노출. 별점/accuracy 제거.
-    const notes        = sectionEl.querySelector('.inline-feedback-notes');
-    const actions      = sectionEl.querySelector('.inline-feedback-actions');
-    const doneMsg      = sectionEl.querySelector('.inline-feedback-done');
-    const outcomeWrap  = sectionEl.querySelector('.inline-fb-outcome-wrap');
-    const outcomeLabels  = sectionEl.querySelectorAll('.inline-fb-outcome label');
-    let selectedOutcome  = null;
-
-    // outcome 라디오 (단일 선택)
-    outcomeLabels.forEach(lbl => {
-      lbl.addEventListener('click', () => {
-        const val = lbl.dataset.outcome;
-        if (selectedOutcome === val) {
-          selectedOutcome = null;
-          lbl.classList.remove('selected');
-        } else {
-          selectedOutcome = val;
-          outcomeLabels.forEach(l => l.classList.toggle('selected', l === lbl));
-        }
-      });
-    });
-
-    const skipBtn = sectionEl.querySelector('.inline-btn-skip');
-    if (skipBtn) {
-      skipBtn.addEventListener('click', () => {
-        // 인라인 스킵: 입력만 초기화 (모달 평가는 다음 세션 진입 시 가능).
-        selectedOutcome = null;
-        outcomeLabels.forEach(l => l.classList.remove('selected'));
-        if (notes) notes.value = '';
-      });
-    }
-
-    const submitBtn = sectionEl.querySelector('.inline-btn-submit');
-    submitBtn.addEventListener('click', async () => {
-      // 단일 신호: outcome 필수 (메모만으로는 저장 불가).
-      if (!selectedOutcome) {
-        showToast('효과 분류를 선택해주세요.');
-        return;
-      }
-      submitBtn.disabled     = true;
-      submitBtn.textContent  = '저장 중...';
-      try {
-        const res = await fetch('/api/feedback', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${currentAccessToken}`,
-          },
-          body: JSON.stringify({
-            technique:                    context.technique,
-            category:                     context.category,
-            region:                       context.region  || null,
-            acuity:                       context.acuity  || null,
-            symptom:                      context.symptom || null,
-            rating:                       null, // 단일 신호 모델 — backend NULL 허용
-            outcome:                      selectedOutcome,
-            notes:                        (notes && notes.value.trim()) || null,
-            recommendation_log_id:        context.recommendation_log_id || null,
-            recommended_technique_index:  (context.recommended_technique_index != null)
-                                            ? context.recommended_technique_index
-                                            : null,
-          }),
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        if (notes)        notes.style.display        = 'none';
-        if (actions)      actions.style.display      = 'none';
-        if (outcomeWrap)  outcomeWrap.style.display  = 'none';
-        doneMsg.style.display      = 'block';
-      } catch (err) {
-        console.error('인라인 피드백 저장 실패:', err);
-        submitBtn.disabled    = false;
-        submitBtn.textContent = '저장';
-        showToast('피드백 저장에 실패했습니다. 다시 시도해주세요.');
-      }
-    });
   }
 
   /* ══════════════════════════════════════
