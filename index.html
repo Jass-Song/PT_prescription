@@ -3107,7 +3107,7 @@
                 .filter(Boolean)
                 .join(' · ')
             : '';
-          const muscleHtml = muscles ? `<div class="rel-muscles">🎯 ${sanitizeTerms(muscles)}</div>` : '';
+          const muscleHtml = muscles ? `<div class="rel-muscles">🎯 ${muscles}</div>` : '';
           const catInfoAttr = rel.categoryInfo
             ? `data-catinfo='${JSON.stringify(rel.categoryInfo).replace(/'/g, "&apos;")}'`
             : '';
@@ -3118,7 +3118,7 @@
           li.className = 'pillar-related-item';
           li.innerHTML = `
             <div class="rel-name-row">
-              <span class="rel-name">${sanitizeTerms(rel.name_ko || rel.technique || rel.techniqueId)}</span>
+              <span class="rel-name">${rel.name_ko || rel.technique || rel.techniqueId || ''}</span>
               <span class="rel-cat">${catLabel ? `(${catLabel})` : ''}</span>
               ${catBtn}
             </div>
@@ -3158,7 +3158,7 @@
     const secTitle2 = isEX ? '🎯 목표 근육 — 어디에 작용하나요?' : '🎯 목표 구조물 — 어디에 작용하나요?';
 
     const dosageHtml = item.dosage
-      ? `<div class="dosage-row">⏱ ${sanitizeTerms(item.dosage)}</div>`
+      ? `<div class="dosage-row">⏱ ${item.dosage}</div>`
       : '';
 
     const card = document.createElement('div');
@@ -3181,7 +3181,7 @@
           <div>
             <div class="position-label">${posLabel1}</div>
             <div class="position-sublabel">${posSubLabel1}</div>
-            <div class="position-value">${sanitizeTerms(item.patientPosition) || '—'}</div>
+            <div class="position-value">${item.patientPosition || '—'}</div>
           </div>
         </div>
         <div class="position-divider"></div>
@@ -3190,7 +3190,7 @@
           <div>
             <div class="position-label">${posLabel2}</div>
             <div class="position-sublabel">${posSubLabel2}</div>
-            <div class="position-value">${sanitizeTerms(item.therapistHands) || '—'}</div>
+            <div class="position-value">${item.therapistHands || '—'}</div>
           </div>
         </div>
       </div>
@@ -3396,42 +3396,13 @@
     return { ok, warn };
   }
 
-  // TODO(2026-05-06+): api/history.js 후처리(applyGlossary) 적용 후 제거
-  // 현재 Track B Phase 3 (sw-frontend-dev, 2026-05-05) 점검 결과:
-  //   - api/recommend.js: applyGlossaryToResult 적용 → 추천 응답은 서버에서 표준화
-  //   - api/history.js: 후처리 미적용 → 이력 응답이 raw 한자어 가능성
-  // 따라서 클라이언트 보정(sanitizeTerms)이 history 화면(name_ko 등)에서 여전히 필요.
-  // sw-backend-dev 가 history.js 에 applyGlossary 적용 후 본 블록과 모든 호출 제거 가능.
-  // 단일 진실 소스: saas/migrations/052-term-glossary.sql / saas/docs/term-glossary-design.md
-  const TERM_REPLACEMENTS = [
-    ['앙와위', '등 대고 눕기'], ['양와위', '등 대고 눕기'],
-    ['측와위', '옆으로 눕기'], ['복와위', '엎드려 눕기'],
-    ['복위', '엎드려 눕기'], ['반좌위', '등받이 세워 앉기'],
-    ['장좌위', '다리 뻗고 앉기'], ['슬흉위', '무릎 꿇고 엎드리기'],
-    ['전굴', '앞으로 굽히기'], ['후굴', '뒤로 젖히기'],
-    ['측굴', '옆으로 기울이기'],
-    ['신연', '늘이기'], ['거상', '들어올리기'],
-    ['표재층', '피부 가까운 얕은 층'],
-    ['신전', '펴기'],
-    ['미측', '발 쪽'], ['두측', '머리 쪽'],
-    ['촉진', '손으로 부드럽게 누르기'],
-    ['내전', '안쪽으로 모으기'], ['외전', '바깥쪽으로 벌리기'],
-    ['내회전', '안쪽으로 돌리기'], ['외회전', '바깥쪽으로 돌리기'],
-  ];
-  function sanitizeTerms(text) {
-    if (!text) return text;
-    let r = String(text);
-    TERM_REPLACEMENTS.forEach(([f, t]) => { r = r.replaceAll(f, t); });
-    return r;
-  }
-
   function renderMuscles(muscles) {
     if (!muscles || muscles.length === 0) return '<p class="card-section-value">—</p>';
     // 기존: string 배열 ("승모근(trapezius)") / 신규: object 배열 ({muscle_ko, muscle_en})
     const items = muscles.map(m => {
-      if (typeof m === 'string') return sanitizeTerms(m);
+      if (typeof m === 'string') return m;
       if (m && typeof m === 'object' && m.muscle_ko) {
-        return sanitizeTerms(m.muscle_en ? `${m.muscle_ko}(${m.muscle_en})` : m.muscle_ko);
+        return m.muscle_en ? `${m.muscle_ko}(${m.muscle_en})` : m.muscle_ko;
       }
       return '';
     }).filter(Boolean);
@@ -3441,7 +3412,7 @@
 
   function renderMovement(text) {
     if (!text) return '<p class="card-section-value">—</p>';
-    const clean = sanitizeTerms(text);
+    const clean = String(text);
     const parts = clean.split(/(?=\d+\.\s)/).filter(s => s.trim());
     if (parts.length <= 1 || !/^\d+\./.test(parts[0].trim())) {
       return `<p class="card-section-value">${clean}</p>`;
@@ -3454,7 +3425,7 @@
   }
 
   function renderFeedback(text) {
-    const { ok, warn } = parseFeedback(sanitizeTerms(text));
+    const { ok, warn } = parseFeedback(text);
     let html = '';
     if (ok) html += `<div class="feedback-ok">✅ <strong>올바른 반응:</strong> ${ok}</div>`;
     if (warn) html += `<div class="feedback-warn">⚠️ <strong>주의신호:</strong> ${warn}</div>`;
@@ -3500,7 +3471,7 @@
       positions.forEach((s, i) => {
         const start = s.idx + s.marker.length;
         const end   = positions[i + 1] ? positions[i + 1].idx : raw.length;
-        let content = sanitizeTerms(raw.slice(start, end).trim());
+        let content = raw.slice(start, end).trim();
         // 선행 콜론·공백 제거
         content = content.replace(/^[\s:：]+/, '');
 
@@ -3535,8 +3506,8 @@
     const list = document.getElementById('catPrincipleList');
     list.innerHTML = (info.basic_principles || []).map(p => `
       <div class="cat-principle-card">
-        <div class="cat-principle-title">${p.icon ? p.icon + ' ' : ''}${sanitizeTerms(p.title_ko)}</div>
-        <div class="cat-principle-desc">${sanitizeTerms(p.desc_ko)}</div>
+        <div class="cat-principle-title">${p.icon ? p.icon + ' ' : ''}${p.title_ko}</div>
+        <div class="cat-principle-desc">${p.desc_ko}</div>
       </div>`).join('');
     document.getElementById('catModalOverlay').classList.add('open');
     document.body.style.overflow = 'hidden';
