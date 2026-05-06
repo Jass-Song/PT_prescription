@@ -1348,7 +1348,16 @@
       background: var(--bg); border-radius: var(--radius-sm);
       padding: 10px 14px; margin-bottom: 8px;
     }
-    .hist-liked-stars { color: #f6ad55; font-size: 14px; letter-spacing: 1px; flex-shrink: 0; }
+    .hist-liked-outcome {
+      flex-shrink: 0;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: var(--primary-light);
+      color: var(--primary);
+      white-space: nowrap;
+    }
     .hist-liked-info { flex: 1; min-width: 0; }
     .hist-liked-name {
       font-size: 0.88rem; font-weight: 600; color: var(--text);
@@ -1372,7 +1381,7 @@
     }
     .btn-hist-trigger:hover { background: #e2e8f0; }
 
-    /* ── Inline Feedback Star Rating ── */
+    /* ── Inline Feedback (단일 신호: outcome only) ── */
     .inline-feedback-section {
       margin-top: 14px;
       padding: 12px 20px 14px;
@@ -1383,20 +1392,6 @@
       color: var(--text-secondary);
       margin-bottom: 6px;
     }
-    .inline-star-rating { display: flex; gap: 4px; margin-bottom: 8px; }
-    .inline-star-btn {
-      background: none;
-      border: none;
-      font-size: 1.5rem;
-      color: #d1d5db;
-      cursor: pointer;
-      padding: 2px 1px;
-      transition: color 0.12s, transform 0.1s;
-      line-height: 1;
-    }
-    .inline-star-btn.hovered,
-    .inline-star-btn.selected { color: #f59e0b; }
-    .inline-star-btn:hover { transform: scale(1.1); }
     .inline-feedback-notes {
       width: 100%;
       font-size: 0.78rem;
@@ -1465,40 +1460,11 @@
       color: #fff;
       border-color: var(--primary);
     }
-    .inline-fb-accuracy {
-      display: grid;
-      grid-template-columns: auto repeat(5, 1fr) auto;
-      gap: 4px;
-      align-items: center;
-      font-size: 0.7rem;
-    }
-    .inline-fb-accuracy .acc-edge { color: var(--text-secondary); white-space: nowrap; }
-    .inline-fb-accuracy label {
-      padding: 3px 0;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      cursor: pointer;
-      background: #fff;
-      text-align: center;
-      transition: background 0.12s, border-color 0.12s, color 0.12s;
-      color: var(--text-secondary);
-    }
-    .inline-fb-accuracy input[type="radio"] { display: none; }
-    .inline-fb-accuracy label.selected {
-      background: var(--primary);
-      color: #fff;
-      border-color: var(--primary);
-    }
     .inline-feedback-done {
       font-size: 0.78rem;
       color: #059669;
       font-weight: 500;
     }
-
-    /* ── Inline star rating: 약화 (Track C) ──
-       별점은 더 이상 노출하지 않음 (모달이 메인 평가 경로).
-       outcome/accuracy/notes/actions 는 카드 렌더링 시 즉시 노출. */
-    .inline-star-rating { display: none !important; }
 
     /* ══════════════════════════════════════
        Pending Evaluation Modal (Track C)
@@ -1640,31 +1606,6 @@
     }
     .pending-fb-outcome input[type="radio"] { display: none; }
     .pending-fb-outcome label.selected {
-      background: var(--primary);
-      color: #fff;
-      border-color: var(--primary);
-    }
-    .pending-fb-accuracy {
-      display: grid;
-      grid-template-columns: auto repeat(5, 1fr) auto;
-      gap: 4px;
-      align-items: center;
-      font-size: 0.72rem;
-      margin-bottom: 10px;
-    }
-    .pending-fb-accuracy .acc-edge { color: var(--text-secondary); white-space: nowrap; }
-    .pending-fb-accuracy label {
-      padding: 4px 0;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      cursor: pointer;
-      background: #fff;
-      text-align: center;
-      transition: background 0.12s, border-color 0.12s, color 0.12s;
-      color: var(--text-secondary);
-    }
-    .pending-fb-accuracy input[type="radio"] { display: none; }
-    .pending-fb-accuracy label.selected {
       background: var(--primary);
       color: #fff;
       border-color: var(--primary);
@@ -3495,16 +3436,9 @@
     const feedbackSection = document.createElement('div');
     feedbackSection.className = 'inline-feedback-section';
     feedbackSection.innerHTML = `
-      <p class="inline-feedback-prompt">이 추천이 임상에서 도움이 됐나요?</p>
-      <div class="inline-star-rating" role="group" aria-label="별점 선택">
-        <button class="inline-star-btn" data-value="1" aria-label="1점">★</button>
-        <button class="inline-star-btn" data-value="2" aria-label="2점">★</button>
-        <button class="inline-star-btn" data-value="3" aria-label="3점">★</button>
-        <button class="inline-star-btn" data-value="4" aria-label="4점">★</button>
-        <button class="inline-star-btn" data-value="5" aria-label="5점">★</button>
-      </div>
-      <div class="inline-fb-extra inline-fb-outcome-wrap" style="display:none">
-        <span class="inline-fb-extra-label">효과 분류 (선택사항)</span>
+      <p class="inline-feedback-prompt">시술 후 효과를 평가해주세요 (다음 환자 진입 시에도 평가 가능)</p>
+      <div class="inline-fb-extra inline-fb-outcome-wrap">
+        <span class="inline-fb-extra-label">효과 분류</span>
         <div class="inline-fb-outcome" role="radiogroup" aria-label="효과 분류 선택">
           <label data-outcome="excellent">매우 효과적</label>
           <label data-outcome="good">효과적</label>
@@ -3514,20 +3448,8 @@
           <label data-outcome="adverse">부작용</label>
         </div>
       </div>
-      <div class="inline-fb-extra inline-fb-accuracy-wrap" style="display:none">
-        <span class="inline-fb-extra-label">적응증 적합도 (1=완전 부적합, 5=완벽 적합, 선택사항)</span>
-        <div class="inline-fb-accuracy" role="radiogroup" aria-label="적응증 적합도 선택">
-          <span class="acc-edge">부적합</span>
-          <label data-accuracy="1">1</label>
-          <label data-accuracy="2">2</label>
-          <label data-accuracy="3">3</label>
-          <label data-accuracy="4">4</label>
-          <label data-accuracy="5">5</label>
-          <span class="acc-edge">적합</span>
-        </div>
-      </div>
-      <textarea class="inline-feedback-notes" placeholder="메모 (선택사항, 최대 200자)" maxlength="200" rows="2" style="display:none"></textarea>
-      <div class="inline-feedback-actions" style="display:none">
+      <textarea class="inline-feedback-notes" placeholder="메모 (선택사항, 최대 200자)" maxlength="200" rows="2"></textarea>
+      <div class="inline-feedback-actions">
         <button class="inline-btn-submit">저장</button>
         <button class="inline-btn-skip">건너뛰기</button>
       </div>
@@ -3966,23 +3888,30 @@
       const liked = histCurrentData?.likedTechniques || [];
       if (liked.length === 0) {
         body.innerHTML = `<div class="hist-empty">
-          별 3개 이상 평가한 기법이 없습니다.
+          긍정적으로 평가한 기법이 없습니다.
           <span style="font-size:0.8rem;display:block;margin-top:6px">
-            추천 결과의 ★ 사용 평가 버튼으로 평가해보세요
+            추천 결과의 효과 평가에서 '효과적' 이상으로 평가해보세요
           </span>
         </div>`;
         return;
       }
+      const OUTCOME_LABELS = {
+        excellent: '매우 효과적',
+        good:      '효과적',
+        moderate:  '보통',
+        poor:      '효과 미미',
+        no_effect: '효과 없음',
+        adverse:   '부작용',
+      };
       liked.forEach(t => {
         const card = document.createElement('div');
         card.className = 'hist-liked-card';
-        const filled  = '★'.repeat(t.star_rating);
-        const empty   = '☆'.repeat(5 - t.star_rating);
+        const outcomeLabel = OUTCOME_LABELS[t.outcome] || '평가';
         const dateStr = new Date(t.created_at).toLocaleDateString('ko-KR', {
           month: 'short', day: 'numeric',
         });
         card.innerHTML = `
-          <div class="hist-liked-stars">${filled}<span style="opacity:.3">${empty}</span></div>
+          <div class="hist-liked-outcome">${outcomeLabel}</div>
           <div class="hist-liked-info">
             <div class="hist-liked-name">${t.name_ko || '—'}</div>
             <div class="hist-liked-cat">${t.category_name ? t.category_name + ' · ' : ''}${dateStr}</div>
@@ -4075,31 +4004,18 @@
   }
 
   /* ══════════════════════════════════════
-     INLINE FEEDBACK STAR RATING
+     INLINE FEEDBACK (단일 신호: outcome only)
   ══════════════════════════════════════ */
   function initFeedbackSection(sectionEl, context) {
     // context: { technique, category, region, acuity, symptom,
     //            recommendation_log_id, recommended_technique_index }
-    // Track C: 별점 약화 — outcome/accuracy/notes/actions 를 초기 노출.
+    // 단일 신호 모델: outcome 6라디오 + 메모 textarea 만 노출. 별점/accuracy 제거.
     const notes        = sectionEl.querySelector('.inline-feedback-notes');
     const actions      = sectionEl.querySelector('.inline-feedback-actions');
     const doneMsg      = sectionEl.querySelector('.inline-feedback-done');
     const outcomeWrap  = sectionEl.querySelector('.inline-fb-outcome-wrap');
-    const accuracyWrap = sectionEl.querySelector('.inline-fb-accuracy-wrap');
     const outcomeLabels  = sectionEl.querySelectorAll('.inline-fb-outcome label');
-    const accuracyLabels = sectionEl.querySelectorAll('.inline-fb-accuracy label');
     let selectedOutcome  = null;
-    let selectedAccuracy = null;
-
-    // 약화된 prompt + outcome/accuracy/notes/actions 초기 노출
-    const promptEl = sectionEl.querySelector('.inline-feedback-prompt');
-    if (promptEl) {
-      promptEl.textContent = '이 추천이 도움됐다면 다음 환자 진입 시 평가해주세요 (지금 평가도 가능)';
-    }
-    if (outcomeWrap)  outcomeWrap.style.display  = 'block';
-    if (accuracyWrap) accuracyWrap.style.display = 'block';
-    if (notes)        notes.style.display        = 'block';
-    if (actions)      actions.style.display      = 'flex';
 
     // outcome 라디오 (단일 선택)
     outcomeLabels.forEach(lbl => {
@@ -4115,37 +4031,21 @@
       });
     });
 
-    // accuracy 라디오 (단일 선택)
-    accuracyLabels.forEach(lbl => {
-      lbl.addEventListener('click', () => {
-        const val = +lbl.dataset.accuracy;
-        if (selectedAccuracy === val) {
-          selectedAccuracy = null;
-          lbl.classList.remove('selected');
-        } else {
-          selectedAccuracy = val;
-          accuracyLabels.forEach(l => l.classList.toggle('selected', l === lbl));
-        }
-      });
-    });
-
     const skipBtn = sectionEl.querySelector('.inline-btn-skip');
     if (skipBtn) {
       skipBtn.addEventListener('click', () => {
         // 인라인 스킵: 입력만 초기화 (모달 평가는 다음 세션 진입 시 가능).
         selectedOutcome = null;
-        selectedAccuracy = null;
         outcomeLabels.forEach(l => l.classList.remove('selected'));
-        accuracyLabels.forEach(l => l.classList.remove('selected'));
         if (notes) notes.value = '';
       });
     }
 
     const submitBtn = sectionEl.querySelector('.inline-btn-submit');
     submitBtn.addEventListener('click', async () => {
-      // 별점이 사라졌으므로 outcome 또는 accuracy 중 하나라도 입력돼야 의미 있음.
-      if (!selectedOutcome && !selectedAccuracy && !(notes && notes.value.trim())) {
-        showToast('효과 분류 또는 적합도를 선택해주세요.');
+      // 단일 신호: outcome 필수 (메모만으로는 저장 불가).
+      if (!selectedOutcome) {
+        showToast('효과 분류를 선택해주세요.');
         return;
       }
       submitBtn.disabled     = true;
@@ -4163,9 +4063,8 @@
             region:                       context.region  || null,
             acuity:                       context.acuity  || null,
             symptom:                      context.symptom || null,
-            rating:                       0, // Track C: 별점 약화 — 0 으로 통일
+            rating:                       null, // 단일 신호 모델 — backend NULL 허용
             outcome:                      selectedOutcome,
-            indication_accuracy:          selectedAccuracy,
             notes:                        (notes && notes.value.trim()) || null,
             recommendation_log_id:        context.recommendation_log_id || null,
             recommended_technique_index:  (context.recommended_technique_index != null)
@@ -4177,7 +4076,6 @@
         if (notes)        notes.style.display        = 'none';
         if (actions)      actions.style.display      = 'none';
         if (outcomeWrap)  outcomeWrap.style.display  = 'none';
-        if (accuracyWrap) accuracyWrap.style.display = 'none';
         doneMsg.style.display      = 'block';
       } catch (err) {
         console.error('인라인 피드백 저장 실패:', err);
@@ -4307,16 +4205,6 @@
               `<label data-outcome="${k}">${OUTCOME_LABELS_KO[k]}</label>`
             ).join('')}
           </div>
-          <span class="pending-fb-label">적응증 적합도 (1=부적합 ↔ 5=적합)</span>
-          <div class="pending-fb-accuracy" role="radiogroup" aria-label="적응증 적합도 선택">
-            <span class="acc-edge">부적합</span>
-            <label data-accuracy="1">1</label>
-            <label data-accuracy="2">2</label>
-            <label data-accuracy="3">3</label>
-            <label data-accuracy="4">4</label>
-            <label data-accuracy="5">5</label>
-            <span class="acc-edge">적합</span>
-          </div>
           <textarea class="pending-fb-notes" placeholder="메모 (선택사항, 최대 200자)" maxlength="200" rows="2"></textarea>
           <div class="pending-fb-actions">
             <button type="button" class="pending-btn-skip">이거 시술 안 했어요</button>
@@ -4325,11 +4213,9 @@
         </div>
       `;
 
-      // 상태 바인딩
+      // 상태 바인딩 (단일 신호 모델: outcome only)
       let selOutcome  = null;
-      let selAccuracy = null;
       const outLabels = block.querySelectorAll('.pending-fb-outcome label');
-      const accLabels = block.querySelectorAll('.pending-fb-accuracy label');
       const notesEl   = block.querySelector('.pending-fb-notes');
       const saveBtn   = block.querySelector('.pending-btn-save');
       const skipBtn   = block.querySelector('.pending-btn-skip');
@@ -4347,18 +4233,6 @@
           }
         });
       });
-      accLabels.forEach(lbl => {
-        lbl.addEventListener('click', () => {
-          const v = +lbl.dataset.accuracy;
-          if (selAccuracy === v) {
-            selAccuracy = null;
-            lbl.classList.remove('selected');
-          } else {
-            selAccuracy = v;
-            accLabels.forEach(l => l.classList.toggle('selected', l === lbl));
-          }
-        });
-      });
 
       skipBtn.addEventListener('click', () => {
         markPendingSkipped(log.id, techIndex);
@@ -4368,8 +4242,8 @@
       });
 
       saveBtn.addEventListener('click', async () => {
-        if (!selOutcome && !selAccuracy) {
-          showToast('효과 분류 또는 적합도를 선택해주세요.');
+        if (!selOutcome) {
+          showToast('효과 분류를 선택해주세요.');
           return;
         }
         saveBtn.disabled = true;
@@ -4382,7 +4256,6 @@
             acuity:    log.acuity  || null,
             symptom:   log.symptom || null,
             outcome:             selOutcome,
-            indication_accuracy: selAccuracy,
             notes:               (notesEl.value || '').trim() || null,
           });
           block.classList.add('rated');
@@ -4415,9 +4288,8 @@
         region:                       payload.region,
         acuity:                       payload.acuity,
         symptom:                      payload.symptom,
-        rating:                       0, // 별점 약화
+        rating:                       null, // 단일 신호 모델 — backend NULL 허용
         outcome:                      payload.outcome,
-        indication_accuracy:          payload.indication_accuracy,
         notes:                        payload.notes,
         recommendation_log_id:        logId,
         recommended_technique_index:  techniqueIndex,

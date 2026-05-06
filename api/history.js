@@ -107,13 +107,14 @@ export default async function handler(req, res) {
         `&order=created_at.desc&limit=20`,
         { headers: authHeaders }
       ),
-      // 별 3개 이상 평가 기법 (techniques 조인)
+      // "좋아요" 평가 기법 — 단일 신호 모델 (대표님 결정 2026-05-06):
+      // outcome ∈ {excellent, good} 만 필터. star_rating 기준 폐기 (마이그 054 NULL 허용).
       fetch(
         `${SUPABASE_URL}/rest/v1/ratings` +
         `?user_id=eq.${user.id}` +
-        `&star_rating=gte.3` +
-        `&select=star_rating,created_at,techniques(name_ko,technique_categories(category_key,name_ko))` +
-        `&order=star_rating.desc,created_at.desc&limit=30`,
+        `&outcome=in.(excellent,good)` +
+        `&select=outcome,star_rating,created_at,techniques(name_ko,technique_categories(category_key,name_ko))` +
+        `&order=created_at.desc&limit=30`,
         { headers: authHeaders }
       ),
     ]);
@@ -122,13 +123,16 @@ export default async function handler(req, res) {
     const ratingsData = await ratingsRes.json();
 
     // 평가 데이터 평탄화
+    // 단일 신호 모델: outcome 이 1차 키. star_rating 은 deprecated (마이그 054 후 NULL 가능)
+    // — 호환성을 위해 응답에 그대로 포함. 라벨링은 클라이언트 책임.
     const likedTechniques = (Array.isArray(ratingsData) ? ratingsData : [])
       .filter(r => r.techniques)
       .map(r => ({
         name_ko:       r.techniques.name_ko,
         category_key:  r.techniques.technique_categories?.category_key  || null,
         category_name: r.techniques.technique_categories?.name_ko       || null,
-        star_rating:   r.star_rating,
+        outcome:       r.outcome,      // 'excellent' | 'good' (필터 결과)
+        star_rating:   r.star_rating,  // deprecated, NULL 가능
         created_at:    r.created_at,
       }));
 
