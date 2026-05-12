@@ -21,13 +21,22 @@
 --   psql -f 사용 시 statement-level auto-commit 으로 안전하나, 여전히
 --   055a 와 055b 는 별도 파일 호출 (두 번의 -f) 로 분리할 것.
 -- ============================================================
--- 검증 항목 (총 6):
---   1. rating_outcome ENUM 7 값 + 'not_used' 포함
---   2. fn_refresh_technique_stats SECURITY DEFINER + 본문에 'not_used' 제외 패턴
---   3. technique_stats.not_used_count 컬럼 존재 (INTEGER, DEFAULT 0)
---   4. technique_stats.recommendation_weight 모두 [0.0, 1.0] 범위
---   5. (E2E) BEGIN/ROLLBACK — outcome='not_used' INSERT 시 weight 변화 없음 (영향 0)
---   6. (E2E) BEGIN/ROLLBACK — outcome='good' INSERT 시 weight 정상 갱신 (effective 증가)
+-- 검증 항목 (총 6) — 각 §N 은 독립 실행 가능 (Supabase SQL 에디터에서
+-- 한 §만 복사·붙여넣기 후 Run 도 정상 동작):
+--   §1. rating_outcome ENUM 7 값 + 'not_used' 포함            (단일 SELECT)
+--   §2. fn_refresh_technique_stats — SECURITY DEFINER +
+--       본문에 'not_used' 제외 패턴                            (단일 SELECT)
+--   §3. technique_stats.not_used_count 컬럼 존재 (INT, DEFAULT 0) (단일 SELECT)
+--   §4. technique_stats.recommendation_weight 모두 [0.0, 1.0]    (단일 SELECT)
+--   §5. (E2E) BEGIN/ROLLBACK — outcome='not_used' INSERT 시
+--       weight 변화 없음 (영향 0)                              (DO 블록 — NOTICE)
+--   §6. (E2E) BEGIN/ROLLBACK — outcome='good' INSERT 시
+--       weight 정상 갱신 (effective 증가)                      (DO 블록 — NOTICE)
+--
+-- 분리 실행 가이드:
+--   - production 진단/적용 절차는 saas/docs/055-production-apply-guide-2026-05-12.md
+--     참조 (대표님 직접 실행용 step-by-step 블록 포함).
+--   - §5/§6 의 NOTICE 메시지는 Supabase SQL 에디터의 "Messages" 탭에서 확인.
 -- ============================================================
 
 
