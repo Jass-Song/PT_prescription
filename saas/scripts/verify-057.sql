@@ -114,7 +114,7 @@ LEFT JOIN techniques t
  AND (
        COALESCE(t.name_ko,        '') ILIKE '%' || s.original_ko || '%'
     OR COALESCE(t.description,    '') ILIKE '%' || s.original_ko || '%'
-    OR COALESCE(t.korean_label,   '') ILIKE '%' || s.original_ko || '%'
+    OR COALESCE(t.clinical_notes, '') ILIKE '%' || s.original_ko || '%'
  )
 GROUP BY s.original_ko
 ORDER BY s.original_ko;
@@ -131,7 +131,7 @@ ORDER BY s.original_ko;
 --   2. 응답 JSON 의 다음 필드들을 grep:
 --        - protocol_steps[].description
 --        - description
---        - korean_label / name_ko
+--        - name_ko / clinical_notes
 --      grep 패턴: '승모근|중둔근|소원근|능형근|대둔근|대흉근'
 --      기대: 0건 매치 (모두 한글 표준으로 치환됨)
 --
