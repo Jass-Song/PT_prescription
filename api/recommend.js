@@ -5,6 +5,45 @@
 import { verifyToken } from './_auth.js';
 import { logServerError } from './_logger.js';
 import { applyGlossary } from './_term_glossary.js';
+import { lookupScenario, getKmoMessage } from './_scenario-matrix.js';
+
+// ── Feature flag: 54 시나리오 매트릭스 LLM 프롬프트 주입 ──────────────────────
+// 기본 ON. OFF 시 기존 프롬프트 그대로 유지 (회귀 안전).
+// 대표님 토글: 환경변수 SCENARIO_INJECTION_DISABLED=1 설정 시 비활성.
+// 출처: docs/clinical-3axis-tier1-recommendation-research-2026-05-06.md
+const SCENARIO_INJECTION_ENABLED = process.env.SCENARIO_INJECTION_DISABLED !== '1';
+
+// ── 3축 시나리오 권장 블록 빌드 ──────────────────────────────────────────────
+// 입력: { region, acuity, painCondition } — 모두 한국어 라벨 (recommend.js 입력 그대로)
+// 반환: LLM system prompt 에 삽입할 문자열 (매칭 실패 시 KMO-only 폴백 또는 빈 문자열)
+function buildScenarioContext({ region, acuity, painCondition }) {
+  if (!SCENARIO_INJECTION_ENABLED) return '';
+  const cell = lookupScenario(region, acuity, painCondition);
+  // 매칭 실패 시 KMO 메시지만 (기존 동작과 호환)
+  if (!cell) {
+    const kmoFallback = getKmoMessage(acuity);
+    if (!kmoFallback) return '';
+    return `\n\n[시나리오 권장 — 일반 가이드]\nKMO 메시지: ${kmoFallback}\n`;
+  }
+  return `
+[시나리오 권장 — 임상 근거 기반 (54 매트릭스)]
+부위: ${region}, 시기: ${acuity}, 통증 양상: ${painCondition}
+
+CPG 권고: ${cell.cpg}
+
+Tier 1 권장 카테고리·강도:
+- Maitland (관절 가동술): ${cell.maitland}
+- Mulligan (MWM/SNAG): ${cell.mulligan}
+- MFR (근막 이완): ${cell.mfr}
+- TrP (압통점): ${cell.trp}
+- 운동 처방: ${cell.exercise}
+
+금기/주의: ${cell.cautions}
+
+KMO 메시지 (clinicalNote 톤 가이드): ${cell.kmo}
+(출처: docs/clinical-3axis-tier1-recommendation-research-2026-05-06.md §4)
+`;
+}
 
 // ── KST 자정 시각 (UTC로 환산) ──
 // Vercel 서버는 UTC 동작. 한국 사용자 기준 자정 리셋 보장.
@@ -550,7 +589,8 @@ async function fetchActiveTechniques(categories, bodyRegions = [], userToken = n
   // RLS는 auth.uid() 기반 — 사용자 JWT가 있으면 사용, 없으면 anon key fallback
   const authToken = userToken || SUPABASE_KEY;
   const headers = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${authToken}` };
-  const url = `${SUPABASE_URL}/rest/v1/techniques?is_active=eq.true&or=(${catFilter})&select=${selectFields}`;
+  // Tier 1 큐레이션 86건만 후보 (마이그 056b is_published 시드)
+  const url = `${SUPABASE_URL}/rest/v1/techniques?is_active=eq.true&is_published=eq.true&or=(${catFilter})&select=${selectFields}`;
 
   try {
     const res = await fetch(url, { headers });
@@ -1106,6 +1146,24 @@ export default async function handler(req, res) {
       });
     }
 
+    // Tier 1 큐레이션 0건 fail-closed 가드 (is_published 시드 미적용 또는 시나리오 매칭 0건)
+    // MT·EX 모두 0건이면 추천 불가 → 503 안내 (마이그 056b 적용 전 항상 이 분기)
+    const totalCandidates = (activeMT?.length || 0) + ((results[3] || [])?.length || 0);
+    if (totalCandidates === 0) {
+      console.error('[recommend] Tier 1 후보 0건 — is_published 시드 또는 시나리오 매칭 확인 필요', { mtCategories, exCategories, bodyRegions });
+      await logServerError('recommend', 'Tier 1 후보 0건 (is_published 필터 후)', {
+        request_path: '/api/recommend',
+        user_id: user?.id ?? null,
+        context: { region, acuity, symptom, mtCategories, exCategories, bodyRegions },
+      });
+      res.setHeader('Retry-After', '60');
+      return res.status(503).json({
+        error: 'RECOMMENDATIONS_UNAVAILABLE',
+        message: '관리자 설정 누락 — 잠시 후 다시 시도해주세요. 문제가 지속되면 관리자에게 문의해주세요.',
+        retryable: true,
+      });
+    }
+
     // excludedTechniqueIds(abbreviation 기준)로 이미 본 기법 제외
     if (excludedTechniqueIds.length > 0) {
       activeMT = activeMT.filter(t => !excludedTechniqueIds.includes(t.abbreviation));
@@ -1211,10 +1269,14 @@ export default async function handler(req, res) {
     ? `\n\n이전 세션 기록 (중복 추천 피할 것):\n${sessionHistory.map((h, i) => `${i+1}. ${JSON.stringify(h)}`).join('\n')}`
     : '';
 
+  // ── 54 시나리오 매트릭스 augmentation (feature flag 제어) ──
+  // body_region·acuity·symptom 3축 → 임상 근거 기반 카테고리·강도·금기·KMO 메시지 주입
+  const scenarioContext = buildScenarioContext({ region, acuity, painCondition: symptom });
+
   const systemPrompt = `당신은 근거기반 임상 물리치료사 멘토입니다.
 반-카타스트로파이징(anti-catastrophizing) 접근을 강조합니다.
 핵심 원칙: "통증 ≠ 손상", "몸은 적응적이다", "Calm things down, then build things back up"
-자세 불균형·정렬 이상 프레임 사용 금지. 공포 유발 표현 금지.
+자세 불균형·정렬 이상 프레임 사용 금지. 공포 유발 표현 금지.${scenarioContext ? '\n' + scenarioContext.trim() + '\n' : ''}
 clinicalNote 작성 원칙: 원인을 단정하지 말고 가능성으로 표현하세요. 단정 표현(~입니다, ~때문입니다)은 옐로우 플래그를 만들 수 있습니다.
   ✗ "요추 불안정성으로 인한 통증입니다" / "디스크 문제로 발생한 증상입니다"
   ✓ "요추 주변 근육의 협응이 통증에 기여하고 있을 수 있습니다" / "신경 민감화가 관여했을 가능성이 있습니다"
