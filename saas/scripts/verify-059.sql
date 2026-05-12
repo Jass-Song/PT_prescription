@@ -67,11 +67,11 @@ WHERE  n.nspname = 'public'
   AND  t.relname = 'patients'
   AND  c.contype = 'u'
   AND  (
-          SELECT array_agg(att.attname ORDER BY att.attname)
+          SELECT array_agg(att.attname::text ORDER BY att.attname::text)
           FROM   unnest(c.conkey) AS k(attnum)
           JOIN   pg_attribute att
             ON   att.attrelid = c.conrelid AND att.attnum = k.attnum
-       ) = ARRAY['label','user_id'];
+       ) = ARRAY['label','user_id']::text[];
 
 
 -- ----------------------------------------------------------------
