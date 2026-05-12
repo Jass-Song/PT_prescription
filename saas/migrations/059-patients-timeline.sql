@@ -26,7 +26,9 @@
 --
 -- 멱등성:
 --   - CREATE TABLE IF NOT EXISTS / ADD COLUMN IF NOT EXISTS /
---     CREATE INDEX IF NOT EXISTS / CREATE POLICY IF NOT EXISTS 전반 사용
+--     CREATE INDEX IF NOT EXISTS 사용
+--   - 정책: PG가 CREATE POLICY IF NOT EXISTS 미지원 →
+--     DROP POLICY IF EXISTS + CREATE POLICY 패턴 사용
 --   - 본 마이그 재실행 시 POST-CHECK 만 다시 출력, 데이터 변경 0
 --
 -- 데이터 시드:
@@ -105,7 +107,11 @@ CREATE INDEX IF NOT EXISTS idx_rec_logs_patient
 
 ALTER TABLE patients ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS patients_own
+-- 멱등성: PostgreSQL 은 CREATE POLICY IF NOT EXISTS 미지원 →
+--         DROP POLICY IF EXISTS + CREATE POLICY 패턴으로 재실행 안전성 확보
+--         (재실행 시 정책 재정의 — USING/WITH CHECK 최신 정의로 갱신)
+DROP POLICY IF EXISTS patients_own ON patients;
+CREATE POLICY patients_own
   ON patients
   FOR ALL
   TO authenticated
