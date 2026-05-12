@@ -1606,6 +1606,245 @@
       font-size: 0.88rem;
       padding: 24px 16px;
     }
+
+    /* ══════════════════════════════════════
+       Red flag UI (Item 5 — 2026-05-12 초안)
+       KMO 톤: 노란/주황 + 흰색, 빨강 단독 회피.
+       feature flag (RED_FLAG_ENABLED) OFF 기본 — 마크업은 hidden, JS 가드 통과 시 활성화.
+    ══════════════════════════════════════ */
+    .red-flag-section {
+      display: none; /* feature flag OFF 기본 — JS 가 .enabled 토글 */
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 12px;
+      padding: 0;
+      margin-top: 12px;
+      overflow: hidden;
+    }
+    .red-flag-section.enabled { display: block; }
+    .red-flag-summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 12px 14px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #92400e;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      user-select: none;
+    }
+    .red-flag-summary::-webkit-details-marker { display: none; }
+    .red-flag-summary::before {
+      content: '▶';
+      font-size: 0.7rem;
+      transition: transform 0.2s ease;
+      display: inline-block;
+      color: #b45309;
+    }
+    .red-flag-section[open] .red-flag-summary::before { transform: rotate(90deg); }
+    .red-flag-summary-text { flex: 1; }
+    .red-flag-summary-hint {
+      font-size: 0.72rem;
+      color: #b45309;
+      font-weight: 400;
+    }
+    .red-flag-body {
+      padding: 0 14px 14px;
+      border-top: 1px solid #fde68a;
+      background: #fffdf5;
+    }
+    .red-flag-intro {
+      font-size: 0.78rem;
+      color: #78350f;
+      line-height: 1.5;
+      padding: 10px 0 12px;
+      margin: 0;
+    }
+    .red-flag-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+    @media (min-width: 640px) {
+      .red-flag-grid { grid-template-columns: 1fr 1fr; }
+    }
+    .red-flag-check {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 10px 12px;
+      background: #fff;
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.83rem;
+      line-height: 1.4;
+      color: #1a1a2e;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .red-flag-check:hover { background: #fffbeb; border-color: #fbbf24; }
+    .red-flag-check input[type="checkbox"] {
+      margin-top: 2px;
+      accent-color: #d97706;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .red-flag-check.checked {
+      background: #fef3c7;
+      border-color: #d97706;
+    }
+    .red-flag-label {
+      flex: 1;
+      font-weight: 500;
+    }
+    .red-flag-label-sub {
+      display: block;
+      font-size: 0.72rem;
+      color: #78350f;
+      font-weight: 400;
+      margin-top: 2px;
+    }
+
+    /* Medical referral modal — pending-eval 패턴 참조 */
+    .medical-referral-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.62);
+      z-index: 1060;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .medical-referral-overlay.open { display: flex; }
+    .medical-referral-modal {
+      background: #fff;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 460px;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 0;
+      animation: slideUp 0.25s ease;
+      border-top: 4px solid #d97706;
+    }
+    .medical-referral-header {
+      padding: 20px 22px 14px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .medical-referral-icon {
+      font-size: 1.5rem;
+      margin-bottom: 8px;
+    }
+    .medical-referral-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #92400e;
+      margin: 0 0 6px;
+    }
+    .medical-referral-sub {
+      font-size: 0.82rem;
+      color: #475569;
+      line-height: 1.55;
+      margin: 0;
+    }
+    .medical-referral-body {
+      padding: 16px 22px 20px;
+    }
+    .medical-referral-list {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin: 0 0 14px;
+      list-style: none;
+    }
+    .medical-referral-list li {
+      font-size: 0.84rem;
+      color: #1a1a2e;
+      line-height: 1.5;
+      padding: 3px 0;
+    }
+    .medical-referral-list li::before {
+      content: '• ';
+      color: #d97706;
+      font-weight: 700;
+    }
+    .medical-referral-msg {
+      font-size: 0.82rem;
+      color: #334155;
+      line-height: 1.6;
+      background: #f8fafc;
+      border-left: 3px solid #d97706;
+      padding: 10px 12px;
+      margin: 0 0 16px;
+      border-radius: 0 6px 6px 0;
+    }
+    .medical-referral-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .medical-referral-btn-primary {
+      flex: 1;
+      padding: 11px 14px;
+      background: #d97706;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .medical-referral-btn-primary:hover { background: #b45309; }
+    .medical-referral-btn-secondary {
+      flex: 1;
+      padding: 11px 14px;
+      background: #fff;
+      color: #64748b;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .medical-referral-btn-secondary:hover { background: #f1f5f9; }
+
+    /* Inline warning banner (응답 영역) */
+    .red-flag-banner {
+      display: none;
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-left: 4px solid #d97706;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin: 0 0 12px;
+      font-size: 0.82rem;
+      color: #78350f;
+      line-height: 1.5;
+      position: relative;
+    }
+    .red-flag-banner.visible { display: block; }
+    .red-flag-banner-title {
+      font-weight: 600;
+      color: #92400e;
+      margin-bottom: 4px;
+    }
+    .red-flag-banner-close {
+      position: absolute;
+      top: 6px;
+      right: 8px;
+      background: none;
+      border: none;
+      font-size: 1rem;
+      color: #92400e;
+      cursor: pointer;
+      padding: 4px 6px;
+      line-height: 1;
+    }
+    .red-flag-banner-close:hover { color: #78350f; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
@@ -1779,6 +2018,37 @@
     </div>
     <div class="pending-eval-body" id="pending-eval-body">
       <!-- renderPendingCard()로 동적 렌더링 -->
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════
+     Medical Referral Modal (Item 5 — 2026-05-12 초안)
+     Red flag 1개 이상 체크 시 추천 차단 + 의료 의뢰 권고.
+     feature flag (RED_FLAG_ENABLED) OFF 기본 — JS 가드 통과 시에만 노출.
+══════════════════════════════ -->
+<div class="medical-referral-overlay" id="medical-referral-overlay" aria-hidden="true">
+  <div class="medical-referral-modal" role="dialog" aria-labelledby="medical-referral-title" aria-describedby="medical-referral-sub">
+    <div class="medical-referral-header">
+      <div class="medical-referral-icon" aria-hidden="true">🩺</div>
+      <h3 class="medical-referral-title" id="medical-referral-title">의료 의뢰 권고</h3>
+      <p class="medical-referral-sub" id="medical-referral-sub">
+        체크하신 항목은 도수치료 단독 적용 전에 의사 진료가 우선되는 임상 신호입니다.
+      </p>
+    </div>
+    <div class="medical-referral-body">
+      <div style="font-size:0.78rem;color:#64748b;margin-bottom:6px;">확인된 항목</div>
+      <ul class="medical-referral-list" id="medical-referral-list">
+        <!-- showMedicalReferralModal()에서 동적 채움 -->
+      </ul>
+      <p class="medical-referral-msg">
+        환자분께는 "추가 검사가 필요한 부분이 있어 의사 선생님 진료를 먼저 받고 오시면 더 안전하게 치료를 도와드릴 수 있어요" 같이 안심되는 안내를 권장합니다.
+        통증 자체가 손상을 의미하지는 않지만, 위 항목은 별도 평가가 필요합니다.
+      </p>
+      <div class="medical-referral-actions">
+        <button type="button" class="medical-referral-btn-secondary" onclick="dismissMedicalReferralModal()">체크 다시 확인</button>
+        <button type="button" class="medical-referral-btn-primary" onclick="acknowledgeMedicalReferral()">확인했습니다</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1990,6 +2260,73 @@
       <div class="choice-grid-3" id="symptom-grid"></div>
     </div>
 
+    <!-- ══════════════════════════════
+         Red Flag 안전 체크 (Item 5 — 2026-05-12 초안)
+         feature flag (RED_FLAG_ENABLED) OFF 기본 — display:none.
+         JS 가 .enabled 토글 시 표시. 8 패턴 체크박스, 0개 = 정상 진행, 1개 이상 = 의료 의뢰 모달.
+    ══════════════════════════════ -->
+    <details class="red-flag-section" id="red-flag-section" aria-hidden="true">
+      <summary class="red-flag-summary">
+        <span class="red-flag-summary-text">⚠️ 안전 확인 (선택)</span>
+        <span class="red-flag-summary-hint">해당 시 펼쳐서 체크</span>
+      </summary>
+      <div class="red-flag-body">
+        <p class="red-flag-intro">
+          아래 항목 중 환자에게 해당하는 것이 있다면 체크해주세요. 도수치료 전 의사 진료가 권장되는 임상 신호 목록입니다.
+        </p>
+        <div class="red-flag-grid" id="red-flag-grid">
+          <label class="red-flag-check" data-flag="vbi">
+            <input type="checkbox" name="red-flag" value="vbi" />
+            <span class="red-flag-label">어지러움·구토·시야 이상
+              <span class="red-flag-label-sub">VBI (척추동맥부전) 의심 — 복시·구음장애·기절 동반 시 특히</span>
+            </span>
+          </label>
+          <label class="red-flag-check" data-flag="cauda_equina">
+            <input type="checkbox" name="red-flag" value="cauda_equina" />
+            <span class="red-flag-label">안장 부위 감각 이상·대소변 조절 문제
+              <span class="red-flag-label-sub">Cauda equina 의심 — 양측 하지 마비 동반 가능</span>
+            </span>
+          </label>
+          <label class="red-flag-check" data-flag="progressive_neuro">
+            <input type="checkbox" name="red-flag" value="progressive_neuro" />
+            <span class="red-flag-label">진행성 근력 약화·반사 변화
+              <span class="red-flag-label-sub">Myelopathy 징후 (Hoffmann·Babinski 양성 등)</span>
+            </span>
+          </label>
+          <label class="red-flag-check" data-flag="tumor_infection">
+            <input type="checkbox" name="red-flag" value="tumor_infection" />
+            <span class="red-flag-label">야간통 + 체중감소 + 발열
+              <span class="red-flag-label-sub">종양·감염 의심 (50세 이상 신규 통증 포함)</span>
+            </span>
+          </label>
+          <label class="red-flag-check" data-flag="recent_trauma">
+            <input type="checkbox" name="red-flag" value="recent_trauma" />
+            <span class="red-flag-label">최근 외상 직후
+              <span class="red-flag-label-sub">골절·인대 파열 의심 — 영상 진단 우선</span>
+            </span>
+          </label>
+          <label class="red-flag-check" data-flag="acute_reactive">
+            <input type="checkbox" name="red-flag" value="acute_reactive" />
+            <span class="red-flag-label">안정 시에도 강한 통증 + 진행성 악화
+              <span class="red-flag-label-sub">급성 reactive 상태 — 자극에 매우 민감</span>
+            </span>
+          </label>
+          <label class="red-flag-check" data-flag="acute_radiculopathy">
+            <input type="checkbox" name="red-flag" value="acute_radiculopathy" />
+            <span class="red-flag-label">급성 방사통 활동기
+              <span class="red-flag-label-sub">신경 자극 활동기 — 도수 manipulation 신중</span>
+            </span>
+          </label>
+          <label class="red-flag-check" data-flag="pfp_manual_only">
+            <input type="checkbox" name="red-flag" value="pfp_manual_only" />
+            <span class="red-flag-label">PFP (슬개대퇴 통증) 단독 도수 적용
+              <span class="red-flag-label-sub">운동 우선 — 단독 도수치료 효과 제한적</span>
+            </span>
+          </label>
+        </div>
+      </div>
+    </details>
+
     <div style="padding: 0 0 8px;">
       <button class="btn-primary" id="btn-recommend" onclick="goScreenCat()" disabled>다음 →</button>
     </div>
@@ -2073,6 +2410,16 @@
 
     <!-- Recommendation content (hidden while loading) -->
     <div class="rec-content-area" id="rec-content-area">
+      <!-- Red flag inline banner (Item 5 — 2026-05-12 초안)
+           feature flag (RED_FLAG_ENABLED) OFF 기본 — JS 가 .visible 토글.
+           응답 텍스트에 red flag 키워드 grep 시 노출. dismissable. -->
+      <div class="red-flag-banner" id="red-flag-banner" role="note" aria-live="polite">
+        <button type="button" class="red-flag-banner-close" aria-label="닫기" onclick="dismissResponseBanner()">✕</button>
+        <div class="red-flag-banner-title">안전 확인 안내</div>
+        <div class="red-flag-banner-text" id="red-flag-banner-text">
+          응답에 추가 평가가 권장되는 표현이 포함되어 있습니다. 환자 임상 신호를 다시 확인해주세요.
+        </div>
+      </div>
       <div id="cat-sections-area"></div>
       <div id="clinical-note-wrap"></div>
     </div>
@@ -3004,6 +3351,16 @@
      RECOMMENDATION LOGIC (AI)
   ══════════════════════════════════════ */
   async function submitRecommend() {
+    // ── Red flag 안전망 (Item 5 — 2026-05-12 초안) ──
+    // feature flag OFF 기본. flag ON 시 1개 이상 체크된 항목이 있으면 추천 차단 + 의료 의뢰 모달.
+    if (typeof RED_FLAG_ENABLED !== 'undefined' && RED_FLAG_ENABLED) {
+      const flagged = checkRedFlags();
+      if (flagged && flagged.length > 0) {
+        showMedicalReferralModal(flagged);
+        return; // 추천 호출 자체를 차단
+      }
+    }
+
     const pillarSummary = selectedPillars.length > 0
       ? ' · 집중: ' + selectedPillars.map(p => PILLAR_META[p].label).join(' → ')
       : '';
@@ -3546,6 +3903,12 @@
   }
 
   function renderAIResult(result) {
+    // ── Red flag inline banner (Item 5 — 2026-05-12 초안) ──
+    // feature flag OFF 기본. flag ON 시 응답 텍스트에 red flag 키워드 grep → 배너 노출.
+    if (typeof RED_FLAG_ENABLED !== 'undefined' && RED_FLAG_ENABLED) {
+      try { applyResponseBanner(result); } catch (e) { console.warn('[red-flag] banner skipped:', e && e.message); }
+    }
+
     if (result.sessionSummary) {
       saveSessionHistory(result.sessionSummary);
     }
@@ -4206,6 +4569,154 @@
     _pendingEvalResolver = null;
     _pendingEvalState = [];
     if (typeof resolver === 'function') resolver();
+  }
+
+  /* ══════════════════════════════════════
+     Red Flag 안전망 (Item 5 — 2026-05-12 초안)
+     ─────────────────────────────────────
+     배경: 대표님 5/6 결정 — 추천 시스템 안전망 강화. 8 red flag 패턴 감지 시
+     추천 대신 "의료 의뢰 권고" 화면 노출.
+     KMO 철학: 두려움 유발 표현 회피, 사실 기반 + 환자 보호.
+     ─────────────────────────────────────
+     ⚠️ feature flag (RED_FLAG_ENABLED) OFF 기본 — 본 코드 배포 안전.
+        대표님 승인 후 별도 PR 에서 true 변경하여 활성화.
+  ══════════════════════════════════════ */
+  const RED_FLAG_ENABLED = false; // ← 대표님 승인 후 true 로 변경 (별도 PR)
+
+  // 응답 텍스트에 포함 시 inline banner 를 띄울 키워드 (느슨한 grep)
+  const RED_FLAG_KEYWORDS = [
+    '야간통', '체중감소', '발열', '안장마취', 'cauda equina', '마미증후군',
+    'Hoffmann', 'Babinski', 'myelopathy', 'VBI', '척추동맥', '동맥 박리',
+    '진행성 신경', '진행성 운동 약화', 'foot drop', '드롭암', 'drop arm',
+    '외상 후 골절', '응급 의뢰', '즉시 의뢰', 'Ottawa',
+  ];
+
+  // red flag 코드 → 한국어 라벨 (모달 표시용)
+  const RED_FLAG_LABELS = {
+    vbi:                 '어지러움·구토·시야 이상 (VBI 의심)',
+    cauda_equina:        '안장 부위 감각 이상·대소변 조절 문제 (Cauda equina 의심)',
+    progressive_neuro:   '진행성 근력 약화·반사 변화 (Myelopathy 징후)',
+    tumor_infection:     '야간통 + 체중감소 + 발열 (종양·감염 의심)',
+    recent_trauma:       '최근 외상 직후 (영상 진단 우선)',
+    acute_reactive:      '안정 시 통증 + 진행성 악화 (급성 reactive)',
+    acute_radiculopathy: '급성 방사통 활동기 (도수 신중)',
+    pfp_manual_only:     'PFP 단독 도수 적용 (운동 우선)',
+  };
+
+  /**
+   * 입력 단계 체크박스에서 체크된 red flag 코드 배열을 반환.
+   * @returns {string[]} 체크된 red flag 코드 (예: ['vbi', 'cauda_equina'])
+   */
+  function checkRedFlags() {
+    const section = document.getElementById('red-flag-section');
+    if (!section) return [];
+    const inputs = section.querySelectorAll('input[name="red-flag"]:checked');
+    const flagged = [];
+    inputs.forEach(el => { if (el.value) flagged.push(el.value); });
+    return flagged;
+  }
+
+  /**
+   * 의료 의뢰 권고 모달 표시. 체크된 red flag 라벨을 리스트로 노출.
+   * 추천 호출 자체는 호출자에서 차단 (submitRecommend 가드).
+   * @param {string[]} flagged - red flag 코드 배열
+   */
+  function showMedicalReferralModal(flagged) {
+    const list = document.getElementById('medical-referral-list');
+    const overlay = document.getElementById('medical-referral-overlay');
+    if (!list || !overlay) return;
+    list.innerHTML = '';
+    (flagged || []).forEach(code => {
+      const li = document.createElement('li');
+      li.textContent = RED_FLAG_LABELS[code] || code;
+      list.appendChild(li);
+    });
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+
+  /** 의뢰 모달 닫고 입력 화면(screen2)으로 복귀 — 체크 다시 확인 */
+  function dismissMedicalReferralModal() {
+    const overlay = document.getElementById('medical-referral-overlay');
+    if (overlay) {
+      overlay.classList.remove('open');
+      overlay.setAttribute('aria-hidden', 'true');
+    }
+    document.body.style.overflow = '';
+    // screen2 (환자 입력) 로 복귀 시도 — 기존 goScreen 헬퍼가 존재할 때만.
+    if (typeof goScreen === 'function') {
+      try { goScreen('screen2'); } catch (e) { /* noop */ }
+    }
+  }
+
+  /** 의뢰 안내 확인 — 모달만 닫고 동일 입력 화면 유지 */
+  function acknowledgeMedicalReferral() {
+    const overlay = document.getElementById('medical-referral-overlay');
+    if (overlay) {
+      overlay.classList.remove('open');
+      overlay.setAttribute('aria-hidden', 'true');
+    }
+    document.body.style.overflow = '';
+    if (typeof goScreen === 'function') {
+      try { goScreen('screen2'); } catch (e) { /* noop */ }
+    }
+  }
+
+  /**
+   * 응답 객체에서 red flag 키워드 grep → inline banner 노출.
+   * @param {object} result - LLM 응답 객체 (recommendations / clinicalNote / categoryResults 등 포함)
+   */
+  function applyResponseBanner(result) {
+    if (!result) return;
+    // 응답에서 텍스트 모아 합치기 (안전하게 JSON 문자열화)
+    let blob = '';
+    try { blob = JSON.stringify(result); } catch (e) { blob = String(result); }
+    const lower = blob.toLowerCase();
+    const hit = RED_FLAG_KEYWORDS.find(kw => lower.indexOf(String(kw).toLowerCase()) !== -1);
+    const banner = document.getElementById('red-flag-banner');
+    if (!banner) return;
+    if (hit) {
+      const text = document.getElementById('red-flag-banner-text');
+      if (text) {
+        text.textContent = '응답에 추가 평가가 권장되는 표현("' + hit + '" 등)이 포함되어 있습니다. 환자 임상 신호를 다시 확인해주세요.';
+      }
+      banner.classList.add('visible');
+    } else {
+      banner.classList.remove('visible');
+    }
+  }
+
+  /** inline banner 닫기 (X 버튼) */
+  function dismissResponseBanner() {
+    const banner = document.getElementById('red-flag-banner');
+    if (banner) banner.classList.remove('visible');
+  }
+
+  /**
+   * feature flag ON 시 마크업 활성화 (체크박스 expandable + 모달 + 배너 visible 영역).
+   * flag OFF 기본 — 마크업은 CSS 로 hidden 상태. DOMContentLoaded 후 1회 실행.
+   */
+  function initRedFlagUI() {
+    if (!RED_FLAG_ENABLED) return; // OFF 면 노출하지 않음 (기존 동작 그대로)
+    const section = document.getElementById('red-flag-section');
+    if (section) {
+      section.classList.add('enabled');
+      section.setAttribute('aria-hidden', 'false');
+      // 체크박스 시각 강조: 체크 토글 시 부모 label 에 .checked 클래스.
+      section.querySelectorAll('input[name="red-flag"]').forEach(input => {
+        input.addEventListener('change', () => {
+          const label = input.closest('.red-flag-check');
+          if (label) label.classList.toggle('checked', input.checked);
+        });
+      });
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initRedFlagUI);
+  } else {
+    initRedFlagUI();
   }
 </script>
 </body>
