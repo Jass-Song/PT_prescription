@@ -1,12 +1,20 @@
 // PT 처방 도우미 — 이력 조회 API
-// GET /api/history                  → 최근 추천 이력 + "좋아요" 평가 기법 (recentLogs + likedTechniques)
-// GET /api/history?type=pending     → 14일 내 evaluation_status='pending' 추천 로그 (최대 20건, { pending: [...] })
-// GET /api/history?type=recent      → 위 기본(생략) 동작과 동일
+// GET  /api/history                  → 최근 추천 이력 + "좋아요" 평가 기법 (recentLogs + likedTechniques)
+// GET  /api/history?type=pending     → 14일 내 evaluation_status='pending' 추천 로그 (최대 20건, { pending: [...] })
+// GET  /api/history?type=recent      → 위 기본(생략) 동작과 동일
+// GET  /api/history?type=patients    → 본인 등록 환자 라벨 목록 (최대 50, { patients: [...] })
+// POST /api/history { type:'patients', label } → 환자 라벨 신규 등록 (UNIQUE 충돌 시 409 + 기존 row)
 //
 // 통합 배경 (2026-05-06 핫픽스):
 //   Vercel Hobby 플랜의 12 Serverless Functions 한도 초과로 인해
 //   별도 엔드포인트였던 api/pending-evaluations.js 의 로직을 본 파일로 통합.
 //   클라이언트 호환성을 위해 응답 shape 은 유지 ({ pending: [...] } vs { recentLogs, likedTechniques }).
+//
+// 환자 timeline tracking (2026-05-12, 마이그 059 의존):
+//   - patients 테이블 (id UUID, user_id FK, label TEXT, last_visit_at, visit_count, notes)
+//   - UNIQUE (user_id, label) — 동일 PT 가 같은 라벨 재등록 시 409 + 기존 row 반환 (idempotent UX)
+//   - RLS: user_id = auth.uid() — 다른 PT 환자 노출 0 보장
+//   - 신규 endpoint 파일 (api/patients.js) 생성 금지 — Vercel Hobby 12-fn 한도
 //
 // pending 분기 마이그 의존:
 //   - recommendation_logs.evaluation_status (마이그 051: enum pending/rated/expired/skipped)
@@ -132,11 +140,14 @@ async function applyGlossaryToPendingResponse(list) {
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+  // GET (조회: recent / pending / patients) + POST (등록: patients) 만 허용
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
   const { user, error: authError } = await verifyToken(req);
   if (authError) return res.status(401).json({ error: authError });
@@ -151,9 +162,102 @@ export default async function handler(req, res) {
     'Authorization': `Bearer ${userToken}`,
   };
 
-  // ?type=pending → 평가 대기 추천 조회 (구 /api/pending-evaluations 통합)
+  // ── POST 분기: 환자 라벨 신규 등록 ──
+  // 본문: { type: 'patients', label: '<text>' }
+  // 응답: 201 { ok: true, patient: { id, label, last_visit_at, visit_count } }
+  //       409 { ok: false, error, patient: {...기존 row...} }  ← UNIQUE 충돌 (idempotent UX)
+  //       400 { error } — 본문 검증 실패
+  if (req.method === 'POST') {
+    const body = req.body || {};
+    if (body.type !== 'patients') {
+      return res.status(400).json({ error: 'type 은 "patients" 만 지원합니다' });
+    }
+    // 라벨 검증: trim → 1~50자, 빈 문자열 거부
+    const rawLabel = typeof body.label === 'string' ? body.label : '';
+    const label = rawLabel.trim();
+    if (label.length === 0) {
+      return res.status(400).json({ error: '환자 라벨이 비어 있습니다' });
+    }
+    if (label.length > 50) {
+      return res.status(400).json({ error: '환자 라벨은 50자 이내로 입력해주세요' });
+    }
+
+    try {
+      // INSERT — UNIQUE (user_id, label) 위반 시 PostgREST 가 409 + code 23505 반환
+      const insertUrl = `${SUPABASE_URL}/rest/v1/patients` +
+        `?select=id,label,last_visit_at,visit_count`;
+      const insertRes = await fetch(insertUrl, {
+        method: 'POST',
+        headers: {
+          ...authHeaders,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation',
+        },
+        // user_id 는 RLS 정책 (WITH CHECK user_id = auth.uid()) 이 강제 — 명시도 가능하나
+        // 마이그 059 default(auth.uid()) 가 있으면 생략 가능. 안전하게 명시.
+        body: JSON.stringify({ user_id: user.id, label }),
+      });
+
+      if (insertRes.ok) {
+        const rows = await insertRes.json();
+        const patient = Array.isArray(rows) ? rows[0] : rows;
+        return res.status(201).json({ ok: true, patient });
+      }
+
+      // UNIQUE 충돌 → 기존 row 조회 후 409 반환 (idempotent UX — 클라이언트는 그대로 선택)
+      if (insertRes.status === 409) {
+        const fetchUrl = `${SUPABASE_URL}/rest/v1/patients` +
+          `?user_id=eq.${user.id}` +
+          `&label=eq.${encodeURIComponent(label)}` +
+          `&select=id,label,last_visit_at,visit_count&limit=1`;
+        const dupRes = await fetch(fetchUrl, { headers: authHeaders });
+        const dupRows = dupRes.ok ? await dupRes.json() : [];
+        const existing = Array.isArray(dupRows) && dupRows.length > 0 ? dupRows[0] : null;
+        return res.status(409).json({
+          ok: false,
+          error: '동일한 라벨의 환자가 이미 존재합니다',
+          patient: existing,
+        });
+      }
+
+      const errText = await insertRes.text();
+      console.error('[history POST patients] Supabase error:', insertRes.status, errText);
+      return res.status(502).json({ error: '환자 등록 실패' });
+    } catch (e) {
+      console.error('[history POST patients]', e.message);
+      return res.status(500).json({ error: '환자 등록 실패' });
+    }
+  }
+
+  // ?type=pending  → 평가 대기 추천 조회 (구 /api/pending-evaluations 통합)
+  // ?type=patients → 본인 등록 환자 라벨 목록 (드롭다운용)
   // 그 외 (생략 / type=recent) → 기존 history (recentLogs + likedTechniques)
   const type = (req.query && req.query.type) || 'recent';
+
+  // ── GET ?type=patients ──
+  // 응답: { patients: [{ id, label, last_visit_at, visit_count }, ...] }
+  // 정렬: last_visit_at DESC NULLS LAST → 최근 방문 환자 상단
+  // RLS: user_id = auth.uid() (마이그 059) — 추가 user_id 필터는 안전망
+  if (type === 'patients') {
+    try {
+      const url = `${SUPABASE_URL}/rest/v1/patients` +
+        `?user_id=eq.${user.id}` +
+        `&select=id,label,last_visit_at,visit_count` +
+        `&order=last_visit_at.desc.nullslast&limit=50`;
+      const response = await fetch(url, { headers: authHeaders });
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error('[history?type=patients] Supabase error:', response.status, errText);
+        return res.status(502).json({ error: '환자 목록 조회 실패' });
+      }
+      const rows = await response.json();
+      // term_glossary 후처리 불필요 — label 은 PT 자유 입력 (자동 치환 대상 아님)
+      return res.status(200).json({ patients: Array.isArray(rows) ? rows : [] });
+    } catch (e) {
+      console.error('[history?type=patients GET]', e.message);
+      return res.status(500).json({ error: '환자 목록 로드 실패' });
+    }
+  }
 
   if (type === 'pending') {
     try {

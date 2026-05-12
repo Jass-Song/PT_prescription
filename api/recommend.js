@@ -829,10 +829,11 @@ function aggregateApplicableMuscles(activeMT, category, regions) {
 // 추천 세션 로깅 (recommendation_logs 테이블)
 // 마이그 051 이후 — 생성된 row id 를 응답으로 수집하여 클라이언트에 전달.
 // 클라이언트는 이 id를 카드별 평가 시 ratings.recommendation_log_id 로 동봉.
+// 마이그 059 이후 — patientId 가 있으면 recommendation_logs.patient_id 컬럼에 동봉.
 // 반환: { id: string } (성공) | null (실패·SUPABASE_KEY 미설정·userId 부재 등)
 // 호출 측은 Promise를 await 하지 않고 .catch로 fire-and-forget 패턴을 유지하되,
 // 결과 id를 활용하려면 await 후 result.recommendation_log_id 에 부착.
-async function logRecommendationSession(userId, userToken, { region, acuity, symptom, selectedCategories, result, latencyMs }) {
+async function logRecommendationSession(userId, userToken, { region, acuity, symptom, selectedCategories, result, latencyMs, patientId = null }) {
   const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gnusyjnviugpofvaicbv.supabase.co';
   const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
   if (!SUPABASE_KEY || !userId) return null;
@@ -843,6 +844,19 @@ async function logRecommendationSession(userId, userToken, { region, acuity, sym
   ];
 
   try {
+    const insertBody = {
+      user_id: userId,
+      region,
+      acuity,
+      symptom,
+      selected_categories: selectedCategories,
+      recommended_techniques: recommended,
+      latency_ms: Number.isFinite(latencyMs) ? latencyMs : null,
+    };
+    // patient_id 는 옵셔널 — 마이그 059 (recommendation_logs.patient_id UUID FK ON DELETE SET NULL).
+    // 미제공 (기존 흐름) 시 컬럼 자체를 INSERT 페이로드에서 생략하여 회귀 안전성 확보.
+    if (patientId) insertBody.patient_id = patientId;
+
     const response = await fetch(`${SUPABASE_URL}/rest/v1/recommendation_logs`, {
       method: 'POST',
       headers: {
@@ -851,15 +865,7 @@ async function logRecommendationSession(userId, userToken, { region, acuity, sym
         'Content-Type': 'application/json',
         'Prefer': 'return=representation',
       },
-      body: JSON.stringify({
-        user_id: userId,
-        region,
-        acuity,
-        symptom,
-        selected_categories: selectedCategories,
-        recommended_techniques: recommended,
-        latency_ms: Number.isFinite(latencyMs) ? latencyMs : null,
-      }),
+      body: JSON.stringify(insertBody),
     });
     if (!response.ok) return null;
     const rows = await response.json();
@@ -867,6 +873,131 @@ async function logRecommendationSession(userId, userToken, { region, acuity, sym
     return row && row.id ? { id: row.id } : null;
   } catch (e) {
     console.error('[logRecommendationSession]', e.message);
+    return null;
+  }
+}
+
+// ── 환자 timeline — 직전 3 세션 history fetch (마이그 059 의존) ──
+// 입력: patientId (UUID), userToken (JWT)
+// 출력: { sessions: [{ created_at, recommended_techniques, outcome }, ...] }
+//        — ORDER BY created_at DESC LIMIT 3, ratings.outcome 1건 LEFT JOIN
+//        — RLS 자동 적용 (recommendation_logs.user_id = auth.uid())
+// LLM 프롬프트 augmentation 용도. 실패 시 빈 배열 반환 (회귀 안전 — 추천 흐름 중단 금지).
+async function fetchPatientTimeline(patientId, userToken) {
+  const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gnusyjnviugpofvaicbv.supabase.co';
+  const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
+  if (!SUPABASE_KEY || !patientId || !userToken) return [];
+
+  try {
+    // PostgREST embedded resource: ratings(outcome,created_at) — 평가 신호 LEFT JOIN.
+    // 단일 신호 모델 (마이그 054) 기준 outcome ∈ {excellent,good,fair,poor,not_used,...}.
+    // 평가 1건만 대표 outcome 으로 표시 (created_at DESC 첫 row).
+    const url = `${SUPABASE_URL}/rest/v1/recommendation_logs` +
+      `?patient_id=eq.${patientId}` +
+      `&select=id,created_at,recommended_techniques,selected_categories,ratings(outcome,created_at)` +
+      `&order=created_at.desc&limit=3`;
+    const response = await fetch(url, {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${userToken}`,
+      },
+    });
+    if (!response.ok) return [];
+    const rows = await response.json();
+    return Array.isArray(rows) ? rows : [];
+  } catch (e) {
+    console.error('[fetchPatientTimeline]', e.message);
+    return [];
+  }
+}
+
+// ── 환자 timeline → LLM 프롬프트 augmentation 블록 빌드 (KMO 톤) ──
+// 입력: timeline (fetchPatientTimeline 결과, 최신순), visitNo (이번이 몇 번째)
+// 출력: system prompt 에 삽입할 문자열 ("" = 신규 환자 또는 timeline 없음).
+// KMO 원칙: 통증 ≠ 손상 / 반파국화 / 회복 단계 진행 인식.
+// outcome 라벨링: excellent/good → "효과 있음", fair → "보통", poor/not_used → "효과 적음".
+function buildPatientTimelineContext(timeline, visitNo) {
+  if (!Array.isArray(timeline) || timeline.length === 0) return '';
+
+  // 오래된 → 최근 순으로 뒤집어 N-2 / N-1 / N 표기 (visitNo 기준 직전 3건)
+  const ordered = [...timeline].reverse();
+  const total = ordered.length;
+
+  const summarizeRow = (row, idx) => {
+    const dateStr = (row.created_at || '').slice(0, 10);
+    const techs = Array.isArray(row.recommended_techniques) ? row.recommended_techniques : [];
+    // 기법명 상위 3개 — 프롬프트 크기 절약
+    const names = techs.map(t => (t && typeof t.name === 'string') ? t.name : '')
+      .filter(Boolean).slice(0, 3).join(', ');
+    // ratings: embedded array — 가장 최근 평가 1건의 outcome 사용
+    const ratings = Array.isArray(row.ratings) ? row.ratings : [];
+    const outcome = ratings.length > 0 ? ratings[0].outcome : null;
+    // KMO 톤 라벨 — 단정·부정 표현 회피
+    let outcomeLabel = '평가 없음';
+    if (outcome === 'excellent' || outcome === 'good') outcomeLabel = '효과 있음';
+    else if (outcome === 'fair') outcomeLabel = '보통';
+    else if (outcome === 'poor' || outcome === 'not_used') outcomeLabel = '효과 적음';
+    else if (outcome) outcomeLabel = outcome; // 기타 enum 값 그대로
+
+    // 라벨: N-(total-1-idx) — 마지막은 N (직전 세션)
+    const offset = (total - 1) - idx;
+    const sessionLabel = offset === 0 ? 'N  ' : `N-${offset}`;
+    return `Session ${sessionLabel} (${dateStr}): ${names || '기록 없음'} / outcome=${outcomeLabel}`;
+  };
+
+  const lines = ordered.map(summarizeRow).join('\n');
+
+  // 권장 가이드 — KMO 톤 (회복 단계 진행 인식 / 효과 적은 카테고리 회피 / 새 시도).
+  // 단정·공포 유발 표현 금지. "건강한 적응" 프레임.
+  return `\n[환자 timeline — 이번이 ${visitNo}번째 세션, 최근 ${total} 세션 요약]
+${lines}
+권장: 회복 단계 진행을 자연스러운 흐름으로 인식하고, 효과가 적었던 카테고리는 다른 모달리티로 전환하거나 새 접근을 시도하세요. 통증 ≠ 손상 원칙을 유지하며 환자 자신감을 회복하는 메시지를 사용하세요.
+`;
+}
+
+// ── 환자 visit 카운트 업데이트 (마이그 059 의존) ──
+// patients.visit_count += 1, last_visit_at = NOW().
+// 반환: { visitNo: number } (= 업데이트 후 visit_count) | null (실패).
+// 회귀 안전: 실패 시 추천 흐름 계속 진행 (응답에서 visit_no 만 누락).
+async function bumpPatientVisit(patientId, userToken) {
+  const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gnusyjnviugpofvaicbv.supabase.co';
+  const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
+  if (!SUPABASE_KEY || !patientId || !userToken) return null;
+
+  try {
+    // 1) 현재 visit_count 조회 (UPDATE 시 +1 적용 후 반환되는 visit_count 가 visit_no)
+    //    PostgREST 는 표현식 기반 UPDATE (visit_count = visit_count + 1) 를 직접 지원하지 않으므로
+    //    RLS 안전한 RPC 가 없을 경우 read-modify-write 패턴 사용. race condition 은 베타 단계에서 수용.
+    const readUrl = `${SUPABASE_URL}/rest/v1/patients` +
+      `?id=eq.${patientId}&select=visit_count&limit=1`;
+    const readRes = await fetch(readUrl, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${userToken}` },
+    });
+    if (!readRes.ok) return null;
+    const rows = await readRes.json();
+    if (!Array.isArray(rows) || rows.length === 0) return null;
+    const current = Number(rows[0].visit_count) || 0;
+    const next = current + 1;
+
+    // 2) UPDATE — RLS 가 user_id = auth.uid() 강제
+    const updateUrl = `${SUPABASE_URL}/rest/v1/patients?id=eq.${patientId}`;
+    const updateRes = await fetch(updateUrl, {
+      method: 'PATCH',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${userToken}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({
+        visit_count: next,
+        last_visit_at: new Date().toISOString(),
+      }),
+    });
+    if (!updateRes.ok) return null;
+    return { visitNo: next };
+  } catch (e) {
+    console.error('[bumpPatientVisit]', e.message);
     return null;
   }
 }
@@ -1004,10 +1135,29 @@ export default async function handler(req, res) {
     excludedTechniqueIds = [],
     sessionHistory = [],
     focusPillars: rawFocusPillars,
+    patient_id: rawPatientId = null,
   } = req.body;
 
   if (!region || !acuity || !symptom) {
     return res.status(400).json({ error: '필수 항목 누락: region, acuity, symptom' });
+  }
+
+  // ── patient_id 정규화 (옵셔널, 마이그 059) ──
+  // UUID 형식 검증 — 잘못된 입력은 무시 (회귀 안전: 기존 흐름으로 진행).
+  // 다른 PT 의 patient_id 가 전달돼도 RLS 가 INSERT/UPDATE/SELECT 모두 차단.
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const patientId = (typeof rawPatientId === 'string' && UUID_RE.test(rawPatientId))
+    ? rawPatientId : null;
+
+  // patient_id 제공 시 timeline fetch (직전 3 세션) + visit_no 산정용 카운트 업데이트는
+  // LLM 호출 직전·직후 흐름에서 처리. 미제공 시 기존 흐름 100% 유지 (회귀 0).
+  let patientTimeline = [];
+  let patientVisitNo = null;
+  if (patientId) {
+    patientTimeline = await fetchPatientTimeline(patientId, userToken).catch(e => {
+      console.warn('[patient timeline] fetch 실패:', e.message);
+      return [];
+    });
   }
 
   // ── focusPillars 정규화 ──
@@ -1087,12 +1237,19 @@ export default async function handler(req, res) {
 
     // 추천 로그 INSERT — 응답에서 id 수집 후 클라이언트로 전달.
     // 마이그 051 이후 ratings.recommendation_log_id FK 매칭에 사용.
+    // 마이그 059 이후 patient_id 동봉 (옵셔널).
     const atLogResult = await logRecommendationSession(user.id, userToken, {
       region, acuity, symptom, selectedCategories: ['category_anatomy_trains'], result: atResponse,
-      latencyMs: Date.now() - t0,
+      latencyMs: Date.now() - t0, patientId,
     }).catch(e => { console.error('[logging AT]', e.message); return null; });
     if (atLogResult && atLogResult.id) {
       atResponse.recommendation_log_id = atLogResult.id;
+    }
+
+    // 환자 visit_count UPDATE — patient_id 제공 시. 실패해도 추천 응답은 정상 진행.
+    if (patientId) {
+      const bump = await bumpPatientVisit(patientId, userToken).catch(() => null);
+      if (bump && Number.isFinite(bump.visitNo)) atResponse.visit_no = bump.visitNo;
     }
 
     // fire-and-forget: 세션 단위 usage 로깅
@@ -1273,10 +1430,18 @@ export default async function handler(req, res) {
   // body_region·acuity·symptom 3축 → 임상 근거 기반 카테고리·강도·금기·KMO 메시지 주입
   const scenarioContext = buildScenarioContext({ region, acuity, painCondition: symptom });
 
+  // ── 환자 timeline augmentation (마이그 059, patient_id 제공 시) ──
+  // visitNo 잠정값: 직전 timeline 길이 + 1 (실제 visit_count UPDATE 는 응답 직전 처리).
+  // patient_id 미제공 또는 신규 환자 시 빈 문자열 반환 (시스템 프롬프트 변경 없음).
+  const provisionalVisitNo = patientId ? (patientTimeline.length + 1) : null;
+  const patientTimelineContext = patientId
+    ? buildPatientTimelineContext(patientTimeline, provisionalVisitNo)
+    : '';
+
   const systemPrompt = `당신은 근거기반 임상 물리치료사 멘토입니다.
 반-카타스트로파이징(anti-catastrophizing) 접근을 강조합니다.
 핵심 원칙: "통증 ≠ 손상", "몸은 적응적이다", "Calm things down, then build things back up"
-자세 불균형·정렬 이상 프레임 사용 금지. 공포 유발 표현 금지.${scenarioContext ? '\n' + scenarioContext.trim() + '\n' : ''}
+자세 불균형·정렬 이상 프레임 사용 금지. 공포 유발 표현 금지.${scenarioContext ? '\n' + scenarioContext.trim() + '\n' : ''}${patientTimelineContext ? patientTimelineContext : ''}
 clinicalNote 작성 원칙: 원인을 단정하지 말고 가능성으로 표현하세요. 단정 표현(~입니다, ~때문입니다)은 옐로우 플래그를 만들 수 있습니다.
   ✗ "요추 불안정성으로 인한 통증입니다" / "디스크 문제로 발생한 증상입니다"
   ✓ "요추 주변 근육의 협응이 통증에 기여하고 있을 수 있습니다" / "신경 민감화가 관여했을 가능성이 있습니다"
@@ -1549,12 +1714,19 @@ techniqueId는 [MT-XXX] 또는 [EX-XXX] ID를 그대로 복사.`;
 
     // 추천 로그 INSERT — 응답에서 id 수집 후 클라이언트로 전달.
     // 마이그 051 이후 ratings.recommendation_log_id FK 매칭에 사용.
+    // 마이그 059 이후 patient_id 동봉 (옵셔널).
     const logResult = await logRecommendationSession(user.id, userToken, {
       region, acuity, symptom, selectedCategories, result,
-      latencyMs: Date.now() - t0,
+      latencyMs: Date.now() - t0, patientId,
     }).catch(e => { console.error('[logging]', e.message); return null; });
     if (logResult && logResult.id) {
       result.recommendation_log_id = logResult.id;
+    }
+
+    // 환자 visit_count UPDATE — patient_id 제공 시. 실패해도 추천 응답은 정상 진행.
+    if (patientId) {
+      const bump = await bumpPatientVisit(patientId, userToken).catch(() => null);
+      if (bump && Number.isFinite(bump.visitNo)) result.visit_no = bump.visitNo;
     }
 
     // fire-and-forget: 세션 단위 usage 로깅

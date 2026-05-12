@@ -822,6 +822,12 @@ ALTER TABLE recommendation_logs
     NOT NULL DEFAULT 'pending',
   ADD COLUMN IF NOT EXISTS evaluated_at      TIMESTAMPTZ;
 
+-- 마이그 059 동기화 — patient_id FK (선 ALTER, patients 테이블 정의는 섹션 O 참조)
+-- recommendation_logs.patient_id 는 patients(id) ON DELETE SET NULL.
+-- patients 테이블이 본 ALTER 보다 뒤(섹션 O)에 정의되므로 schema.sql 전체
+-- replay 시에는 본 ALTER 가 실패할 수 있음 → 섹션 O 마지막에서 한 번 더 멱등 ADD.
+-- 단일 진실 소스: saas/migrations/059-patients-timeline.sql
+
 -- ratings 컬럼 추가 (멱등) — ON DELETE SET NULL (CASCADE 금지: 평가 데이터 보존)
 ALTER TABLE ratings
   ADD COLUMN IF NOT EXISTS recommendation_log_id      UUID
@@ -901,6 +907,58 @@ DROP POLICY IF EXISTS "term_glossary_select_all" ON term_glossary;
 CREATE POLICY "term_glossary_select_all"
   ON term_glossary FOR SELECT
   USING (true);
+
+-- ============================================================
+-- O. PATIENTS — 환자별 timeline tracking (마이그 059 동기화)
+-- ============================================================
+-- 목적: PT 별 환자 레지스트리 + recommendation_logs 와의 FK 연결로
+--      최근 3 세션 history 를 LLM 추천 프롬프트에 augmentation.
+-- 락인 스펙 (다른 에이전트와 contract — 변경 금지):
+--   - label TEXT NOT NULL (PT 자유 입력: 이름/별명/번호)
+--   - UNIQUE (user_id, label) — PT 별 동명 환자 충돌 차단
+--   - visit_count INTEGER NOT NULL DEFAULT 0
+--   - patient_id UUID FK ON DELETE SET NULL (로그 보존 우선)
+-- 단일 진실 소스: saas/migrations/059-patients-timeline.sql
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS patients (
+  id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id        UUID NOT NULL
+                   REFERENCES auth.users(id) ON DELETE CASCADE,
+  label          TEXT NOT NULL,
+                   -- PT 가 입력한 환자 식별 텍스트 (이름·별명·번호)
+  created_at     TIMESTAMPTZ DEFAULT NOW(),
+  last_visit_at  TIMESTAMPTZ DEFAULT NOW(),
+  visit_count    INTEGER NOT NULL DEFAULT 0,
+  notes          TEXT,
+                   -- PT 메모 (선택)
+  UNIQUE (user_id, label)
+);
+
+CREATE INDEX IF NOT EXISTS idx_patients_user_id
+  ON patients(user_id);
+CREATE INDEX IF NOT EXISTS idx_patients_last_visit
+  ON patients(user_id, last_visit_at DESC);
+
+-- recommendation_logs.patient_id 멱등 재선언 (섹션 M 의 ALTER 와 동일 — schema.sql
+-- 전체 replay 케이스 대응: 섹션 M 시점에는 patients 테이블이 아직 없으므로
+-- 본 섹션에서 FK 컬럼 + 인덱스를 한 번 더 보장).
+ALTER TABLE recommendation_logs
+  ADD COLUMN IF NOT EXISTS patient_id UUID
+    REFERENCES patients(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_rec_logs_patient
+  ON recommendation_logs(patient_id, created_at DESC);
+
+ALTER TABLE patients ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS patients_own ON patients;
+CREATE POLICY patients_own
+  ON patients
+  FOR ALL
+  TO authenticated
+  USING      (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
 
 -- ============================================================
 -- END OF SCHEMA

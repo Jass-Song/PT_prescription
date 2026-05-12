@@ -1202,6 +1202,168 @@
     .gfb-save-btn:hover { background: #4338ca; }
     .gfb-save-btn:disabled { background: #a5b4fc; cursor: default; }
 
+    /* ══════════════════════════════════════
+       Patient Select (Patient Timeline P3)
+       — 드롭다운: screen2 상단, form-card 스타일 일관
+       — 모달: 신규 환자 등록, KMO 톤 (회색/위협 X)
+       — visit_no badge: 추천 카드 상단, 회색 톤
+    ══════════════════════════════════════ */
+    .patient-select-wrap {
+      background: #fff;
+      border: 1px solid var(--border, #e2e8f0);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 14px;
+    }
+    .patient-select-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary, #64748b);
+      margin-bottom: 8px;
+    }
+    .patient-select-optional {
+      font-weight: 400;
+      color: #94a3b8;
+      font-size: 12px;
+    }
+    .patient-select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid var(--border, #e2e8f0);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      background: #fff;
+      color: #1a1a2e;
+      outline: none;
+      transition: border-color 0.15s;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%2364748b' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+    }
+    .patient-select:focus { border-color: var(--primary, #1f6fc4); }
+    .patient-select-hint {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+
+    .patient-modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(15,23,42,0.55);
+      z-index: 1150;
+      align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .patient-modal-overlay.open { display: flex; }
+    .patient-modal {
+      background: #fff;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 380px;
+      padding: 22px 22px 18px;
+      box-shadow: 0 12px 40px rgba(15,23,42,0.18);
+      animation: welcomeFade 0.22s ease-out;
+    }
+    .patient-modal-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 6px;
+    }
+    .patient-modal-sub {
+      font-size: 0.82rem;
+      color: #64748b;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+    .patient-modal-form { margin-bottom: 16px; }
+    .patient-modal-form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary, #64748b);
+      margin-bottom: 6px;
+    }
+    .patient-modal-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid var(--border, #e2e8f0);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+      box-sizing: border-box;
+    }
+    .patient-modal-input:focus { border-color: var(--primary, #1f6fc4); }
+    .patient-modal-hint {
+      font-size: 11.5px;
+      color: #94a3b8;
+      margin-top: 6px;
+    }
+    .patient-modal-error {
+      font-size: 12.5px;
+      color: #b91c1c;
+      margin-top: 8px;
+      min-height: 16px;
+      line-height: 1.4;
+    }
+    .patient-modal-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .patient-modal-btn-primary,
+    .patient-modal-btn-secondary {
+      flex: 1;
+      padding: 11px;
+      border-radius: 9px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: background 0.15s;
+      font-family: inherit;
+    }
+    .patient-modal-btn-primary {
+      background: var(--primary, #1f6fc4);
+      color: #fff;
+    }
+    .patient-modal-btn-primary:hover { background: #155da8; }
+    .patient-modal-btn-primary:disabled {
+      background: #a8c4e2;
+      cursor: default;
+    }
+    .patient-modal-btn-secondary {
+      background: #f1f5f9;
+      color: #475569;
+    }
+    .patient-modal-btn-secondary:hover { background: #e2e8f0; }
+
+    /* visit_no badge — 회색 톤 (위협 X). KMO 철학: 사실 기반·반파국화 */
+    .visit-no-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #e2e8f0;
+      border-radius: 999px;
+      font-size: 12.5px;
+      font-weight: 600;
+      margin: 4px 0 10px;
+      line-height: 1;
+    }
+    .visit-no-badge::before { content: '📅'; font-size: 13px; }
+
     /* ── Welcome Modal (첫-사용 환영 가이드) ── */
     .welcome-overlay {
       display: none;
@@ -1954,6 +2116,38 @@
 <div class="toast" id="appToast"></div>
 
 <!-- ── Welcome Modal (첫-사용 환영 가이드) ── -->
+<!-- ══════════════════════════════
+     신규 환자 등록 모달 — Patient Timeline P3
+     드롭다운에서 "+ 신규 환자 등록..." 선택 시 노출.
+     POST /api/history { type:'patients', label } → 등록 후 드롭다운에 추가 + 자동 선택.
+══════════════════════════════ -->
+<div class="patient-modal-overlay" id="patientModalOverlay" role="dialog" aria-labelledby="patientModalTitle" aria-hidden="true">
+  <div class="patient-modal">
+    <div class="patient-modal-title" id="patientModalTitle">신규 환자 등록</div>
+    <div class="patient-modal-sub">
+      환자 식별을 위한 라벨을 입력하세요. 이름·별명·번호 모두 가능합니다.
+    </div>
+    <div class="patient-modal-form">
+      <label class="patient-modal-form-label" for="patientLabelInput">환자 라벨</label>
+      <input
+        type="text"
+        id="patientLabelInput"
+        class="patient-modal-input"
+        maxlength="50"
+        placeholder="이름·별명·번호 (예: 김철수 / 환자-001)"
+        oninput="document.getElementById('patientModalSubmit').disabled = !this.value.trim()"
+        onkeydown="if(event.key==='Enter' && this.value.trim()) createPatient()"
+      />
+      <div class="patient-modal-hint">최대 50자 · 본인 계정 내에서만 보입니다</div>
+      <div class="patient-modal-error" id="patientModalError"></div>
+    </div>
+    <div class="patient-modal-actions">
+      <button type="button" class="patient-modal-btn-secondary" onclick="dismissPatientModal()">취소</button>
+      <button type="button" class="patient-modal-btn-primary" id="patientModalSubmit" onclick="createPatient()" disabled>등록</button>
+    </div>
+  </div>
+</div>
+
 <div class="welcome-overlay" id="welcomeOverlay">
   <div class="welcome-modal">
     <div class="welcome-greet">👋 안녕하세요, 선생님</div>
@@ -2225,6 +2419,19 @@
       <button class="btn-hist-trigger" onclick="openHistory()">📋 이력</button>
     </div>
 
+    <!-- ══════════════════════════════
+         환자 선택 (선택사항) — Patient Timeline P3
+         드롭다운 + 신규 등록 모달. 빈 값 = 환자 미선택 (기존 흐름 유지).
+    ══════════════════════════════ -->
+    <div class="patient-select-wrap">
+      <label class="patient-select-label" for="patient-select">환자 선택 <span class="patient-select-optional">(선택사항)</span></label>
+      <select id="patient-select" class="patient-select" onchange="handlePatientSelectChange()">
+        <option value="">환자 선택 (선택사항)</option>
+        <option value="__new__">+ 신규 환자 등록...</option>
+      </select>
+      <div class="patient-select-hint">선택 시 같은 환자의 이전 세션 맥락을 반영해 추천합니다</div>
+    </div>
+
     <div class="step-indicator">
       <div class="step-dot active" id="sdot1">1</div>
       <div class="step-line" id="sline1"></div>
@@ -2389,6 +2596,9 @@
       <div class="label">선택 조합</div>
       <div class="combo" id="combo-label"></div>
     </div>
+
+    <!-- visit_no badge area (Patient Timeline P3) — 환자 선택 시 N번째 방문 표기 -->
+    <div id="rec-header-meta-area" style="text-align:center; min-height: 0;"></div>
 
     <!-- Usage badge -->
     <div id="usage-badge-wrap" style="text-align:center; margin-bottom: 8px; min-height: 24px;"></div>
@@ -3377,6 +3587,9 @@
       excludedTechniqueIds: [],
       sessionHistory:      getSessionHistory(),
     };
+    // Patient Timeline P3 — 선택된 환자 UUID 가 있으면 payload 에 포함
+    const _selectedPatientId = getSelectedPatientId();
+    if (_selectedPatientId) basePayload.patient_id = _selectedPatientId;
 
     try {
       // ── Pillar 기반 단일 호출 (신규) vs 카테고리 병렬 호출 (legacy) 분기 ──
@@ -3909,6 +4122,9 @@
       try { applyResponseBanner(result); } catch (e) { console.warn('[red-flag] banner skipped:', e && e.message); }
     }
 
+    // Patient Timeline P3 — visit_no badge (회귀 안전: visit_no 없으면 미표시)
+    try { renderVisitNoBadge(result && result.visit_no); } catch (e) { console.warn('[visit-no] skipped:', e && e.message); }
+
     if (result.sessionSummary) {
       saveSessionHistory(result.sessionSummary);
     }
@@ -4256,7 +4472,181 @@
     SECTION_ORDER.forEach(expandSection);
     updateStepDots();
     checkRecommendBtn();
+    // 환자 드롭다운 로드 (Patient Timeline P3) — 비동기, 실패해도 기존 흐름 유지
+    loadPatientsList();
     goScreen('screen2');
+  }
+
+  /* ══════════════════════════════════════
+     Patient Timeline P3 — 환자 선택 드롭다운 + 신규 등록 모달
+     — 빈 값 = 환자 미선택 (기존 흐름 그대로)
+     — patient_id (UUID) → submitRecommend 에서 body 에 포함
+     — /api/recommend 응답의 visit_no → 추천 화면 상단 badge 표시
+  ══════════════════════════════════════ */
+  let _patientsListLoaded = false;
+
+  async function loadPatientsList() {
+    const select = document.getElementById('patient-select');
+    if (!select) return;
+    // 토큰 없으면 스킵 (로그인 전 상태)
+    if (!currentAccessToken) return;
+    try {
+      const res = await fetch('/api/history?type=patients', {
+        headers: { 'Authorization': `Bearer ${currentAccessToken}` },
+      });
+      if (!res.ok) {
+        console.warn('[patients] 목록 조회 실패:', res.status);
+        return;
+      }
+      const data = await res.json();
+      const patients = Array.isArray(data.patients) ? data.patients : [];
+      // 기존 동적 option 제거 (placeholder + __new__ 만 유지)
+      [...select.options].forEach(opt => {
+        if (opt.value !== '' && opt.value !== '__new__') opt.remove();
+      });
+      // 신규 환자 등록 option 위에 동적 옵션 삽입
+      const newOpt = select.querySelector('option[value="__new__"]');
+      patients.forEach(p => {
+        if (!p || !p.id || !p.label) return;
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        const vc = (typeof p.visit_count === 'number' && p.visit_count > 0)
+          ? ` (${p.visit_count}회 방문)`
+          : '';
+        opt.textContent = `${p.label}${vc}`;
+        if (newOpt) select.insertBefore(opt, newOpt);
+        else select.appendChild(opt);
+      });
+      _patientsListLoaded = true;
+    } catch (e) {
+      console.warn('[patients] 목록 조회 예외:', e && e.message);
+    }
+  }
+
+  function handlePatientSelectChange() {
+    const select = document.getElementById('patient-select');
+    if (!select) return;
+    if (select.value === '__new__') {
+      // 모달 노출 — 선택은 일단 placeholder 로 되돌림 (등록 성공 시 신규 옵션으로 자동 선택)
+      select.value = '';
+      showNewPatientModal();
+    }
+  }
+
+  function showNewPatientModal() {
+    const overlay = document.getElementById('patientModalOverlay');
+    if (!overlay) return;
+    const input = document.getElementById('patientLabelInput');
+    const submit = document.getElementById('patientModalSubmit');
+    const err = document.getElementById('patientModalError');
+    if (input) input.value = '';
+    if (submit) submit.disabled = true;
+    if (err) err.textContent = '';
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden', 'false');
+    setTimeout(() => { if (input) input.focus(); }, 50);
+  }
+
+  function dismissPatientModal() {
+    const overlay = document.getElementById('patientModalOverlay');
+    if (!overlay) return;
+    overlay.classList.remove('open');
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+
+  async function createPatient() {
+    const input = document.getElementById('patientLabelInput');
+    const submit = document.getElementById('patientModalSubmit');
+    const errBox = document.getElementById('patientModalError');
+    if (!input || !submit) return;
+    const label = (input.value || '').trim();
+    if (!label) return;
+    if (label.length > 50) {
+      if (errBox) errBox.textContent = '라벨은 최대 50자까지 입력 가능합니다.';
+      return;
+    }
+    if (!currentAccessToken) {
+      if (errBox) errBox.textContent = '로그인이 필요합니다.';
+      return;
+    }
+    submit.disabled = true;
+    const origText = submit.textContent;
+    submit.textContent = '등록 중...';
+    if (errBox) errBox.textContent = '';
+    try {
+      const res = await fetch('/api/history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${currentAccessToken}`,
+        },
+        body: JSON.stringify({ type: 'patients', label }),
+      });
+      // 201 신규 / 409 기존 row 둘 다 patient 필드 포함
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok && res.status !== 409) {
+        const msg = data && data.error ? data.error : `등록 실패 (HTTP ${res.status})`;
+        if (errBox) errBox.textContent = msg;
+        submit.textContent = origText;
+        submit.disabled = false;
+        return;
+      }
+      const patient = data && data.patient ? data.patient : null;
+      if (!patient || !patient.id) {
+        if (errBox) errBox.textContent = '서버 응답 형식 오류 — 다시 시도해주세요.';
+        submit.textContent = origText;
+        submit.disabled = false;
+        return;
+      }
+      // 드롭다운 갱신 — 이미 존재하면 해당 option 선택, 없으면 신규 추가 후 선택
+      const select = document.getElementById('patient-select');
+      if (select) {
+        let existing = [...select.options].find(o => o.value === patient.id);
+        if (!existing) {
+          const opt = document.createElement('option');
+          opt.value = patient.id;
+          const vc = (typeof patient.visit_count === 'number' && patient.visit_count > 0)
+            ? ` (${patient.visit_count}회 방문)`
+            : '';
+          opt.textContent = `${patient.label}${vc}`;
+          const newOpt = select.querySelector('option[value="__new__"]');
+          if (newOpt) select.insertBefore(opt, newOpt);
+          else select.appendChild(opt);
+          existing = opt;
+        }
+        select.value = patient.id;
+      }
+      submit.textContent = origText;
+      submit.disabled = false;
+      dismissPatientModal();
+    } catch (e) {
+      if (errBox) errBox.textContent = (e && e.message) || '네트워크 오류 — 다시 시도해주세요.';
+      submit.textContent = origText;
+      submit.disabled = false;
+    }
+  }
+
+  // 추천 호출 시 body 에 포함할 patient_id 추출 (없거나 __new__/빈 값이면 null)
+  function getSelectedPatientId() {
+    const select = document.getElementById('patient-select');
+    if (!select) return null;
+    const v = select.value;
+    if (!v || v === '__new__') return null;
+    return v;
+  }
+
+  // 추천 결과 상단 visit_no badge 렌더 (회귀 안전: visit_no 없으면 미표시)
+  function renderVisitNoBadge(visit_no) {
+    const header = document.getElementById('rec-header-meta-area');
+    // 기존 badge 제거 (회귀 안전)
+    const old = document.getElementById('visit-no-badge');
+    if (old) old.remove();
+    if (visit_no == null || typeof visit_no !== 'number' || visit_no < 1) return;
+    const badge = document.createElement('div');
+    badge.id = 'visit-no-badge';
+    badge.className = 'visit-no-badge';
+    badge.textContent = (visit_no === 1) ? '첫 방문' : `이 환자 ${visit_no}번째 방문`;
+    if (header) header.appendChild(badge);
   }
 
   // "다음 환자 추천 받기" 버튼 핸들러
