@@ -170,7 +170,10 @@ CREATE TABLE ratings (
   id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
 
   -- 관계
-  technique_id      UUID NOT NULL REFERENCES techniques(id) ON DELETE CASCADE,
+  -- technique_id: NULL 허용 (마이그 060). Anatomy Trains·LLM 의역·용어집(term_glossary)
+  -- 후처리로 techniques.name_ko 매치 실패 케이스에서 NULL 폴백 (api/feedback.js L83~102).
+  -- 원본 이름은 technique_label TEXT 에 보존. FK / ON DELETE CASCADE 정책은 유지.
+  technique_id      UUID REFERENCES techniques(id) ON DELETE CASCADE,
   user_id           UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
 
   -- 핵심 평가
