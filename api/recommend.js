@@ -550,7 +550,8 @@ async function fetchActiveTechniques(categories, bodyRegions = [], userToken = n
   // RLS는 auth.uid() 기반 — 사용자 JWT가 있으면 사용, 없으면 anon key fallback
   const authToken = userToken || SUPABASE_KEY;
   const headers = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${authToken}` };
-  const url = `${SUPABASE_URL}/rest/v1/techniques?is_active=eq.true&or=(${catFilter})&select=${selectFields}`;
+  // Tier 1 큐레이션 86건만 후보 (마이그 056b is_published 시드)
+  const url = `${SUPABASE_URL}/rest/v1/techniques?is_active=eq.true&is_published=eq.true&or=(${catFilter})&select=${selectFields}`;
 
   try {
     const res = await fetch(url, { headers });
@@ -1103,6 +1104,24 @@ export default async function handler(req, res) {
     if (activeMT === null) {
       return res.status(503).json({
         error: `기법 데이터를 불러오지 못했습니다. (DB 조회 실패 — 계정 승인 여부를 확인하세요. mtCategories: ${JSON.stringify(mtCategories)})`
+      });
+    }
+
+    // Tier 1 큐레이션 0건 fail-closed 가드 (is_published 시드 미적용 또는 시나리오 매칭 0건)
+    // MT·EX 모두 0건이면 추천 불가 → 503 안내 (마이그 056b 적용 전 항상 이 분기)
+    const totalCandidates = (activeMT?.length || 0) + ((results[3] || [])?.length || 0);
+    if (totalCandidates === 0) {
+      console.error('[recommend] Tier 1 후보 0건 — is_published 시드 또는 시나리오 매칭 확인 필요', { mtCategories, exCategories, bodyRegions });
+      await logServerError('recommend', 'Tier 1 후보 0건 (is_published 필터 후)', {
+        request_path: '/api/recommend',
+        user_id: user?.id ?? null,
+        context: { region, acuity, symptom, mtCategories, exCategories, bodyRegions },
+      });
+      res.setHeader('Retry-After', '60');
+      return res.status(503).json({
+        error: 'RECOMMENDATIONS_UNAVAILABLE',
+        message: '관리자 설정 누락 — 잠시 후 다시 시도해주세요. 문제가 지속되면 관리자에게 문의해주세요.',
+        retryable: true,
       });
     }
 
